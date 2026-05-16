@@ -32,7 +32,7 @@ interface Task {
   assignedTo: string; createdAt: number;
 }
 interface Snippet { id: string; title: string; content: string; label: 'env' | 'código' | 'config' | 'otro'; authorId: string; createdAt: number; }
-interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; }
+interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; }
 interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; }
 interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; }
 interface SharedFile { id: string; name: string; type: string; size: number; dataUrl: string; x: number; y: number; createdAt: number; authorName: string; }
@@ -252,11 +252,13 @@ export default function EquipoDevClient() {
 
   const handleAddNote = (content: string, authorId: string) => {
     const m = members.find(m => m.id === authorId);
-    saveNotes([{ id: crypto.randomUUID(), content, authorId, createdAt: Date.now(), x: 80 + Math.random() * 300, y: 80 + Math.random() * 200, color: m?.color || '#E85D2F' }, ...notes]);
+    saveNotes([{ id: crypto.randomUUID(), content, authorId, createdAt: Date.now(), x: 80 + Math.random() * 300, y: 80 + Math.random() * 200, color: m?.color || '#E85D2F', type: 'text' }, ...notes]);
     toast.success("Nota agregada"); setOpenNoteModal(false);
   };
   const handleDeleteNote  = (id: string) => { saveNotes(notes.filter(n => n.id !== id)); };
-  const handleDragNote    = (id: string, x: number, y: number) => saveNotes(notes.map(n => n.id === id ? { ...n, x, y } : n));
+  const handleDragNote = (id: string, x: number, y: number, extra?: Partial<Note>) => {
+    saveNotes(notes.map(n => n.id === id ? { ...n, x, y, ...extra } : n));
+  };
   const handleDragImage   = (id: string, x: number, y: number, w?: number, h?: number) =>
     saveImages(boardImages.map(img => img.id === id ? { ...img, x, y, width: w||img.width, height: h||img.height } : img));
 
@@ -339,50 +341,58 @@ export default function EquipoDevClient() {
   );
 
   // ── Main layout ──
+  const isPizarra = activeTab === 'pizarra';
+
   return (
-    <div className="flex flex-col h-screen" style={{ background: "#0A0C0F", padding: "20px 24px", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: "#0A0C0F", padding: isPizarra ? "0" : "20px 24px", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <Toaster {...toasterProps} />
 
-      {/* Header */}
-      <header className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-white">Equipo de <span className="text-[#E85D2F]">Programadores</span></h1>
-          <p className="text-xs text-gray-500 mt-0.5">Gestión de tareas, snippets y colaboración</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {currentUser && (
-            <button onClick={() => setShowWhoAreYou(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px 5px 5px', background: `${currentUser.color}12`, border: `1px solid ${currentUser.color}30`, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${currentUser.color}20`; }}
-              onMouseLeave={e => { e.currentTarget.style.background = `${currentUser.color}12`; }}
-              title="Cambiar perfil">
-              <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={26} borderRadius={7} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: currentUser.color }}>{currentUser.name}</span>
-            </button>
+      {/* Header - Floating if Pizarra */}
+      <header className={`${isPizarra ? 'fixed top-6 left-1/2 -translate-x-1/2 z-[1000] w-auto' : 'mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0'}`}>
+        <div className={`${isPizarra ? 'bg-[#1C1F26]/60 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl flex items-center gap-4' : 'flex flex-col md:flex-row md:items-center justify-between gap-4 w-full'}`}>
+          {!isPizarra && (
+            <div>
+              <h1 className="text-xl font-bold text-white">Equipo de <span className="text-[#E85D2F]">Programadores</span></h1>
+              <p className="text-xs text-gray-500 mt-0.5">Gestión de tareas, snippets y colaboración</p>
+            </div>
           )}
-          <div className="flex bg-[#1C1F26] p-1 rounded-xl border border-white/5 flex-wrap gap-0.5">
-            <TabBtn active={activeTab==='equipo'}   onClick={() => setActiveTab('equipo')}   icon={<Users size={14}/>}       label="Equipo"/>
-            <TabBtn active={activeTab==='tareas'}   onClick={() => setActiveTab('tareas')}   icon={<CheckSquare size={14}/>} label="Tareas"/>
-            <TabBtn active={activeTab==='snippets'} onClick={() => setActiveTab('snippets')} icon={<Code size={14}/>}        label="Snippets"/>
-            <TabBtn active={activeTab==='pizarra'}  onClick={() => setActiveTab('pizarra')}  icon={<StickyNote size={14}/>}  label="Pizarra"/>
-            <TabBtn active={activeTab==='archivos'} onClick={() => setActiveTab('archivos')} icon={<FolderOpen size={14}/>}  label="Archivos"/>
-            <TabBtn active={activeTab==='boveda'}   onClick={() => setActiveTab('boveda')} icon={<Shield size={14}/>} label="Bóveda"/>
-            <TabBtn active={activeTab==='ajustes'}  onClick={() => setActiveTab('ajustes')}  icon={<Settings size={14}/>}   label="Ajustes"/>
+          <div className="flex items-center gap-3">
+            {currentUser && (
+              <button onClick={() => setShowWhoAreYou(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: isPizarra ? '4px 8px 4px 4px' : '5px 12px 5px 5px', background: `${currentUser.color}12`, border: `1px solid ${currentUser.color}30`, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = `${currentUser.color}20`; }}
+                onMouseLeave={e => { e.currentTarget.style.background = `${currentUser.color}12`; }}
+                title="Cambiar perfil">
+                <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={isPizarra ? 22 : 26} borderRadius={7} />
+                <span style={{ fontSize: isPizarra ? 11 : 12, fontWeight: 600, color: currentUser.color }}>{currentUser.name}</span>
+              </button>
+            )}
+            <div className={`flex p-1 rounded-xl border border-white/5 flex-wrap gap-0.5 ${isPizarra ? 'bg-transparent border-none' : 'bg-[#1C1F26]'}`}>
+              <TabBtn active={activeTab==='equipo'}   onClick={() => setActiveTab('equipo')}   icon={<Users size={14}/>}       label="Equipo"/>
+              <TabBtn active={activeTab==='tareas'}   onClick={() => setActiveTab('tareas')}   icon={<CheckSquare size={14}/>} label="Tareas"/>
+              <TabBtn active={activeTab==='snippets'} onClick={() => setActiveTab('snippets')} icon={<Code size={14}/>}        label="Snippets"/>
+              <TabBtn active={activeTab==='pizarra'}  onClick={() => setActiveTab('pizarra')}  icon={<StickyNote size={14}/>}  label="Pizarra"/>
+              <TabBtn active={activeTab==='archivos'} onClick={() => setActiveTab('archivos')} icon={<FolderOpen size={14}/>}  label="Archivos"/>
+              <TabBtn active={activeTab==='boveda'}   onClick={() => setActiveTab('boveda')} icon={<Shield size={14}/>} label="Bóveda"/>
+              <TabBtn active={activeTab==='ajustes'}  onClick={() => setActiveTab('ajustes')}  icon={<Settings size={14}/>}   label="Ajustes"/>
+            </div>
+            {!isPizarra && (
+              <button onClick={() => setIsToolkitVisible(!isToolkitVisible)} title={isToolkitVisible ? "Ocultar herramientas" : "Mostrar herramientas"} className={`p-2 rounded-xl border transition-all flex items-center justify-center ${isToolkitVisible ? 'bg-[#E85D2F]/10 border-[#E85D2F]/30 text-[#E85D2F]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                <Sparkles size={16} className={isToolkitVisible ? 'animate-pulse' : ''} />
+              </button>
+            )}
+            <button onClick={handleLogout} title="Cerrar sesión" style={{ padding:"8px 10px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, color:"#5A6270", cursor:"pointer", display:"flex", alignItems:"center", transition:"all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.color="#E85D2F"; e.currentTarget.style.borderColor="rgba(232,93,47,0.3)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="#5A6270"; e.currentTarget.style.borderColor="rgba(255,255,255,0.07)"; }}>
+              <LogOut size={15}/>
+            </button>
           </div>
-          <button onClick={() => setIsToolkitVisible(!isToolkitVisible)} title={isToolkitVisible ? "Ocultar herramientas" : "Mostrar herramientas"} className={`p-2 rounded-xl border transition-all flex items-center justify-center ${isToolkitVisible ? 'bg-[#E85D2F]/10 border-[#E85D2F]/30 text-[#E85D2F]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-            <Sparkles size={16} className={isToolkitVisible ? 'animate-pulse' : ''} />
-          </button>
-          <button onClick={handleLogout} title="Cerrar sesión" style={{ padding:"8px 10px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, color:"#5A6270", cursor:"pointer", display:"flex", alignItems:"center", transition:"all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.color="#E85D2F"; e.currentTarget.style.borderColor="rgba(232,93,47,0.3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color="#5A6270"; e.currentTarget.style.borderColor="rgba(255,255,255,0.07)"; }}>
-            <LogOut size={15}/>
-          </button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 overflow-hidden">
+      <div className={`flex-1 overflow-hidden ${isPizarra ? '' : 'flex flex-col lg:flex-row gap-6'}`}>
+        <div className="flex-1 h-full overflow-hidden">
           {activeTab==='equipo' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionEquipo members={members} tasks={tasks} /></div>}
           {activeTab==='tareas' && (
             <SectionTareas tasks={filteredTasks} members={members} filterMember={taskFilterMember}
@@ -883,17 +893,44 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; members: Member[];
   onAddNote: () => void; onDeleteNote: (n: Note) => void; onDeleteImage: (img: BoardImage) => void;
   onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void;
-  onDragNote: (id: string, x: number, y: number) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
+  onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
-  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'>('select');
+  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [offset, setOffset]     = useState({ x:0, y:0 });
   const [zoom, setZoom]         = useState(1);
   const [selectedId, setSelectedId] = useState<string|null>(null);
+  const [currentColor, setCurrentColor] = useState('#F4F5F7');
+  const [editingText, setEditingText] = useState<{ x: number, y: number, content: string } | null>(null);
+  
+  const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const saveText = () => {
+    if (!editingText) return;
+    if (editingText.content.trim()) {
+      pushToHistory();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const worldX = (editingText.x - rect.left - offset.x) / zoom;
+        const worldY = (editingText.y - rect.top - offset.y) / zoom;
+        onSaveNotes([...notes, { 
+          id: crypto.randomUUID(), 
+          content: editingText.content, 
+          authorId: members[0]?.id || '', 
+          createdAt: Date.now(), 
+          x: worldX, 
+          y: worldY, 
+          color: currentColor, 
+          type: 'text' 
+        }]);
+      }
+    }
+    setEditingText(null);
+  };
 
   const zoomIn  = () => setZoom(p => Math.min(p+0.1, 3));
   const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.3));
@@ -967,14 +1004,61 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
     return () => window.removeEventListener('resize', resize);
   }, [drawings, offset, zoom]);
 
+  // Infinite Scroll & Zoom listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        // Zoom centrado en el mouse
+        const factor = Math.pow(1.1, -e.deltaY / 100);
+        const newZoom = Math.min(Math.max(zoom * factor, 0.3), 3);
+        
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldX = (mouseX - offset.x) / zoom;
+        const worldY = (mouseY - offset.y) / zoom;
+
+        setZoom(newZoom);
+        setOffset({
+          x: mouseX - worldX * newZoom,
+          y: mouseY - worldY * newZoom
+        });
+      } else {
+        // Pan (Infinite Scroll)
+        setOffset(prev => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY
+        }));
+      }
+    };
+
+    container.addEventListener('wheel', handleWheelNative, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheelNative);
+  }, [zoom, offset]);
+
   const onMD=(e:React.MouseEvent)=>{
-    if (tool==='select') { const t=e.target as HTMLElement; if (t===canvasRef.current||t===containerRef.current) setSelectedId(null); }
+    if (tool==='select') {
+      const t = e.target as HTMLElement;
+      // Si el click es directamente en el fondo o en el wrapper de items (no en un item)
+      if (t === canvasRef.current || t === containerRef.current || (t.parentElement === containerRef.current)) {
+        setSelectedId(null);
+      }
+    }
     if (tool==='hand') { setIsPanning(true); return; }
     if (tool==='pencil'||tool==='eraser') {
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
-      onSaveDrawings([...drawings, { points:[{x,y}], color:tool==='eraser'?'#0A0C0F':'#E85D2F', width:(tool==='eraser'?30:3)/zoom }]);
+      onSaveDrawings([...drawings, { points:[{x,y}], color:tool==='eraser'?'#0A0C0F':currentColor, width:(tool==='eraser'?30:3)/zoom }]);
+    }
+    if (tool==='text') {
+      if (editingText) return; 
+      setEditingText({ x: e.clientX, y: e.clientY, content: '' });
     }
   };
   const onMM=(e:React.MouseEvent)=>{
@@ -989,38 +1073,78 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':'default';
 
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2 bg-[#1C1F26] p-1.5 rounded-xl border border-white/5">
-          <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<ChevronRight size={16} className="-rotate-45"/>} title="Seleccionar"/>
-          <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Users size={16}/>} title="Mano"/>
-          <div className="w-px h-5 bg-white/5 mx-0.5"/>
-          <ToolBtn active={false} onClick={zoomIn}    icon={<ZoomIn size={16}/>}  title="Zoom +"/>
-          <ToolBtn active={false} onClick={zoomOut}   icon={<ZoomOut size={16}/>} title="Zoom -"/>
-          <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={16}/>} title="Reset zoom"/>
-          <span className="text-[10px] text-gray-500 font-bold px-2">{Math.round(zoom*100)}%</span>
-          <div className="w-px h-5 bg-white/5 mx-0.5"/>
-          <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<Code size={16}/>}   title="Lápiz"/>
-          <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Trash2 size={16}/>} title="Borrador"/>
-          <div className="w-px h-5 bg-white/5 mx-0.5"/>
-          <button onClick={onClearAll} className="p-1.5 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all" title="Limpiar todo"><RefreshCw size={15}/></button>
+    <div className="h-full relative overflow-hidden">
+      {/* Floating Color Palette (Left Center) */}
+      {(tool === 'pencil' || tool === 'text') && (
+        <div className="fixed left-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3 bg-[#1C1F26]/60 backdrop-blur-xl p-3 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 rotate-180 [writing-mode:vertical-lr]">Colores</div>
+          {colors.map(c => (
+            <button key={c} onClick={() => setCurrentColor(c)} 
+              className={`w-7 h-7 rounded-full border-2 transition-all ${currentColor === c ? 'border-white scale-125 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-transparent hover:scale-110'}`}
+              style={{ background: c }} />
+          ))}
         </div>
-        <ButtonBase onClick={onAddNote} className="flex items-center gap-2"><Plus size={16}/> Agregar Nota</ButtonBase>
-      </div>
+      )}
+
+      {/* Floating Toolbar (Bottom Center) */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3">
+        <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<ChevronRight size={18} className="-rotate-45"/>} title="Seleccionar"/>
+            <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Users size={18}/>} title="Mano"/>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={false} onClick={zoomIn}    icon={<ZoomIn size={18}/>}  title="Zoom +"/>
+            <ToolBtn active={false} onClick={zoomOut}   icon={<ZoomOut size={18}/>} title="Zoom -"/>
+            <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={18}/>} title="Reset view"/>
+            <span className="text-[11px] text-gray-400 font-bold px-2 min-w-[45px] text-center">{Math.round(zoom*100)}%</span>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Code size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>}   title="Lápiz"/>
+            <ToolBtn active={tool==='text'} onClick={()=>setTool('text')} icon={<FileText size={18}/>} title="Texto (Teclado)"/>
+            <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Trash2 size={18}/>} title="Borrador"/>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><RefreshCw size={17}/></button>
+          </div>
+          <button onClick={onAddNote} className="bg-[#E85D2F] hover:bg-[#FF6B3D] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
+            <Plus size={22}/>
+          </button>
+        </div>
+
       <div ref={containerRef}
-        style={{ background:"#0A0C0F", backgroundImage:`radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)`, backgroundSize:`${24*zoom}px ${24*zoom}px`, backgroundPosition:`${offset.x}px ${offset.y}px`, border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, cursor:getCursor(), position:'relative', overflow:'hidden', flex:1 }}
+        style={{ width: '100%', height: '100%', background:"#0A0C0F", backgroundImage:`radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)`, backgroundSize:`${24*zoom}px ${24*zoom}px`, backgroundPosition:`${offset.x}px ${offset.y}px`, cursor:getCursor(), position:'relative', overflow:'hidden' }}
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
-        <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none' }}>
+        
+        <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
           {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} onSelect={()=>setSelectedId(img.id)}/>)}
           {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} onSelect={()=>setSelectedId(note.id)}/>)}
         </div>
-        {notes.length===0&&drawings.length===0&&images.length===0&&(
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none opacity-10">
-            <StickyNote size={64}/><p className="text-xl font-bold uppercase tracking-widest">Pizarra colaborativa</p>
-            <p className="text-sm">Dibuja, agrega notas o pega imágenes</p>
+
+        {/* Text Editor (Fixed for reliability) */}
+        {editingText && (
+          <div 
+            className="fixed inset-0 z-[2000] cursor-default"
+            onMouseDown={(e) => {
+               // Si clica fuera del textarea, guardar y cerrar
+               if (e.target === e.currentTarget) {
+                 saveText();
+               }
+            }}>
+            <textarea
+              autoFocus
+              className="absolute bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
+              style={{ left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, outline: 'none' }}
+              value={editingText.content}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  saveText();
+                }
+                if (e.key === 'Escape') setEditingText(null);
+              }}
+              onChange={(e) => setEditingText({ ...editingText, content: e.target.value })}
+            />
           </div>
         )}
+
+        <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 20 }}/>
       </div>
     </div>
   );
@@ -1345,38 +1469,97 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, onSelect }:
   },[isDragging,resizeDir,pos,image.id,onDrag,zoom,image.width,image.height]);
   return (
     <div style={{ position:'absolute',left:pos.x,top:pos.y,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isDragging?'grabbing':'grab'),boxShadow:isSelected?`0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)`:"0 10px 30px rgba(0,0,0,0.3)",pointerEvents:'auto' }}
-      onMouseDown={()=>{ if(disabled)return; onSelect(); setIsDragging(true); }} className="group select-none">
-      <img src={image.src} className="w-full h-full object-cover rounded-xl border border-white/10" draggable="false"/>
+      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); onSelect(); setIsDragging(true); }} className="group select-none">
+      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
-          className={`absolute w-3 h-3 bg-white rounded-full border-2 border-[#E85D2F] z-50 ${dir==='nw'?'-top-1.5 -left-1.5 cursor-nw-resize':dir==='ne'?'-top-1.5 -right-1.5 cursor-ne-resize':dir==='sw'?'-bottom-1.5 -left-1.5 cursor-sw-resize':'-bottom-1.5 -right-1.5 cursor-se-resize'}`}/>
+          className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
       ))}
     </div>
   );
 }
 
 function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, onSelect }: any) {
-  const [pos, setPos] = useState({ x:note.x, y:note.y });
   const [isDragging, setIsDragging] = useState(false);
-  const author = members.find((m:any) => m.id===note.authorId);
-  useEffect(()=>{
-    const onMM=(e:MouseEvent)=>{ if(!isDragging)return; setPos(p=>({x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom})); };
-    const onMU=()=>{ if(isDragging){setIsDragging(false);onDrag(note.id,pos.x,pos.y);} };
-    if(isDragging){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
-    return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
-  },[isDragging,pos,note.id,onDrag,zoom]);
+  const [resizeDir, setResizeDir] = useState<string|null>(null);
+  const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18 });
+  const author = members.find((m: any) => m.id === note.authorId);
+
+  useEffect(() => {
+    const onMM = (e: MouseEvent) => {
+      if (isDragging) {
+        setPos(p => ({ ...p, x: p.x + e.movementX / zoom, y: p.y + e.movementY / zoom }));
+      } else if (resizeDir) {
+        const dx = e.movementX / zoom;
+        const dy = e.movementY / zoom;
+        const factor = (resizeDir.includes('e') ? dx : -dx) + (resizeDir.includes('s') ? dy : -dy);
+        setPos(p => ({
+          ...p,
+          x: resizeDir.includes('w') ? p.x + dx : p.x,
+          y: resizeDir.includes('n') ? p.y + dy : p.y,
+          fs: Math.max(8, Math.min(1000, p.fs + factor * 0.5))
+        }));
+      }
+    };
+    const onMU = () => {
+      if (isDragging || resizeDir) {
+        onDrag(note.id, pos.x, pos.y, { fontSize: pos.fs });
+        setIsDragging(false);
+        setResizeDir(null);
+      }
+    };
+    if (isDragging || resizeDir) {
+      window.addEventListener('mousemove', onMM);
+      window.addEventListener('mouseup', onMU);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMM);
+      window.removeEventListener('mouseup', onMU);
+    };
+  }, [isDragging, resizeDir, pos, note.id, onDrag, zoom]);
+
+  const isText = note.type === 'text';
+
   return (
-    <div style={{ position:'absolute',left:pos.x,top:pos.y,background:"#1C1F26",border:`1px solid ${note.color}40`,width:220,boxShadow:isSelected?`0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)`:"0 10px 30px rgba(0,0,0,0.5)",zIndex:isDragging?50:10,cursor:disabled?'inherit':(isDragging?'grabbing':'grab'),transform:`rotate(${((note.createdAt%10)-5)/2}deg)`,pointerEvents:'auto' }}
-      onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; onSelect(); setIsDragging(true); }}
-      className="rounded-xl p-4 select-none">
-      <div className="flex items-center gap-2 mb-3">
-        {author
-          ? <AvatarImg seed={author.avatarSeed || author.name} name={author.name} color={author.color} size={20} borderRadius={6} />
-          : <div style={{ width:20, height:20, borderRadius:6, background: note.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:800, color:'#fff' }}>?</div>
-        }
-        <span className="text-[10px] text-gray-400 font-bold">{author?.name}</span>
-      </div>
-      <p className="text-gray-200 text-xs leading-relaxed whitespace-pre-wrap">{note.content}</p>
+    <div style={{ 
+      position:'absolute',
+      left:pos.x,
+      top:pos.y,
+      background: isText ? 'transparent' : "#1C1F26",
+      border: isText ? (isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px solid transparent') : `1px solid ${note.color}40`,
+      width: isText ? 'auto' : 220,
+      transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
+      pointerEvents:'auto' 
+    }}
+      onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); onSelect(); setIsDragging(true); }}
+      className={`${isText ? 'rounded-none px-1.5 py-0' : 'rounded-xl p-4'} select-none group`}>
+      
+      {isSelected && isText && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
+        <div key={dir} 
+          onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
+          className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-10 
+            ${dir === 'nw' ? '-top-1 -left-1 cursor-nw-resize' : ''}
+            ${dir === 'ne' ? '-top-1 -right-1 cursor-ne-resize' : ''}
+            ${dir === 'sw' ? '-bottom-1 -left-1 cursor-sw-resize' : ''}
+            ${dir === 'se' ? '-bottom-1 -right-1 cursor-se-resize' : ''}
+          `}
+        />
+      ))}
+
+      {!isText && (
+        <div className="flex items-center gap-2 mb-3">
+          {author
+            ? <AvatarImg seed={author.avatarSeed || author.name} name={author.name} color={author.color} size={20} borderRadius={6} />
+            : <div style={{ width:20, height:20, borderRadius:6, background: note.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:800, color:'#fff' }}>?</div>
+          }
+          <span className="text-[10px] text-gray-400 font-bold">{author?.name}</span>
+        </div>
+      )}
+      
+      <p className={`whitespace-pre-wrap ${isText ? 'font-bold leading-tight' : 'text-xs text-gray-200 leading-relaxed'}`} 
+         style={{ color: isText ? note.color : (isText ? '#fff' : 'inherit'), fontSize: isText ? pos.fs : undefined }}>
+        {note.content}
+      </p>
     </div>
   );
 }
