@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users, CheckSquare, Code, StickyNote, Plus, Trash2, UserPlus,
@@ -1704,7 +1704,9 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
   const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18 });
+  const [tbSnap, setTbSnap] = useState({ t: 0, b: 0 });
   const author = members.find((m: any) => m.id === note.authorId);
+  const isText = note.type === 'text';
 
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x: note.x, y: note.y, fs: note.fontSize || 18 });
@@ -1743,7 +1745,35 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
     };
   }, [isDragging, resizeDir, pos, note.id, onDrag, zoom]);
 
-  const isText = note.type === 'text';
+  useLayoutEffect(() => {
+    if (!isText) return;
+    // Measure where the CSS alphabetic baseline actually sits within a line-height:1 box
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;` +
+      `font:bold ${pos.fs}px "DM Sans",system-ui,sans-serif;line-height:1;padding:0;border:0;margin:0;`;
+    const sTop = document.createElement('span');
+    sTop.style.cssText = 'vertical-align:top;display:inline-block;height:0;width:0;';
+    const sBl = document.createElement('span');
+    sBl.style.cssText = 'vertical-align:baseline;display:inline-block;height:0;width:0;';
+    probe.appendChild(sTop);
+    probe.appendChild(sBl);
+    document.body.appendChild(probe);
+    const baselineY = sBl.getBoundingClientRect().top - sTop.getBoundingClientRect().top;
+    document.body.removeChild(probe);
+    // actualBoundingBoxAscent/Descent are always relative to the alphabetic baseline
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.font = `bold ${pos.fs}px "DM Sans", system-ui, sans-serif`;
+    const sample = note.content.trim() || 'Ay';
+    const m = ctx.measureText(sample);
+    const aba = m.actualBoundingBoxAscent ?? pos.fs * 0.56;
+    const abd = m.actualBoundingBoxDescent ?? 0;
+    const t = Math.max(0, baselineY - aba);
+    const b = Math.max(0, pos.fs - baselineY - abd);
+    setTbSnap(prev => (Math.abs(prev.t - t) > 0.4 || Math.abs(prev.b - b) > 0.4) ? { t, b } : prev);
+  }, [pos.fs, note.content, isText]);
+
   const ndx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const ndy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
 
@@ -1754,27 +1784,41 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       top:pos.y + ndy,
       background: isText ? 'transparent' : "#1C1F26",
       border: isText
-        ? (isSelected ? '1px dashed rgba(255,255,255,0.4)' : isInMultiSelect ? '1px dashed rgba(232,93,47,0.6)' : '1px solid transparent')
+        ? '1px solid transparent'
         : (isInMultiSelect ? `1px dashed rgba(232,93,47,0.7)` : `1px solid ${note.color}40`),
       boxShadow: isInMultiSelect && !isSelected ? '0 0 0 1.5px rgba(232,93,47,0.4), 0 0 18px rgba(232,93,47,0.15)' : undefined,
       width: isText ? 'auto' : 220,
       transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
-      pointerEvents:'auto' 
+      pointerEvents:'auto'
     }}
       onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
-      className={`${isText ? 'rounded-none px-1.5 py-0' : 'rounded-xl p-4'} select-none group`}>
-      
-      {isSelected && isText && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
-        <div key={dir} 
-          onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
-          className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-10 
-            ${dir === 'nw' ? '-top-1 -left-1 cursor-nw-resize' : ''}
-            ${dir === 'ne' ? '-top-1 -right-1 cursor-ne-resize' : ''}
-            ${dir === 'sw' ? '-bottom-1 -left-1 cursor-sw-resize' : ''}
-            ${dir === 'se' ? '-bottom-1 -right-1 cursor-se-resize' : ''}
-          `}
-        />
-      ))}
+      className={`${isText ? 'rounded-none p-0' : 'rounded-xl p-4'} select-none group`}>
+
+      {isText && (isSelected || isInMultiSelect) && (
+        <div style={{
+          position: 'absolute',
+          top: tbSnap.t,
+          bottom: tbSnap.b,
+          left: 0,
+          right: 0,
+          border: isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px dashed rgba(232,93,47,0.6)',
+          pointerEvents: 'none',
+          borderRadius: 2,
+        }}>
+          {isSelected && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
+            <div key={dir}
+              onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
+              style={{ pointerEvents: 'all' }}
+              className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-10 rounded-sm
+                ${dir === 'nw' ? '-top-1 -left-1 cursor-nw-resize' : ''}
+                ${dir === 'ne' ? '-top-1 -right-1 cursor-ne-resize' : ''}
+                ${dir === 'sw' ? '-bottom-1 -left-1 cursor-sw-resize' : ''}
+                ${dir === 'se' ? '-bottom-1 -right-1 cursor-se-resize' : ''}
+              `}
+            />
+          ))}
+        </div>
+      )}
 
       {!isText && (
         <div className="flex items-center gap-2 mb-3">
@@ -1786,8 +1830,8 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
         </div>
       )}
       
-      <p className={`whitespace-pre-wrap ${isText ? 'font-bold leading-tight' : 'text-xs text-gray-200 leading-relaxed'}`} 
-         style={{ color: isText ? note.color : (isText ? '#fff' : 'inherit'), fontSize: isText ? pos.fs : undefined }}>
+      <p className={`whitespace-pre-wrap ${isText ? 'font-bold' : 'text-xs text-gray-200 leading-relaxed'}`}
+         style={{ color: isText ? note.color : undefined, fontSize: isText ? pos.fs : undefined, lineHeight: isText ? 1 : undefined, margin: 0, padding: 0 }}>
         {note.content}
       </p>
     </div>
