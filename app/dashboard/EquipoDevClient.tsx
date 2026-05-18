@@ -1795,28 +1795,53 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
 }
 
 // ─── Dev Shapes ───────────────────────────────────────────────────────────────
+// defaultW/H proporcionales al viewBox de cada forma (vb = "x y w h")
 const DEV_SHAPES = [
-  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 95  },
-  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 95  },
-  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 75  },
-  { type: 'monitor',      label: 'Computadora',     defaultW: 110, defaultH: 90  },
-  { type: 'mobile',       label: 'Móvil',           defaultW: 60,  defaultH: 100 },
-  { type: 'browser',      label: 'Browser',         defaultW: 110, defaultH: 80  },
-  { type: 'terminal',     label: 'Terminal',        defaultW: 110, defaultH: 80  },
-  { type: 'api',          label: 'API',             defaultW: 100, defaultH: 70  },
-  { type: 'microservice', label: 'Microservicio',   defaultW: 90,  defaultH: 90  },
-  { type: 'router',       label: 'Router',          defaultW: 85,  defaultH: 85  },
-  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 100, defaultH: 85  },
-  { type: 'docker',       label: 'Docker',          defaultW: 90,  defaultH: 80  },
-  { type: 'git',          label: 'Git',             defaultW: 90,  defaultH: 80  },
-  { type: 'user',         label: 'Usuario',         defaultW: 70,  defaultH: 85  },
-  { type: 'globe',        label: 'Internet',        defaultW: 85,  defaultH: 85  },
-  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 85  },
-  { type: 'storage',      label: 'Almacenamiento',  defaultW: 90,  defaultH: 70  },
-  { type: 'queue',        label: 'Queue',           defaultW: 95,  defaultH: 75  },
-  { type: 'cache',        label: 'Caché',           defaultW: 85,  defaultH: 75  },
-  { type: 'firewall',     label: 'Firewall',        defaultW: 85,  defaultH: 90  },
+  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70  },  // vb 32×28
+  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82  },  // vb 34×35
+  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64  },  // vb 35×23
+  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96  },  // vb 36×32
+  { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95  },  // vb 20×38
+  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102 },  // vb 36×34
+  { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102 },  // vb 36×34
+  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63  },  // vb 40×23
+  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96  },  // vb 30×36
+  { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90  },  // vb 38×38
+  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82  },  // vb 34×29
+  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82  },  // vb 38×31
+  { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88  },  // vb 36×36
+  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91  },  // vb 30×34
+  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88  },  // vb 34×34
+  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90  },  // vb 24×31
+  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64  },  // vb 32×24 (ajustado)
+  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84  },  // vb 38×32
+  { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88  },  // vb 34×34
+  { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93  },  // vb 32×37
 ];
+
+// viewBox ajustado al contenido real de cada forma (sin márgenes sobrantes)
+const SHAPE_VB: Record<string, string> = {
+  database:     '4 2 32 28',
+  server:       '3 2 34 35',
+  cloud:        '8 11 35 23',
+  monitor:      '2 2 36 32',
+  mobile:       '10 1 20 38',
+  browser:      '2 3 36 34',
+  terminal:     '2 3 36 34',
+  api:          '0 8 40 23',
+  microservice: '5 2 30 36',
+  router:       '1 1 38 38',
+  loadbalancer: '3 3 34 29',
+  docker:       '2 5 38 31',
+  git:          '2 2 36 36',
+  user:         '5 4 30 34',
+  globe:        '3 3 34 34',
+  lock:         '8 5 24 31',
+  storage:      '4 5 32 24',
+  queue:        '2 4 38 32',
+  cache:        '3 3 34 34',
+  firewall:     '4 2 32 37',
+};
 
 function ShapeSvg({ type, color, width, height }: { type: string; color: string; width: number; height: number }) {
   const s = color, f = color + '22', sw = 2;
@@ -1843,7 +1868,7 @@ function ShapeSvg({ type, color, width, height }: { type: string; color: string;
     firewall: <><path d="M20 3 L35 11 L35 27 Q35 35 20 38 Q5 35 5 27 L5 11 Z" stroke={s} strokeWidth={sw} fill={f}/><line x1="5" y1="18" x2="35" y2="18" stroke={s} strokeWidth="1.5" opacity="0.55"/><line x1="5" y1="24" x2="35" y2="24" stroke={s} strokeWidth="1.5" opacity="0.55"/><line x1="12" y1="11" x2="12" y2="35" stroke={s} strokeWidth="1.5" opacity="0.4"/><line x1="20" y1="11" x2="20" y2="38" stroke={s} strokeWidth="1.5" opacity="0.4"/><line x1="28" y1="11" x2="28" y2="35" stroke={s} strokeWidth="1.5" opacity="0.4"/></>,
   };
   return (
-    <svg viewBox="0 0 40 40" width={width} height={height} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox={SHAPE_VB[type] ?? '0 0 40 40'} width={width} height={height} fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
       {el[type] ?? null}
     </svg>
   );
