@@ -35,6 +35,7 @@ interface Snippet { id: string; title: string; content: string; label: 'env' | '
 interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; }
 interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; }
 interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; }
+interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; }
 interface SharedFile { id: string; name: string; type: string; size: number; dataUrl: string; x: number; y: number; createdAt: number; authorName: string; }
 
 type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'boveda' | 'ajustes';
@@ -80,6 +81,7 @@ export default function EquipoDevClient() {
   const [notes, setNotes]               = useState<Note[]>([]);
   const [drawings, setDrawings]         = useState<DrawingPath[]>([]);
   const [boardImages, setBoardImages]   = useState<BoardImage[]>([]);
+  const [boardShapes, setBoardShapes]   = useState<BoardShape[]>([]);
   const [archivos, setArchivos]         = useState<SharedFile[]>([]);
   const [vaultProjects, setVaultProjects] = useState<VaultProject[]>([]);
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
@@ -139,6 +141,7 @@ export default function EquipoDevClient() {
     const n = load("velsat_dev_notes");    if (n) setNotes(n);
     const d = load("velsat_dev_drawings"); if (d) setDrawings(d);
     const i = load("velsat_dev_images");   if (i) setBoardImages(i);
+    const sh = load("velsat_dev_shapes");  if (sh) setBoardShapes(sh);
     const a = load("velsat_dev_archivos"); if (a) setArchivos(a);
     const v = load("velsat_dev_vault");    if (v) setVaultProjects(v);
 
@@ -156,6 +159,7 @@ export default function EquipoDevClient() {
   const saveNotes    = (d: Note[])        => { localStorage.setItem("velsat_dev_notes",    JSON.stringify(d)); setNotes(d); };
   const saveDrawings = (d: DrawingPath[]) => { localStorage.setItem("velsat_dev_drawings", JSON.stringify(d)); setDrawings(d); };
   const saveImages   = (d: BoardImage[])  => { try { localStorage.setItem("velsat_dev_images", JSON.stringify(d)); setBoardImages(d); } catch { toast.error("Imagen demasiado grande"); } };
+  const saveShapes   = (d: BoardShape[])  => { try { localStorage.setItem("velsat_dev_shapes", JSON.stringify(d)); setBoardShapes(d); } catch { toast.error("Error guardando formas"); } };
   const saveArchivos = (d: SharedFile[])  => { try { localStorage.setItem("velsat_dev_archivos", JSON.stringify(d)); setArchivos(d); } catch { toast.error("Archivo demasiado grande"); } };
   const saveVault    = (d: VaultProject[]) => { localStorage.setItem("velsat_dev_vault",    JSON.stringify(d)); setVaultProjects(d); };
 
@@ -404,7 +408,7 @@ export default function EquipoDevClient() {
               onClearCompleted={handleClearCompleted}/>
           )}
           {activeTab==='snippets' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionSnippets snippets={filteredSnippets} search={snippetSearch} setSearch={setSnippetSearch} members={members} onAddSnippet={() => { setEditingSnippet(null); setOpenSnippetModal(true); }} onEditSnippet={s => { setEditingSnippet(s); setOpenSnippetModal(true); }} onCopy={handleCopySnippet} onDeleteSnippet={s => { setDeleteConfig({type:'snippet',id:s.id,name:s.title}); setOpenDeleteModal(true); }}/></div>}
-          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); toast.success("Pizarra limpiada"); }}/>}
+          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} shapes={boardShapes} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onSaveShapes={saveShapes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]); toast.success("Pizarra limpiada"); }}/>}
           {activeTab==='archivos' && <SectionArchivos archivos={archivos} members={members} currentUser={currentUser} onSave={saveArchivos}/>}
           {activeTab==='boveda' && <SectionBoveda projects={vaultProjects} isUnlocked={isVaultUnlocked} onUnlock={setIsVaultUnlocked} onSaveVault={saveVault} onAddProject={() => { setEditingVaultProject(null); setOpenVaultModal(true); }} onEditProject={p => { setEditingVaultProject(p); setOpenVaultModal(true); }} onDeleteProject={p => { setDeleteConfig({type:'vault',id:p.id,name:p.name}); setOpenDeleteModal(true); }} />}
           {activeTab==='ajustes' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionAjustes members={members} onAddMember={() => setOpenMemberModal(true)} onDeleteMember={m => { setDeleteConfig({type:'member',id:m.id,name:m.name}); setOpenDeleteModal(true); }} onChangeAvatar={handleChangeAvatar}/></div>}
@@ -889,10 +893,10 @@ function SectionSnippets({ snippets, search, setSearch, members, onAddSnippet, o
 }
 
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
-function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
-  notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; members: Member[];
+function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
+  notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; shapes: BoardShape[]; members: Member[];
   onAddNote: () => void; onDeleteNote: (n: Note) => void; onDeleteImage: (img: BoardImage) => void;
-  onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void;
+  onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void; onSaveShapes: (s: BoardShape[]) => void;
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
@@ -911,6 +915,8 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   const [selectedPathIndices, setSelectedPathIndices] = useState<Set<number>>(new Set());
   const [multiDragActive, setMultiDragActive]     = useState(false);
   const [multiDragDelta, setMultiDragDelta]       = useState({x:0, y:0});
+  const [showShapesPanel, setShowShapesPanel]     = useState(false);
+  const [panelDrag, setPanelDrag] = useState<{ type: string; startX: number; startY: number; clientX: number; clientY: number } | null>(null);
   
   const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -943,6 +949,45 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.3));
   const resetZoom = () => { setZoom(1); setOffset({x:0,y:0}); };
 
+  const handleAddShape = (type: string) => {
+    const info = DEV_SHAPES.find(s => s.type === type);
+    if (!info) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
+    const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
+    onSaveShapes([...shapes, { id: crypto.randomUUID(), type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+    setShowShapesPanel(false);
+  };
+
+  useEffect(() => {
+    if (!panelDrag) return;
+    const onMove = (e: MouseEvent) => setPanelDrag(d => d ? { ...d, clientX: e.clientX, clientY: e.clientY } : null);
+    const onUp = (e: MouseEvent) => {
+      if (!panelDrag) return;
+      const moved = Math.hypot(e.clientX - panelDrag.startX, e.clientY - panelDrag.startY);
+      const info = DEV_SHAPES.find(s => s.type === panelDrag.type);
+      if (info) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (moved < 8) {
+          // Click corto → colocar en centro del canvas
+          const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
+          const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+        } else if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          // Drag hasta el canvas → colocar donde se soltó
+          const wx = (e.clientX - rect.left - offset.x) / zoom - info.defaultW / 2;
+          const wy = (e.clientY - rect.top - offset.y) / zoom - info.defaultH / 2;
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: wx, y: wy, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+        }
+      }
+      setPanelDrag(null);
+      setShowShapesPanel(false);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [panelDrag, offset, zoom, shapes, onSaveShapes, currentColor]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
@@ -951,6 +996,7 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
         if (selectedIds.size > 0 || selectedPathIndices.size > 0) {
           onSaveNotes(notes.filter(n => !selectedIds.has(n.id)));
           onSaveImages(images.filter(i => !selectedIds.has(i.id)));
+          onSaveShapes(shapes.filter(s => !selectedIds.has(s.id)));
           if (selectedPathIndices.size > 0) onSaveDrawings(drawings.filter((_: any, idx: number) => !selectedPathIndices.has(idx)));
           setSelectedIds(new Set()); setSelectedPathIndices(new Set());
         } else {
@@ -1092,6 +1138,11 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
               minX = Math.min(minX, img.x); minY = Math.min(minY, img.y);
               maxX = Math.max(maxX, img.x + img.width); maxY = Math.max(maxY, img.y + img.height);
             });
+            shapes.forEach(s => {
+              if (!selectedIds.has(s.id)) return;
+              minX = Math.min(minX, s.x); minY = Math.min(minY, s.y);
+              maxX = Math.max(maxX, s.x + s.width); maxY = Math.max(maxY, s.y + s.height + 20);
+            });
             if (minX !== Infinity && wx >= minX && wx <= maxX && wy >= minY && wy <= maxY) {
               onMultiDragStart();
               return;
@@ -1162,6 +1213,7 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
         const {x: ddx, y: ddy} = multiDragDelta;
         onSaveNotes(notes.map(n => selectedIds.has(n.id) ? {...n, x: n.x+ddx, y: n.y+ddy} : n));
         onSaveImages(images.map(img => selectedIds.has(img.id) ? {...img, x: img.x+ddx, y: img.y+ddy} : img));
+        onSaveShapes(shapes.map(s => selectedIds.has(s.id) ? {...s, x: s.x+ddx, y: s.y+ddy} : s));
         if (selectedPathIndices.size > 0) {
           onSaveDrawings(drawings.map((p, idx) => selectedPathIndices.has(idx)
             ? {...p, points: p.points.map(pt => ({x: pt.x+ddx, y: pt.y+ddy}))}
@@ -1187,6 +1239,9 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
         images.forEach(img => {
           if (img.x < mx+mw && img.x+img.width > mx && img.y < my+mh && img.y+img.height > my) newIds.add(img.id);
         });
+        shapes.forEach(s => {
+          if (s.x < mx+mw && s.x+s.width > mx && s.y < my+mh && s.y+s.height > my) newIds.add(s.id);
+        });
         const newPaths = new Set<number>();
         drawings.forEach((p, idx) => {
           if (p.points.some(pt => pt.x >= mx && pt.x <= mx+mw && pt.y >= my && pt.y <= my+mh)) newPaths.add(idx);
@@ -1205,6 +1260,16 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
 
   return (
     <div className="h-full relative overflow-hidden">
+      {/* Shapes Panel (Right Center) */}
+      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} />
+
+      {/* Ghost mientras arrastra desde el panel */}
+      {panelDrag && (
+        <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(232,93,47,0.4))' }}>
+          <ShapeSvg type={panelDrag.type} color={currentColor} width={44} height={44}/>
+        </div>
+      )}
+
       {/* Floating Color Palette (Left Center) */}
       {(tool === 'pencil' || tool === 'text') && (
         <div className="fixed left-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3 bg-[#1C1F26]/60 backdrop-blur-xl p-3 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
@@ -1244,6 +1309,7 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
         
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
+          {shapes.map(s => <DraggableShape key={s.id} shape={s} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
           {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
           {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
@@ -1724,6 +1790,148 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
          style={{ color: isText ? note.color : (isText ? '#fff' : 'inherit'), fontSize: isText ? pos.fs : undefined }}>
         {note.content}
       </p>
+    </div>
+  );
+}
+
+// ─── Dev Shapes ───────────────────────────────────────────────────────────────
+const DEV_SHAPES = [
+  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 95  },
+  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 95  },
+  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 75  },
+  { type: 'monitor',      label: 'Computadora',     defaultW: 110, defaultH: 90  },
+  { type: 'mobile',       label: 'Móvil',           defaultW: 60,  defaultH: 100 },
+  { type: 'browser',      label: 'Browser',         defaultW: 110, defaultH: 80  },
+  { type: 'terminal',     label: 'Terminal',        defaultW: 110, defaultH: 80  },
+  { type: 'api',          label: 'API',             defaultW: 100, defaultH: 70  },
+  { type: 'microservice', label: 'Microservicio',   defaultW: 90,  defaultH: 90  },
+  { type: 'router',       label: 'Router',          defaultW: 85,  defaultH: 85  },
+  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 100, defaultH: 85  },
+  { type: 'docker',       label: 'Docker',          defaultW: 90,  defaultH: 80  },
+  { type: 'git',          label: 'Git',             defaultW: 90,  defaultH: 80  },
+  { type: 'user',         label: 'Usuario',         defaultW: 70,  defaultH: 85  },
+  { type: 'globe',        label: 'Internet',        defaultW: 85,  defaultH: 85  },
+  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 85  },
+  { type: 'storage',      label: 'Almacenamiento',  defaultW: 90,  defaultH: 70  },
+  { type: 'queue',        label: 'Queue',           defaultW: 95,  defaultH: 75  },
+  { type: 'cache',        label: 'Caché',           defaultW: 85,  defaultH: 75  },
+  { type: 'firewall',     label: 'Firewall',        defaultW: 85,  defaultH: 90  },
+];
+
+function ShapeSvg({ type, color, width, height }: { type: string; color: string; width: number; height: number }) {
+  const s = color, f = color + '22', sw = 2;
+  const el: Record<string, React.ReactNode> = {
+    database: <><ellipse cx="20" cy="8" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/><rect x="5" y="8" width="30" height="20" fill={f} stroke="none"/><line x1="5" y1="8" x2="5" y2="28" stroke={s} strokeWidth={sw}/><line x1="35" y1="8" x2="35" y2="28" stroke={s} strokeWidth={sw}/><ellipse cx="20" cy="18" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/><ellipse cx="20" cy="28" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/></>,
+    server: <><rect x="4" y="3" width="32" height="9" rx="2" stroke={s} strokeWidth={sw} fill={f}/><circle cx="30" cy="7.5" r="1.5" fill={s}/><rect x="4" y="15" width="32" height="9" rx="2" stroke={s} strokeWidth={sw} fill={f}/><circle cx="30" cy="19.5" r="1.5" fill={s}/><rect x="4" y="27" width="32" height="9" rx="2" stroke={s} strokeWidth={sw} fill={f}/><circle cx="30" cy="31.5" r="1.5" fill={s}/></>,
+    cloud: <path d="M9 29 Q9 21 17 21 Q18 12 26 12 Q35 12 36 21 Q42 21 42 27 Q42 33 36 33 H14 Q9 33 9 29 Z" stroke={s} strokeWidth={sw} fill={f}/>,
+    monitor: <><rect x="3" y="3" width="34" height="24" rx="2" stroke={s} strokeWidth={sw} fill={f}/><line x1="3" y1="22" x2="37" y2="22" stroke={s} strokeWidth={sw}/><line x1="20" y1="27" x2="20" y2="33" stroke={s} strokeWidth={sw}/><line x1="13" y1="33" x2="27" y2="33" stroke={s} strokeWidth={sw}/></>,
+    mobile: <><rect x="11" y="2" width="18" height="36" rx="4" stroke={s} strokeWidth={sw} fill={f}/><circle cx="20" cy="33" r="2" stroke={s} strokeWidth={sw} fill="none"/><line x1="16" y1="6" x2="24" y2="6" stroke={s} strokeWidth={sw} strokeLinecap="round"/></>,
+    browser: <><rect x="3" y="4" width="34" height="32" rx="3" stroke={s} strokeWidth={sw} fill={f}/><line x1="3" y1="13" x2="37" y2="13" stroke={s} strokeWidth={sw}/><circle cx="8" cy="8.5" r="1.5" fill={s} opacity="0.7"/><circle cx="13" cy="8.5" r="1.5" fill={s} opacity="0.7"/><rect x="18" y="6" width="15" height="5" rx="2" stroke={s} strokeWidth="1" fill="none" opacity="0.5"/></>,
+    terminal: <><rect x="3" y="4" width="34" height="32" rx="3" stroke={s} strokeWidth={sw} fill={f}/><line x1="3" y1="13" x2="37" y2="13" stroke={s} strokeWidth={sw}/><circle cx="8" cy="8.5" r="1.5" fill="#E74C3C"/><circle cx="13" cy="8.5" r="1.5" fill="#F1C40F"/><circle cx="18" cy="8.5" r="1.5" fill="#2ECC71"/><text x="7" y="25" fill={s} fontSize="9" fontFamily="monospace" opacity="0.9">$ _</text></>,
+    api: <><rect x="5" y="9" width="30" height="22" rx="4" stroke={s} strokeWidth={sw} fill={f}/><text x="20" y="23" textAnchor="middle" fill={s} fontSize="9" fontWeight="bold" fontFamily="monospace" dominantBaseline="middle">API</text><path d="M1 15 L5 20 L1 25" stroke={s} strokeWidth={sw} fill="none"/><path d="M39 15 L35 20 L39 25" stroke={s} strokeWidth={sw} fill="none"/></>,
+    microservice: <polygon points="20,3 34,11 34,29 20,37 6,29 6,11" stroke={s} strokeWidth={sw} fill={f}/>,
+    router: <><circle cx="20" cy="20" r="10" stroke={s} strokeWidth={sw} fill={f}/><line x1="20" y1="4" x2="20" y2="10" stroke={s} strokeWidth={sw}/><line x1="20" y1="30" x2="20" y2="36" stroke={s} strokeWidth={sw}/><line x1="4" y1="20" x2="10" y2="20" stroke={s} strokeWidth={sw}/><line x1="30" y1="20" x2="36" y2="20" stroke={s} strokeWidth={sw}/><circle cx="20" cy="3" r="2" fill={s}/><circle cx="20" cy="37" r="2" fill={s}/><circle cx="3" cy="20" r="2" fill={s}/><circle cx="37" cy="20" r="2" fill={s}/></>,
+    loadbalancer: <><path d="M20 4 L36 16 H4 Z" stroke={s} strokeWidth={sw} fill={f}/><line x1="20" y1="16" x2="10" y2="26" stroke={s} strokeWidth={sw}/><line x1="20" y1="16" x2="20" y2="26" stroke={s} strokeWidth={sw}/><line x1="20" y1="16" x2="30" y2="26" stroke={s} strokeWidth={sw}/><circle cx="10" cy="30" r="4" stroke={s} strokeWidth={sw} fill={f}/><circle cx="20" cy="30" r="4" stroke={s} strokeWidth={sw} fill={f}/><circle cx="30" cy="30" r="4" stroke={s} strokeWidth={sw} fill={f}/></>,
+    docker: <><rect x="3" y="16" width="30" height="18" rx="3" stroke={s} strokeWidth={sw} fill={f}/><rect x="7" y="20" width="5" height="5" rx="1" stroke={s} strokeWidth={sw} fill="none"/><rect x="14" y="20" width="5" height="5" rx="1" stroke={s} strokeWidth={sw} fill="none"/><rect x="21" y="20" width="5" height="5" rx="1" stroke={s} strokeWidth={sw} fill="none"/><rect x="14" y="12" width="5" height="5" rx="1" stroke={s} strokeWidth={sw} fill="none"/><rect x="21" y="12" width="5" height="5" rx="1" stroke={s} strokeWidth={sw} fill="none"/><path d="M33 18 Q39 14 35 8" stroke={s} strokeWidth={sw} fill="none"/><circle cx="35" cy="6" r="2" fill={s}/></>,
+    git: <><circle cx="8" cy="32" r="5" stroke={s} strokeWidth={sw} fill={f}/><circle cx="8" cy="8" r="5" stroke={s} strokeWidth={sw} fill={f}/><circle cx="32" cy="18" r="5" stroke={s} strokeWidth={sw} fill={f}/><line x1="8" y1="13" x2="8" y2="27" stroke={s} strokeWidth={sw}/><path d="M8 13 Q10 4 16 5 L27 14" stroke={s} strokeWidth={sw} fill="none"/></>,
+    user: <><circle cx="20" cy="13" r="8" stroke={s} strokeWidth={sw} fill={f}/><path d="M6 37 Q6 25 20 25 Q34 25 34 37" stroke={s} strokeWidth={sw} fill={f}/></>,
+    globe: <><circle cx="20" cy="20" r="16" stroke={s} strokeWidth={sw} fill={f}/><ellipse cx="20" cy="20" rx="7" ry="16" stroke={s} strokeWidth={sw} fill="none"/><line x1="4" y1="20" x2="36" y2="20" stroke={s} strokeWidth={sw}/><path d="M6 13 Q20 17 34 13" stroke={s} strokeWidth={sw} fill="none"/><path d="M6 27 Q20 23 34 27" stroke={s} strokeWidth={sw} fill="none"/></>,
+    lock: <><rect x="9" y="18" width="22" height="17" rx="3" stroke={s} strokeWidth={sw} fill={f}/><path d="M13 18 V13 Q13 6 20 6 Q27 6 27 13 V18" stroke={s} strokeWidth={sw} fill="none"/><circle cx="20" cy="26" r="2.5" fill={s}/><line x1="20" y1="26" x2="20" y2="31" stroke={s} strokeWidth={sw}/></>,
+    storage: <><ellipse cx="20" cy="12" rx="15" ry="6" stroke={s} strokeWidth={sw} fill={f}/><rect x="5" y="12" width="30" height="15" fill={f} stroke="none"/><line x1="5" y1="12" x2="5" y2="27" stroke={s} strokeWidth={sw}/><line x1="35" y1="12" x2="35" y2="27" stroke={s} strokeWidth={sw}/><ellipse cx="20" cy="27" rx="15" ry="6" stroke={s} strokeWidth={sw} fill={f}/><line x1="9" y1="17" x2="20" y2="17" stroke={s} strokeWidth="1.5" opacity="0.5"/></>,
+    queue: <><rect x="3" y="5" width="30" height="8" rx="2" stroke={s} strokeWidth={sw} fill={f}/><rect x="3" y="16" width="30" height="8" rx="2" stroke={s} strokeWidth={sw} fill={f}/><rect x="3" y="27" width="30" height="8" rx="2" stroke={s} strokeWidth={sw} fill={f}/><path d="M35 9 L39 20 L35 31" stroke={s} strokeWidth={sw} fill="none" strokeLinecap="round"/></>,
+    cache: <><circle cx="20" cy="20" r="16" stroke={s} strokeWidth={sw} fill={f}/><path d="M16 9 L12 20 H18 L14 31 L28 17 H22 L26 9 Z" stroke={s} strokeWidth="1.5" fill={s} opacity="0.45"/></>,
+    firewall: <><path d="M20 3 L35 11 L35 27 Q35 35 20 38 Q5 35 5 27 L5 11 Z" stroke={s} strokeWidth={sw} fill={f}/><line x1="5" y1="18" x2="35" y2="18" stroke={s} strokeWidth="1.5" opacity="0.55"/><line x1="5" y1="24" x2="35" y2="24" stroke={s} strokeWidth="1.5" opacity="0.55"/><line x1="12" y1="11" x2="12" y2="35" stroke={s} strokeWidth="1.5" opacity="0.4"/><line x1="20" y1="11" x2="20" y2="38" stroke={s} strokeWidth="1.5" opacity="0.4"/><line x1="28" y1="11" x2="28" y2="35" stroke={s} strokeWidth="1.5" opacity="0.4"/></>,
+  };
+  return (
+    <svg viewBox="0 0 40 40" width={width} height={height} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {el[type] ?? null}
+    </svg>
+  );
+}
+
+function DraggableShape({ shape, onSave, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+  const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
+  const [isDragging, setIsDragging] = useState(false);
+  const [resizeDir, setResizeDir] = useState<string|null>(null);
+  const info = DEV_SHAPES.find(s => s.type === shape.type);
+
+  useEffect(() => {
+    if (!isDragging && !resizeDir) setPos({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
+  }, [shape.x, shape.y, shape.width, shape.height]);
+
+  useEffect(() => {
+    const onMM = (e: MouseEvent) => {
+      if (isDragging) setPos(p => ({ ...p, x: p.x + e.movementX/zoom, y: p.y + e.movementY/zoom }));
+      if (resizeDir) setPos(p => {
+        let { x, y, w, h } = p;
+        const dx = e.movementX/zoom, dy = e.movementY/zoom;
+        if (resizeDir.includes('e')) w += dx; if (resizeDir.includes('w')) { x += dx; w -= dx; }
+        if (resizeDir.includes('s')) h += dy; if (resizeDir.includes('n')) { y += dy; h -= dy; }
+        return { x, y, w: Math.max(40, w), h: Math.max(40, h) };
+      });
+    };
+    const onMU = () => { if (isDragging || resizeDir) { setIsDragging(false); setResizeDir(null); onSave(shape.id, pos.x, pos.y, pos.w, pos.h); } };
+    if (isDragging || resizeDir) { window.addEventListener('mousemove', onMM); window.addEventListener('mouseup', onMU); }
+    return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); };
+  }, [isDragging, resizeDir, pos, shape.id, onSave, zoom]);
+
+  const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
+  const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
+  const border = isSelected
+    ? '1px dashed rgba(255,255,255,0.4)'
+    : isInMultiSelect
+    ? '1px dashed rgba(232,93,47,0.6)'
+    : '1px solid transparent';
+
+  return (
+    <div style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: isDragging?49:9, userSelect:'none', pointerEvents:'auto' }}
+      onMouseDown={e => { if (disabled) return; e.stopPropagation(); if (isInMultiSelect) { onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
+      className="group select-none">
+      <div style={{ position:'relative', width: pos.w, height: pos.h, border, borderRadius: 3 }}>
+        <ShapeSvg type={shape.type} color={shape.color} width={pos.w} height={pos.h} />
+        {isSelected && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
+          <div key={dir} onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
+            className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 rounded-sm
+              ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
+        ))}
+      </div>
+      <span style={{ fontSize: 9, color: shape.color, fontWeight: 700, marginTop: 4, fontFamily: "'DM Sans', sans-serif", opacity: 0.85, pointerEvents:'none', letterSpacing:'0.02em' }}>
+        {shape.label ?? info?.label}
+      </span>
+    </div>
+  );
+}
+
+function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor }: { isVisible: boolean; onToggle: () => void; onAddShape: (t:string)=>void; onDragStart: (t:string, e:React.MouseEvent)=>void; defaultColor: string }) {
+  return (
+    <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
+      <button onClick={onToggle}
+        title="Formas de desarrollo"
+        style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#E85D2F' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#E85D2F':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
+        onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(232,93,47,0.5)'; } }}
+        onMouseLeave={e=>{ if (!isVisible) { e.currentTarget.style.color='#8A9099'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'; } }}>
+        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+      {isVisible && (
+        <div style={{ position:'absolute', right:'calc(100% + 12px)', top:'50%', transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:210, boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:10 }}>
+          <p style={{ fontSize:10, fontWeight:800, color:'#5A6270', textTransform:'uppercase', letterSpacing:'0.1em', margin:0, padding:'0 2px' }}>Formas Dev — clic o arrastra</p>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            {DEV_SHAPES.map(sh => (
+              <button key={sh.type}
+                title={sh.label}
+                onMouseDown={e => { e.preventDefault(); onDragStart(sh.type, e); }}
+                style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
+                onMouseEnter={e=>{ e.currentTarget.style.background='rgba(232,93,47,0.12)'; e.currentTarget.style.borderColor='rgba(232,93,47,0.4)'; e.currentTarget.style.transform='scale(1.04)'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background='rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; e.currentTarget.style.transform='scale(1)'; }}>
+                <ShapeSvg type={sh.type} color={defaultColor} width={34} height={34}/>
+                <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none' }}>{sh.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
