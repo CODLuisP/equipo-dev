@@ -1074,9 +1074,10 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             drawings.forEach((p, idx) => {
               if (!selectedPathIndices.has(idx)) return;
+              const pad = (p.width / 2 + 6) / zoom;
               p.points.forEach(pt => {
-                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
-                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+                minX = Math.min(minX, pt.x - pad); minY = Math.min(minY, pt.y - pad);
+                maxX = Math.max(maxX, pt.x + pad); maxY = Math.max(maxY, pt.y + pad);
               });
             });
             notes.forEach(n => {
@@ -1093,6 +1094,19 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
             });
             if (minX !== Infinity && wx >= minX && wx <= maxX && wy >= minY && wy <= maxY) {
               onMultiDragStart();
+              return;
+            }
+          }
+
+          // Hit test: clic cerca de un trazo de lápiz → seleccionarlo directamente
+          for (let idx = drawings.length - 1; idx >= 0; idx--) {
+            const p = drawings[idx];
+            const hitDist = Math.max(p.width / 2 + 5, 8 / zoom);
+            const isHit = p.points.some(pt => Math.hypot(pt.x - wx, pt.y - wy) <= hitDist);
+            if (isHit) {
+              setSelectedPathIndices(new Set([idx]));
+              setSelectedIds(new Set());
+              setSelectedId(null);
               return;
             }
           }
