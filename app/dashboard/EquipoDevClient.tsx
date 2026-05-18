@@ -36,6 +36,7 @@ interface Note { id: string; content: string; authorId: string; createdAt: numbe
 interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; }
 interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; }
 interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; }
+interface CustomShape { id: string; label: string; svgContent: string; viewBox: string; defaultW: number; defaultH: number; }
 interface SharedFile { id: string; name: string; type: string; size: number; dataUrl: string; x: number; y: number; createdAt: number; authorName: string; }
 
 type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'boveda' | 'ajustes';
@@ -82,6 +83,7 @@ export default function EquipoDevClient() {
   const [drawings, setDrawings]         = useState<DrawingPath[]>([]);
   const [boardImages, setBoardImages]   = useState<BoardImage[]>([]);
   const [boardShapes, setBoardShapes]   = useState<BoardShape[]>([]);
+  const [customShapes, setCustomShapes] = useState<CustomShape[]>([]);
   const [archivos, setArchivos]         = useState<SharedFile[]>([]);
   const [vaultProjects, setVaultProjects] = useState<VaultProject[]>([]);
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
@@ -142,6 +144,7 @@ export default function EquipoDevClient() {
     const d = load("velsat_dev_drawings"); if (d) setDrawings(d);
     const i = load("velsat_dev_images");   if (i) setBoardImages(i);
     const sh = load("velsat_dev_shapes");  if (sh) setBoardShapes(sh);
+    const cs = load("velsat_custom_shapes"); if (cs) setCustomShapes(cs);
     const a = load("velsat_dev_archivos"); if (a) setArchivos(a);
     const v = load("velsat_dev_vault");    if (v) setVaultProjects(v);
 
@@ -159,7 +162,8 @@ export default function EquipoDevClient() {
   const saveNotes    = (d: Note[])        => { localStorage.setItem("velsat_dev_notes",    JSON.stringify(d)); setNotes(d); };
   const saveDrawings = (d: DrawingPath[]) => { localStorage.setItem("velsat_dev_drawings", JSON.stringify(d)); setDrawings(d); };
   const saveImages   = (d: BoardImage[])  => { try { localStorage.setItem("velsat_dev_images", JSON.stringify(d)); setBoardImages(d); } catch { toast.error("Imagen demasiado grande"); } };
-  const saveShapes   = (d: BoardShape[])  => { try { localStorage.setItem("velsat_dev_shapes", JSON.stringify(d)); setBoardShapes(d); } catch { toast.error("Error guardando formas"); } };
+  const saveShapes       = (d: BoardShape[])   => { try { localStorage.setItem("velsat_dev_shapes",   JSON.stringify(d)); setBoardShapes(d); } catch { toast.error("Error guardando formas"); } };
+  const saveCustomShapes = (d: CustomShape[])  => { try { localStorage.setItem("velsat_custom_shapes", JSON.stringify(d)); setCustomShapes(d); } catch { toast.error("Error guardando forma custom"); } };
   const saveArchivos = (d: SharedFile[])  => { try { localStorage.setItem("velsat_dev_archivos", JSON.stringify(d)); setArchivos(d); } catch { toast.error("Archivo demasiado grande"); } };
   const saveVault    = (d: VaultProject[]) => { localStorage.setItem("velsat_dev_vault",    JSON.stringify(d)); setVaultProjects(d); };
 
@@ -408,7 +412,7 @@ export default function EquipoDevClient() {
               onClearCompleted={handleClearCompleted}/>
           )}
           {activeTab==='snippets' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionSnippets snippets={filteredSnippets} search={snippetSearch} setSearch={setSnippetSearch} members={members} onAddSnippet={() => { setEditingSnippet(null); setOpenSnippetModal(true); }} onEditSnippet={s => { setEditingSnippet(s); setOpenSnippetModal(true); }} onCopy={handleCopySnippet} onDeleteSnippet={s => { setDeleteConfig({type:'snippet',id:s.id,name:s.title}); setOpenDeleteModal(true); }}/></div>}
-          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} shapes={boardShapes} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onSaveShapes={saveShapes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]); toast.success("Pizarra limpiada"); }}/>}
+          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} shapes={boardShapes} customShapes={customShapes} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onSaveShapes={saveShapes} onSaveCustomShapes={saveCustomShapes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]); toast.success("Pizarra limpiada"); }}/>}
           {activeTab==='archivos' && <SectionArchivos archivos={archivos} members={members} currentUser={currentUser} onSave={saveArchivos}/>}
           {activeTab==='boveda' && <SectionBoveda projects={vaultProjects} isUnlocked={isVaultUnlocked} onUnlock={setIsVaultUnlocked} onSaveVault={saveVault} onAddProject={() => { setEditingVaultProject(null); setOpenVaultModal(true); }} onEditProject={p => { setEditingVaultProject(p); setOpenVaultModal(true); }} onDeleteProject={p => { setDeleteConfig({type:'vault',id:p.id,name:p.name}); setOpenDeleteModal(true); }} />}
           {activeTab==='ajustes' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionAjustes members={members} onAddMember={() => setOpenMemberModal(true)} onDeleteMember={m => { setDeleteConfig({type:'member',id:m.id,name:m.name}); setOpenDeleteModal(true); }} onChangeAvatar={handleChangeAvatar}/></div>}
@@ -893,10 +897,10 @@ function SectionSnippets({ snippets, search, setSearch, members, onAddSnippet, o
 }
 
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
-function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
-  notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; shapes: BoardShape[]; members: Member[];
+function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
+  notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; shapes: BoardShape[]; customShapes: CustomShape[]; members: Member[];
   onAddNote: () => void; onDeleteNote: (n: Note) => void; onDeleteImage: (img: BoardImage) => void;
-  onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void; onSaveShapes: (s: BoardShape[]) => void;
+  onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void; onSaveShapes: (s: BoardShape[]) => void; onSaveCustomShapes: (s: CustomShape[]) => void;
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
@@ -949,14 +953,65 @@ function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, o
   const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.3));
   const resetZoom = () => { setZoom(1); setOffset({x:0,y:0}); };
 
+  const resolveShapeInfo = (type: string) => {
+    const builtin = DEV_SHAPES.find(s => s.type === type);
+    if (builtin) return { defaultW: builtin.defaultW, defaultH: builtin.defaultH, color: builtin.color, label: builtin.label };
+    const custom = customShapes.find(s => s.id === type);
+    if (custom) return { defaultW: custom.defaultW, defaultH: custom.defaultH, color: currentColor, label: custom.label };
+    return null;
+  };
+
   const handleAddShape = (type: string) => {
-    const info = DEV_SHAPES.find(s => s.type === type);
+    const info = resolveShapeInfo(type);
     if (!info) return;
     const rect = containerRef.current?.getBoundingClientRect();
     const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
     const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
-    onSaveShapes([...shapes, { id: crypto.randomUUID(), type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+    onSaveShapes([...shapes, { id: crypto.randomUUID(), type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
     setShowShapesPanel(false);
+  };
+
+  const handleSaveSelectionAsShape = () => {
+    if (selectedPathIndices.size === 0) return;
+    const label = prompt('Nombre de la forma:', 'Mi Forma') || 'Mi Forma';
+    const paths = [...selectedPathIndices].map(i => drawings[i]).filter(Boolean);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    paths.forEach(p => p.points.forEach((pt: {x:number;y:number}) => { minX=Math.min(minX,pt.x); minY=Math.min(minY,pt.y); maxX=Math.max(maxX,pt.x); maxY=Math.max(maxY,pt.y); }));
+    const bw = maxX - minX || 1, bh = maxY - minY || 1;
+    const norm = (x: number, y: number) => ({ x: ((x-minX)/bw*100).toFixed(2), y: ((y-minY)/bh*100).toFixed(2) });
+    const svgContent = paths.map((p: DrawingPath) => {
+      const d = p.points.map((pt: {x:number;y:number}, i: number) => { const n = norm(pt.x, pt.y); return `${i===0?'M':'L'}${n.x},${n.y}`; }).join(' ');
+      return `<path d="${d}" stroke="${p.color}" stroke-width="${p.width}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }).join('');
+    const aspect = bw / bh;
+    const dw = Math.min(Math.round(aspect >= 1 ? 100 : 100*aspect), 120);
+    const dh = Math.min(Math.round(aspect >= 1 ? 100/aspect : 100), 120);
+    onSaveCustomShapes([...customShapes, { id: crypto.randomUUID(), label, svgContent, viewBox: '0 0 100 100', defaultW: dw, defaultH: dh }]);
+    toast.success(`"${label}" guardada en el panel de formas`);
+  };
+
+  const handleImportSvg = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        if (!svgEl) { toast.error('SVG inválido'); return; }
+        const vb = svgEl.getAttribute('viewBox') || `0 0 ${svgEl.getAttribute('width')||100} ${svgEl.getAttribute('height')||100}`;
+        svgEl.querySelectorAll('script').forEach(s => s.remove());
+        svgEl.querySelectorAll('*').forEach(el => { Array.from(el.attributes).filter(a=>a.name.startsWith('on')).forEach(a=>el.removeAttribute(a.name)); });
+        const [,,vw,vh] = vb.split(/[\s,]+/).map(Number);
+        const aspect = (vw||1)/(vh||1);
+        const dw = Math.round(aspect>=1 ? 100 : 100*aspect);
+        const dh = Math.round(aspect>=1 ? 100/aspect : 100);
+        const label = file.name.replace(/\.svg$/i,'');
+        onSaveCustomShapes([...customShapes, { id: crypto.randomUUID(), label, svgContent: svgEl.innerHTML, viewBox: vb, defaultW: dw, defaultH: dh }]);
+        toast.success(`"${label}" importada al panel`);
+      } catch { toast.error('Error leyendo el SVG'); }
+    };
+    reader.readAsText(file);
   };
 
   useEffect(() => {
@@ -965,19 +1020,17 @@ function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, o
     const onUp = (e: MouseEvent) => {
       if (!panelDrag) return;
       const moved = Math.hypot(e.clientX - panelDrag.startX, e.clientY - panelDrag.startY);
-      const info = DEV_SHAPES.find(s => s.type === panelDrag.type);
+      const info = resolveShapeInfo(panelDrag.type);
       if (info) {
         const rect = containerRef.current?.getBoundingClientRect();
         if (moved < 8) {
-          // Click corto → colocar en centro del canvas
           const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
           const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
-          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
         } else if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          // Drag hasta el canvas → colocar donde se soltó
           const wx = (e.clientX - rect.left - offset.x) / zoom - info.defaultW / 2;
           const wy = (e.clientY - rect.top - offset.y) / zoom - info.defaultH / 2;
-          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: wx, y: wy, width: info.defaultW, height: info.defaultH, color: currentColor, label: info.label }]);
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: wx, y: wy, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
         }
       }
       setPanelDrag(null);
@@ -986,7 +1039,7 @@ function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, o
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [panelDrag, offset, zoom, shapes, onSaveShapes, currentColor]);
+  }, [panelDrag, offset, zoom, shapes, onSaveShapes, currentColor, customShapes]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1261,12 +1314,12 @@ function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, o
   return (
     <div className="h-full relative overflow-hidden">
       {/* Shapes Panel (Right Center) */}
-      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} />
+      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onImportSvg={handleImportSvg} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
 
       {/* Ghost mientras arrastra desde el panel */}
       {panelDrag && (
         <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(232,93,47,0.4))' }}>
-          <ShapeSvg type={panelDrag.type} color={currentColor} width={44} height={44}/>
+          <ShapeSvg type={panelDrag.type} color={resolveShapeInfo(panelDrag.type)?.color ?? currentColor} width={44} height={44} customTemplates={customShapes}/>
         </div>
       )}
 
@@ -1309,7 +1362,7 @@ function SectionPizarra({ notes, drawings, images, shapes, members, onAddNote, o
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
         
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
-          {shapes.map(s => <DraggableShape key={s.id} shape={s} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
           {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
           {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
@@ -1841,26 +1894,26 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
 // ─── Dev Shapes ───────────────────────────────────────────────────────────────
 // defaultW/H proporcionales al viewBox de cada forma (vb = "x y w h")
 const DEV_SHAPES = [
-  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70  },  // vb 32×28
-  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82  },  // vb 34×35
-  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64  },  // vb 35×23
-  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96  },  // vb 36×32
-  { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95  },  // vb 20×38
-  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102 },  // vb 36×34
-  { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102 },  // vb 36×34
-  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63  },  // vb 40×23
-  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96  },  // vb 30×36
-  { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90  },  // vb 38×38
-  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82  },  // vb 34×29
-  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82  },  // vb 38×31
-  { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88  },  // vb 36×36
-  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91  },  // vb 30×34
-  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88  },  // vb 34×34
-  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90  },  // vb 24×31
-  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64  },  // vb 32×24 (ajustado)
-  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84  },  // vb 38×32
-  { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88  },  // vb 34×34
-  { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93  },  // vb 32×37
+  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70,  color: '#F39C12' },
+  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82,  color: '#95A5A6' },
+  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64,  color: '#5DADE2' },
+  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96,  color: '#85C1E9' },
+  { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95,  color: '#2ECC71' },
+  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102, color: '#3498DB' },
+  { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102, color: '#1ABC9C' },
+  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63,  color: '#E67E22' },
+  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96,  color: '#9B59B6' },
+  { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90,  color: '#E74C3C' },
+  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82,  color: '#E85D2F' },
+  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82,  color: '#2980B9' },
+  { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88,  color: '#E74C3C' },
+  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91,  color: '#85C1E9' },
+  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88,  color: '#5DADE2' },
+  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90,  color: '#F1C40F' },
+  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64,  color: '#95A5A6' },
+  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84,  color: '#E67E22' },
+  { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88,  color: '#1ABC9C' },
+  { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93,  color: '#E74C3C' },
 ];
 
 // viewBox ajustado al contenido real de cada forma (sin márgenes sobrantes)
@@ -1887,7 +1940,16 @@ const SHAPE_VB: Record<string, string> = {
   firewall:     '4 2 32 37',
 };
 
-function ShapeSvg({ type, color, width, height }: { type: string; color: string; width: number; height: number }) {
+function ShapeSvg({ type, color, width, height, customTemplates }: { type: string; color: string; width: number; height: number; customTemplates?: CustomShape[] }) {
+  const custom = customTemplates?.find(t => t.id === type);
+  if (custom) {
+    return (
+      <svg viewBox={custom.viewBox} width={width} height={height}
+        xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
+        dangerouslySetInnerHTML={{ __html: custom.svgContent }}
+      />
+    );
+  }
   const s = color, f = color + '22', sw = 2;
   const el: Record<string, React.ReactNode> = {
     database: <><ellipse cx="20" cy="8" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/><rect x="5" y="8" width="30" height="20" fill={f} stroke="none"/><line x1="5" y1="8" x2="5" y2="28" stroke={s} strokeWidth={sw}/><line x1="35" y1="8" x2="35" y2="28" stroke={s} strokeWidth={sw}/><ellipse cx="20" cy="18" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/><ellipse cx="20" cy="28" rx="15" ry="5" stroke={s} strokeWidth={sw} fill={f}/></>,
@@ -1918,7 +1980,7 @@ function ShapeSvg({ type, color, width, height }: { type: string; color: string;
   );
 }
 
-function DraggableShape({ shape, onSave, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -1957,7 +2019,7 @@ function DraggableShape({ shape, onSave, disabled, zoom, isSelected, isInMultiSe
       onMouseDown={e => { if (disabled) return; e.stopPropagation(); if (isInMultiSelect) { onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       className="group select-none">
       <div style={{ position:'relative', width: pos.w, height: pos.h, border, borderRadius: 3 }}>
-        <ShapeSvg type={shape.type} color={shape.color} width={pos.w} height={pos.h} />
+        <ShapeSvg type={shape.type} color={shape.color} width={pos.w} height={pos.h} customTemplates={customTemplates} />
         {isSelected && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
           <div key={dir} onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
             className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 rounded-sm
@@ -1971,11 +2033,16 @@ function DraggableShape({ shape, onSave, disabled, zoom, isSelected, isInMultiSe
   );
 }
 
-function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor }: { isVisible: boolean; onToggle: () => void; onAddShape: (t:string)=>void; onDragStart: (t:string, e:React.MouseEvent)=>void; defaultColor: string }) {
+function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor, customTemplates, onDeleteCustom, onImportSvg, selectedPathCount, onSaveSelectionAsShape }: {
+  isVisible: boolean; onToggle: () => void; onAddShape: (t:string)=>void; onDragStart: (t:string, e:React.MouseEvent)=>void; defaultColor: string;
+  customTemplates: CustomShape[]; onDeleteCustom: (id:string)=>void; onImportSvg: (f:File)=>void;
+  selectedPathCount: number; onSaveSelectionAsShape: ()=>void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
   return (
     <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
-      <button onClick={onToggle}
-        title="Formas de desarrollo"
+      <input ref={fileRef} type="file" accept=".svg,image/svg+xml" style={{ display:'none' }} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImportSvg(f); e.target.value=''; }}/>
+      <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#E85D2F' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#E85D2F':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
         onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(232,93,47,0.5)'; } }}
         onMouseLeave={e=>{ if (!isVisible) { e.currentTarget.style.color='#8A9099'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'; } }}>
@@ -1984,21 +2051,77 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         </svg>
       </button>
       {isVisible && (
-        <div style={{ position:'absolute', right:'calc(100% + 12px)', top:'50%', transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:210, boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:10 }}>
-          <p style={{ fontSize:10, fontWeight:800, color:'#5A6270', textTransform:'uppercase', letterSpacing:'0.1em', margin:0, padding:'0 2px' }}>Formas Dev — clic o arrastra</p>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-            {DEV_SHAPES.map(sh => (
-              <button key={sh.type}
-                title={sh.label}
-                onMouseDown={e => { e.preventDefault(); onDragStart(sh.type, e); }}
-                style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
-                onMouseEnter={e=>{ e.currentTarget.style.background='rgba(232,93,47,0.12)'; e.currentTarget.style.borderColor='rgba(232,93,47,0.4)'; e.currentTarget.style.transform='scale(1.04)'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background='rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; e.currentTarget.style.transform='scale(1)'; }}>
-                <ShapeSvg type={sh.type} color={defaultColor} width={34} height={34}/>
-                <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none' }}>{sh.label}</span>
+        <div style={{ position:'absolute', right:'calc(100% + 12px)', top:'50%', transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:226, maxHeight:'80vh', overflowY:'auto', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:12 }}>
+
+          {/* Acciones */}
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={()=>fileRef.current?.click()}
+              title="Importar SVG como forma"
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(93,173,226,0.12)', border:'1px solid rgba(93,173,226,0.3)', borderRadius:9, cursor:'pointer', color:'#5DADE2', fontSize:10, fontWeight:700 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(93,173,226,0.22)';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(93,173,226,0.12)';}}>
+              <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 2v8M5 6l3-4 3 4"/><rect x="2" y="10" width="12" height="4" rx="1.5"/></svg>
+              Importar SVG
+            </button>
+            {selectedPathCount > 0 && (
+              <button onClick={onSaveSelectionAsShape}
+                title="Guardar selección de lapiz como forma"
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(46,204,113,0.12)', border:'1px solid rgba(46,204,113,0.3)', borderRadius:9, cursor:'pointer', color:'#2ECC71', fontSize:10, fontWeight:700 }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(46,204,113,0.22)';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(46,204,113,0.12)';}}>
+                <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 13 Q3 3 8 3 Q13 3 13 8 Q13 13 8 13 Q3 13 3 8"/><path d="M8 6v4M6 8h4"/></svg>
+                Guardar trazo
               </button>
-            ))}
+            )}
           </div>
+
+          {/* Formas custom */}
+          {customTemplates.length > 0 && (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <p style={{ fontSize:10, fontWeight:800, color:'#2ECC71', textTransform:'uppercase', letterSpacing:'0.1em', margin:0, padding:'0 2px' }}>Mis Formas</p>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                {customTemplates.map(sh => (
+                  <div key={sh.id} style={{ position:'relative' }}>
+                    <button
+                      title={sh.label}
+                      onMouseDown={e => { e.preventDefault(); onDragStart(sh.id, e); }}
+                      style={{ width:'100%', display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(46,204,113,0.05)', border:'1px solid rgba(46,204,113,0.15)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.14)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.4)'; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.05)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.15)'; }}>
+                      <ShapeSvg type={sh.id} color={defaultColor} width={34} height={34} customTemplates={customTemplates}/>
+                      <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none' }}>{sh.label}</span>
+                    </button>
+                    <button onClick={()=>onDeleteCustom(sh.id)} title="Eliminar forma"
+                      style={{ position:'absolute', top:2, right:2, width:14, height:14, borderRadius:'50%', background:'rgba(231,76,60,0.8)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', opacity:0, transition:'opacity 0.15s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.opacity='1';}}
+                      onMouseLeave={e=>{e.currentTarget.style.opacity='0';}}
+                      onFocus={e=>{e.currentTarget.style.opacity='1';}}
+                      onBlur={e=>{e.currentTarget.style.opacity='0';}}>
+                      <svg viewBox="0 0 8 8" width={8} height={8} fill="none" stroke="#fff" strokeWidth="2"><path d="M2 2l4 4M6 2l-4 4"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Formas built-in */}
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <p style={{ fontSize:10, fontWeight:800, color:'#5A6270', textTransform:'uppercase', letterSpacing:'0.1em', margin:0, padding:'0 2px' }}>Formas Dev — clic o arrastra</p>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+              {DEV_SHAPES.map(sh => (
+                <button key={sh.type} title={sh.label}
+                  onMouseDown={e => { e.preventDefault(); onDragStart(sh.type, e); }}
+                  style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
+                  onMouseEnter={e=>{ e.currentTarget.style.background=`${sh.color}18`; e.currentTarget.style.borderColor=`${sh.color}55`; e.currentTarget.style.transform='scale(1.04)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background='rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; e.currentTarget.style.transform='scale(1)'; }}>
+                  <ShapeSvg type={sh.type} color={sh.color} width={34} height={34}/>
+                  <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none' }}>{sh.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
     </div>
