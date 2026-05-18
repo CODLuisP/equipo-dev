@@ -904,6 +904,13 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   const [selectedId, setSelectedId] = useState<string|null>(null);
   const [currentColor, setCurrentColor] = useState('#F4F5F7');
   const [editingText, setEditingText] = useState<{ x: number, y: number, content: string } | null>(null);
+  const [isMarqueeing, setIsMarqueeing]           = useState(false);
+  const [marqueeStart, setMarqueeStart]           = useState<{x:number,y:number}|null>(null);
+  const [marqueeEnd, setMarqueeEnd]               = useState<{x:number,y:number}|null>(null);
+  const [selectedIds, setSelectedIds]             = useState<Set<string>>(new Set());
+  const [selectedPathIndices, setSelectedPathIndices] = useState<Set<number>>(new Set());
+  const [multiDragActive, setMultiDragActive]     = useState(false);
+  const [multiDragDelta, setMultiDragDelta]       = useState({x:0, y:0});
   
   const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -939,11 +946,18 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
-      if ((e.key==='Delete'||e.key==='Backspace') && selectedId) {
+      if ((e.key==='Delete'||e.key==='Backspace') && (selectedId || selectedIds.size > 0 || selectedPathIndices.size > 0)) {
         pushToHistory();
-        const n = notes.find(n => n.id===selectedId); if (n) onDeleteNote(n);
-        const i = images.find(i => i.id===selectedId); if (i) onDeleteImage(i);
-        setSelectedId(null);
+        if (selectedIds.size > 0 || selectedPathIndices.size > 0) {
+          onSaveNotes(notes.filter(n => !selectedIds.has(n.id)));
+          onSaveImages(images.filter(i => !selectedIds.has(i.id)));
+          if (selectedPathIndices.size > 0) onSaveDrawings(drawings.filter((_: any, idx: number) => !selectedPathIndices.has(idx)));
+          setSelectedIds(new Set()); setSelectedPathIndices(new Set());
+        } else {
+          const n = notes.find(n => n.id===selectedId); if (n) onDeleteNote(n);
+          const i = images.find(i => i.id===selectedId); if (i) onDeleteImage(i);
+          setSelectedId(null);
+        }
       }
       if (e.ctrlKey||e.metaKey) {
         if (e.key==='z') { e.preventDefault(); undo(); }
@@ -955,7 +969,7 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, notes, images, clipboard, pushToHistory, undo]);
+  }, [selectedId, selectedIds, selectedPathIndices, notes, images, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveDrawings, onDeleteNote, onDeleteImage]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -990,19 +1004,24 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
     const ctx=canvas.getContext('2d'); if (!ctx) return;
     const redraw = () => {
       ctx.clearRect(0,0,canvas.width,canvas.height); ctx.save(); ctx.translate(offset.x,offset.y); ctx.scale(zoom,zoom);
-      drawings.forEach(p => {
+      drawings.forEach((p, idx) => {
         if (p.points.length<2) return;
+        const isSel = selectedPathIndices.has(idx);
+        const pdx = isSel && multiDragActive ? multiDragDelta.x : 0;
+        const pdy = isSel && multiDragActive ? multiDragDelta.y : 0;
         ctx.beginPath(); ctx.strokeStyle=p.color; ctx.lineWidth=p.width; ctx.lineJoin='round'; ctx.lineCap='round';
-        ctx.moveTo(p.points[0].x,p.points[0].y);
-        for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x,p.points[i].y);
+        ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
+        for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
+        if (isSel) { ctx.shadowColor='#E85D2F'; ctx.shadowBlur=14/zoom; }
         ctx.stroke();
+        ctx.shadowColor='transparent'; ctx.shadowBlur=0;
       });
       ctx.restore();
     };
     const resize = () => { if (containerRef.current) { canvas.width=containerRef.current.clientWidth; canvas.height=containerRef.current.clientHeight; redraw(); } };
     window.addEventListener('resize', resize); resize();
     return () => window.removeEventListener('resize', resize);
-  }, [drawings, offset, zoom]);
+  }, [drawings, offset, zoom, selectedPathIndices, multiDragActive, multiDragDelta]);
 
   // Infinite Scroll & Zoom listener
   useEffect(() => {
@@ -1044,9 +1063,47 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
   const onMD=(e:React.MouseEvent)=>{
     if (tool==='select') {
       const t = e.target as HTMLElement;
-      // Si el click es directamente en el fondo o en el wrapper de items (no en un item)
       if (t === canvasRef.current || t === containerRef.current || (t.parentElement === containerRef.current)) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+          const wx = (e.clientX - rect.left - offset.x) / zoom;
+          const wy = (e.clientY - rect.top - offset.y) / zoom;
+
+          // Si hay selección activa, verificar si el clic está dentro del bounding box → iniciar multi-drag
+          if (selectedPathIndices.size > 0 || selectedIds.size > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            drawings.forEach((p, idx) => {
+              if (!selectedPathIndices.has(idx)) return;
+              p.points.forEach(pt => {
+                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+              });
+            });
+            notes.forEach(n => {
+              if (!selectedIds.has(n.id)) return;
+              const nw = n.type === 'text' ? 200 : 220;
+              const nh = n.type === 'text' ? 50 : 120;
+              minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+              maxX = Math.max(maxX, n.x + nw); maxY = Math.max(maxY, n.y + nh);
+            });
+            images.forEach(img => {
+              if (!selectedIds.has(img.id)) return;
+              minX = Math.min(minX, img.x); minY = Math.min(minY, img.y);
+              maxX = Math.max(maxX, img.x + img.width); maxY = Math.max(maxY, img.y + img.height);
+            });
+            if (minX !== Infinity && wx >= minX && wx <= maxX && wy >= minY && wy <= maxY) {
+              onMultiDragStart();
+              return;
+            }
+          }
+
+          setMarqueeStart({x: wx, y: wy});
+          setMarqueeEnd({x: wx, y: wy});
+          setIsMarqueeing(true);
+        }
         setSelectedId(null);
+        setSelectedIds(new Set());
+        setSelectedPathIndices(new Set());
       }
     }
     if (tool==='hand') { setIsPanning(true); return; }
@@ -1057,20 +1114,80 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
       onSaveDrawings([...drawings, { points:[{x,y}], color:tool==='eraser'?'#0A0C0F':currentColor, width:(tool==='eraser'?30:3)/zoom }]);
     }
     if (tool==='text') {
-      if (editingText) return; 
+      if (editingText) return;
       setEditingText({ x: e.clientX, y: e.clientY, content: '' });
     }
   };
+  const onMultiDragStart = () => { setMultiDragActive(true); setMultiDragDelta({x:0, y:0}); };
+
   const onMM=(e:React.MouseEvent)=>{
     if (isPanning) { setOffset(p=>({x:p.x+e.movementX,y:p.y+e.movementY})); return; }
+    if (multiDragActive) {
+      setMultiDragDelta(d => ({x: d.x + e.movementX/zoom, y: d.y + e.movementY/zoom}));
+      return;
+    }
+    if (isMarqueeing) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const wx = (e.clientX - rect.left - offset.x) / zoom;
+        const wy = (e.clientY - rect.top - offset.y) / zoom;
+        setMarqueeEnd({x: wx, y: wy});
+      }
+      return;
+    }
     if (isDrawing) {
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
       const d=[...drawings]; d[d.length-1].points.push({x,y}); onSaveDrawings(d);
     }
   };
-  const onMU=()=>{ setIsDrawing(false); setIsPanning(false); };
-  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':'default';
+  const onMU=()=>{
+    if (multiDragActive) {
+      if (multiDragDelta.x !== 0 || multiDragDelta.y !== 0) {
+        pushToHistory();
+        const {x: ddx, y: ddy} = multiDragDelta;
+        onSaveNotes(notes.map(n => selectedIds.has(n.id) ? {...n, x: n.x+ddx, y: n.y+ddy} : n));
+        onSaveImages(images.map(img => selectedIds.has(img.id) ? {...img, x: img.x+ddx, y: img.y+ddy} : img));
+        if (selectedPathIndices.size > 0) {
+          onSaveDrawings(drawings.map((p, idx) => selectedPathIndices.has(idx)
+            ? {...p, points: p.points.map(pt => ({x: pt.x+ddx, y: pt.y+ddy}))}
+            : p));
+        }
+      }
+      setMultiDragActive(false);
+      setMultiDragDelta({x:0, y:0});
+      return;
+    }
+    if (isMarqueeing && marqueeStart && marqueeEnd) {
+      const mx = Math.min(marqueeStart.x, marqueeEnd.x);
+      const my = Math.min(marqueeStart.y, marqueeEnd.y);
+      const mw = Math.abs(marqueeEnd.x - marqueeStart.x);
+      const mh = Math.abs(marqueeEnd.y - marqueeStart.y);
+      if (mw > 5 || mh > 5) {
+        const newIds = new Set<string>();
+        notes.forEach(n => {
+          const nw = n.type==='text' ? 200 : 220;
+          const nh = n.type==='text' ? 50 : 120;
+          if (n.x < mx+mw && n.x+nw > mx && n.y < my+mh && n.y+nh > my) newIds.add(n.id);
+        });
+        images.forEach(img => {
+          if (img.x < mx+mw && img.x+img.width > mx && img.y < my+mh && img.y+img.height > my) newIds.add(img.id);
+        });
+        const newPaths = new Set<number>();
+        drawings.forEach((p, idx) => {
+          if (p.points.some(pt => pt.x >= mx && pt.x <= mx+mw && pt.y >= my && pt.y <= my+mh)) newPaths.add(idx);
+        });
+        setSelectedIds(newIds);
+        setSelectedPathIndices(newPaths);
+      }
+      setIsMarqueeing(false);
+      setMarqueeStart(null);
+      setMarqueeEnd(null);
+    }
+    setIsDrawing(false);
+    setIsPanning(false);
+  };
+  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
 
   return (
     <div className="h-full relative overflow-hidden">
@@ -1113,8 +1230,8 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
         
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
-          {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} onSelect={()=>setSelectedId(img.id)}/>)}
-          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} onSelect={()=>setSelectedId(note.id)}/>)}
+          {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
 
         {/* Text Editor (Fixed for reliability) */}
@@ -1144,6 +1261,20 @@ function SectionPizarra({ notes, drawings, images, members, onAddNote, onDeleteN
           </div>
         )}
 
+        {isMarqueeing && marqueeStart && marqueeEnd && (
+          <div style={{
+            position: 'absolute',
+            left: Math.min(marqueeStart.x, marqueeEnd.x) * zoom + offset.x,
+            top:  Math.min(marqueeStart.y, marqueeEnd.y) * zoom + offset.y,
+            width:  Math.abs(marqueeEnd.x - marqueeStart.x) * zoom,
+            height: Math.abs(marqueeEnd.y - marqueeStart.y) * zoom,
+            background: 'rgba(232,93,47,0.08)',
+            border: '1.5px dashed rgba(232,93,47,0.7)',
+            borderRadius: 3,
+            pointerEvents: 'none',
+            zIndex: 30,
+          }}/>
+        )}
         <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 20 }}/>
       </div>
     </div>
@@ -1454,10 +1585,13 @@ function ToolBtn({ active, onClick, icon, title }: any) {
   return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[#E85D2F] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
 }
 
-function DraggableImage({ image, onDrag, disabled, zoom, isSelected, onSelect }: any) {
+function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const [pos, setPos] = useState({ x:image.x, y:image.y, w:image.width, h:image.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir]   = useState<string|null>(null);
+  useEffect(() => {
+    if (!isDragging && !resizeDir) setPos({ x:image.x, y:image.y, w:image.width, h:image.height });
+  }, [image.x, image.y, image.width, image.height]);
   useEffect(() => {
     const onMM=(e:MouseEvent)=>{
       if (isDragging) setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom}));
@@ -1467,10 +1601,17 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, onSelect }:
     if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
     return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
   },[isDragging,resizeDir,pos,image.id,onDrag,zoom,image.width,image.height]);
+  const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
+  const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
+  const shadow = isSelected
+    ? `0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)`
+    : isInMultiSelect
+    ? `0 0 0 2px rgba(232,93,47,0.55),0 0 24px rgba(232,93,47,0.25)`
+    : `0 10px 30px rgba(0,0,0,0.3)`;
   return (
-    <div style={{ position:'absolute',left:pos.x,top:pos.y,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isDragging?'grabbing':'grab'),boxShadow:isSelected?`0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)`:"0 10px 30px rgba(0,0,0,0.3)",pointerEvents:'auto' }}
-      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); onSelect(); setIsDragging(true); }} className="group select-none">
-      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
+    <div style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto' }}
+      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
+      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : isInMultiSelect ? 'rounded-xl border-dashed border-orange-400/60' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
@@ -1479,11 +1620,15 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, onSelect }:
   );
 }
 
-function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, onSelect }: any) {
+function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
   const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18 });
   const author = members.find((m: any) => m.id === note.authorId);
+
+  useEffect(() => {
+    if (!isDragging && !resizeDir) setPos({ x: note.x, y: note.y, fs: note.fontSize || 18 });
+  }, [note.x, note.y, note.fontSize]);
 
   useEffect(() => {
     const onMM = (e: MouseEvent) => {
@@ -1519,19 +1664,24 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, onSe
   }, [isDragging, resizeDir, pos, note.id, onDrag, zoom]);
 
   const isText = note.type === 'text';
+  const ndx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
+  const ndy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
 
   return (
-    <div style={{ 
+    <div style={{
       position:'absolute',
-      left:pos.x,
-      top:pos.y,
+      left:pos.x + ndx,
+      top:pos.y + ndy,
       background: isText ? 'transparent' : "#1C1F26",
-      border: isText ? (isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px solid transparent') : `1px solid ${note.color}40`,
+      border: isText
+        ? (isSelected ? '1px dashed rgba(255,255,255,0.4)' : isInMultiSelect ? '1px dashed rgba(232,93,47,0.6)' : '1px solid transparent')
+        : (isInMultiSelect ? `1px dashed rgba(232,93,47,0.7)` : `1px solid ${note.color}40`),
+      boxShadow: isInMultiSelect && !isSelected ? '0 0 0 1.5px rgba(232,93,47,0.4), 0 0 18px rgba(232,93,47,0.15)' : undefined,
       width: isText ? 'auto' : 220,
       transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
       pointerEvents:'auto' 
     }}
-      onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); onSelect(); setIsDragging(true); }}
+      onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       className={`${isText ? 'rounded-none px-1.5 py-0' : 'rounded-xl p-4'} select-none group`}>
       
       {isSelected && isText && !disabled && (['nw','ne','sw','se'] as const).map(dir => (

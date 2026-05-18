@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\equipo-dev\" -Depth 0 | Where-Object { $_.PSIsContainer } | Select-Object Name)"
     ]
   }
 }
