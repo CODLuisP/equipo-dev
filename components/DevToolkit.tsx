@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Terminal, Globe, Plus, Zap, Copy, ExternalLink, Activity, X } from 'lucide-react';
+import {
+  Terminal, Globe, Plus, Zap, Copy, ExternalLink, Activity, X,
+  Monitor, Utensils, PhoneCall, Coffee, DoorOpen, Moon, LogOut, Users,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -13,23 +16,55 @@ interface StagingLink {
 
 interface RadarEntry {
   userId: string; name: string; color: string; avatarSeed?: string;
-  icon: string; statusText: string; isAFK: boolean; timestamp: number;
+  iconKey: string; statusText: string; isAFK: boolean; timestamp: number;
 }
 
 interface PendingAlert extends RadarEntry { alertId: string; }
 
+// ─── Status Icons ─────────────────────────────────────────────────────────────
+
+// Custom toilet SVG (lucide doesn't have one)
+function ToiletSVG({ size = 20, color = 'currentColor', strokeWidth = 1.75 }: { size?: number; color?: string; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="7" y="2" width="10" height="5" rx="1.5"/>
+      <path d="M5 7h14"/>
+      <path d="M6 7c0 5.5 12 5.5 12 0"/>
+      <path d="M9 12.5l-1.5 7h9l-1.5-7"/>
+      <path d="M8 19.5h8"/>
+    </svg>
+  );
+}
+
+type IconKey = 'bathroom' | 'food' | 'call' | 'coffee' | 'out' | 'rest' | 'online';
+
+function StatusIcon({ iconKey, size = 18, color = 'currentColor', strokeWidth = 1.75 }: {
+  iconKey: string; size?: number; color?: string; strokeWidth?: number;
+}) {
+  const p = { size, color, strokeWidth };
+  switch (iconKey) {
+    case 'bathroom': return <ToiletSVG size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'food':     return <Utensils {...p} />;
+    case 'call':     return <PhoneCall {...p} />;
+    case 'coffee':   return <Coffee {...p} />;
+    case 'out':      return <DoorOpen {...p} />;
+    case 'rest':     return <Moon {...p} />;
+    default:         return <Monitor {...p} />;
+  }
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'velsat_radar_v2';
+const STORAGE_KEY = 'velsat_radar_v3';
 const CHANNEL_NAME = 'velsat_radar';
 
-const AFK_PRESETS = [
-  { icon: '🚽', text: 'En el baño',       color: '#E74C3C', bg: 'rgba(231,76,60,0.12)',   border: 'rgba(231,76,60,0.28)'  },
-  { icon: '🍔', text: 'Comiendo',         color: '#F39C12', bg: 'rgba(243,156,18,0.12)',  border: 'rgba(243,156,18,0.28)' },
-  { icon: '📞', text: 'En llamada',       color: '#9B59B6', bg: 'rgba(155,89,182,0.12)', border: 'rgba(155,89,182,0.28)'  },
-  { icon: '☕', text: 'Tomando café',     color: '#E67E22', bg: 'rgba(230,126,34,0.12)',  border: 'rgba(230,126,34,0.28)' },
-  { icon: '🏃', text: 'Salí un momento', color: '#3498DB', bg: 'rgba(52,152,219,0.12)',  border: 'rgba(52,152,219,0.28)' },
-  { icon: '🛌', text: 'Descansando',      color: '#8E44AD', bg: 'rgba(142,68,173,0.12)', border: 'rgba(142,68,173,0.28)'  },
+const AFK_PRESETS: { iconKey: IconKey; text: string; color: string; bg: string; border: string }[] = [
+  { iconKey: 'bathroom', text: 'En el baño',       color: '#E74C3C', bg: 'rgba(231,76,60,0.12)',   border: 'rgba(231,76,60,0.28)'  },
+  { iconKey: 'food',     text: 'Comiendo',         color: '#F39C12', bg: 'rgba(243,156,18,0.12)',  border: 'rgba(243,156,18,0.28)' },
+  { iconKey: 'call',     text: 'En llamada',       color: '#9B59B6', bg: 'rgba(155,89,182,0.12)',  border: 'rgba(155,89,182,0.28)' },
+  { iconKey: 'coffee',   text: 'Tomando café',     color: '#E67E22', bg: 'rgba(230,126,34,0.12)',  border: 'rgba(230,126,34,0.28)' },
+  { iconKey: 'out',      text: 'Salí un momento',  color: '#3498DB', bg: 'rgba(52,152,219,0.12)',  border: 'rgba(52,152,219,0.28)' },
+  { iconKey: 'rest',     text: 'Descansando',      color: '#8E44AD', bg: 'rgba(142,68,173,0.12)',  border: 'rgba(142,68,173,0.28)' },
 ];
 
 const AFK_MSG: Record<string, string> = {
@@ -59,25 +94,31 @@ function useElapsed(startTs: number): string {
 
 function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () => void }) {
   const time = useElapsed(status.timestamp);
+  const preset = AFK_PRESETS.find(p => p.iconKey === status.iconKey);
+  const accentColor = preset?.color ?? '#E85D2F';
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(8,10,14,0.95)',
+      background: 'rgba(8,10,14,0.96)',
       backdropFilter: 'blur(28px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       fontFamily: "'DM Sans', system-ui, sans-serif",
     }}>
-      {/* Radial glow */}
-      <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle, rgba(232,93,47,0.07) 0%, transparent 65%)', pointerEvents:'none' }} />
-      {/* Grid */}
+      <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:`radial-gradient(circle, ${accentColor}10 0%, transparent 65%)`, pointerEvents:'none' }} />
       <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.025) 1px, transparent 0)', backgroundSize:'32px 32px', pointerEvents:'none' }} />
 
-      {/* Emoji */}
-      <div style={{ fontSize: 100, lineHeight:1, marginBottom: 24, filter:'drop-shadow(0 0 40px rgba(232,93,47,0.25))' }}>
-        {status.icon}
+      {/* Big icon */}
+      <div style={{
+        width:120, height:120, borderRadius:32,
+        background:`${accentColor}15`, border:`1.5px solid ${accentColor}35`,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        marginBottom:28,
+        boxShadow:`0 0 60px ${accentColor}20`,
+      }}>
+        <StatusIcon iconKey={status.iconKey} size={56} color={accentColor} strokeWidth={1.5} />
       </div>
 
-      {/* Status text */}
       <h1 style={{ color:'#F4F5F7', fontSize:44, fontWeight:900, margin:'0 0 10px', letterSpacing:'-1.5px', textAlign:'center' }}>
         {status.statusText}
       </h1>
@@ -95,27 +136,24 @@ function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () =
         <p style={{ color:'rgba(255,255,255,0.22)', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.18em', margin:'0 0 12px' }}>
           Tiempo fuera
         </p>
-        <div style={{ fontSize:76, fontWeight:900, color:'#E85D2F', fontFamily:'monospace', letterSpacing:4, lineHeight:1 }}>
+        <div style={{ fontSize:76, fontWeight:900, color: accentColor, fontFamily:'monospace', letterSpacing:4, lineHeight:1 }}>
           {time}
         </div>
       </div>
 
-      {/* Return button */}
       <button
         onClick={onReturn}
         style={{
-          background:'#E85D2F', color:'#fff', border:'none', borderRadius:20,
+          background: accentColor, color:'#fff', border:'none', borderRadius:20,
           padding:'20px 56px', fontSize:18, fontWeight:800, cursor:'pointer',
-          boxShadow:'0 20px 60px rgba(232,93,47,0.35), 0 0 0 1px rgba(232,93,47,0.4)',
+          boxShadow:`0 20px 60px ${accentColor}35, 0 0 0 1px ${accentColor}40`,
           letterSpacing:'-0.3px', transition:'all 0.2s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 28px 70px rgba(232,93,47,0.45)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 20px 60px rgba(232,93,47,0.35)'; }}
+        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 28px 70px ${accentColor}45`; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow=`0 20px 60px ${accentColor}35`; }}
       >
-        ¡Ya regresé! 👋
+        Ya regresé
       </button>
-
-      <style>{`@keyframes afk-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
     </div>
   );
 }
@@ -124,20 +162,20 @@ function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () =
 
 function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDismiss: () => void }) {
   const first = alerts[0];
-  const time = useElapsed(first.timestamp);
+  const time  = useElapsed(first.timestamp);
+
   return (
     <div style={{
       position:'fixed', inset:0, zIndex:9998,
-      background:'rgba(8,10,14,0.91)',
+      background:'rgba(8,10,14,0.92)',
       backdropFilter:'blur(24px)',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
       fontFamily:"'DM Sans', system-ui, sans-serif",
     }}>
-      {/* Glow */}
       <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:`radial-gradient(circle, ${first.color}12 0%, transparent 70%)`, pointerEvents:'none' }} />
       <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.025) 1px, transparent 0)', backgroundSize:'32px 32px', pointerEvents:'none' }} />
 
-      {/* X button */}
+      {/* X */}
       <button
         onClick={onDismiss}
         style={{
@@ -153,31 +191,36 @@ function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDis
         <X size={18}/>
       </button>
 
-      {/* More AFK badge */}
       {alerts.length > 1 && (
         <div style={{ position:'absolute', top:28, left:28, background:'rgba(232,93,47,0.12)', border:'1px solid rgba(232,93,47,0.25)', borderRadius:10, padding:'6px 14px', fontSize:11, fontWeight:800, color:'#E85D2F' }}>
-          {alerts.length - 1} más ausente{alerts.length > 2 ? 's' : ''}
+          +{alerts.length - 1} más ausente{alerts.length > 2 ? 's' : ''}
         </div>
       )}
 
-      {/* Content */}
       <div style={{ position:'relative', zIndex:10, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
-        {/* Avatar circle */}
+        {/* Avatar */}
         <div style={{
-          width:76, height:76, borderRadius:22,
+          width:72, height:72, borderRadius:20,
           background:`${first.color}18`, border:`2px solid ${first.color}45`,
           display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:28, fontWeight:900, color:first.color,
-          boxShadow:`0 0 40px ${first.color}25`, marginBottom:20,
+          fontSize:26, fontWeight:900, color:first.color,
+          boxShadow:`0 0 40px ${first.color}25`, marginBottom:24,
         }}>
           {first.name.charAt(0).toUpperCase()}
         </div>
 
-        {/* Big emoji */}
-        <div style={{ fontSize:72, marginBottom:16, lineHeight:1 }}>{first.icon}</div>
+        {/* Status icon */}
+        <div style={{
+          width:80, height:80, borderRadius:22,
+          background:`${first.color}12`, border:`1.5px solid ${first.color}30`,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          marginBottom:20,
+          boxShadow:`0 0 30px ${first.color}15`,
+        }}>
+          <StatusIcon iconKey={first.iconKey} size={38} color={first.color} strokeWidth={1.5} />
+        </div>
 
-        {/* Message */}
-        <h2 style={{ color:'#F4F5F7', fontSize:36, fontWeight:900, margin:'0 0 10px', letterSpacing:'-1px' }}>
+        <h2 style={{ color:'#F4F5F7', fontSize:34, fontWeight:900, margin:'0 0 10px', letterSpacing:'-1px' }}>
           <span style={{ color:first.color }}>{first.name}</span>
           {' '}{AFK_MSG[first.statusText] ?? `está: ${first.statusText}`}
         </h2>
@@ -186,7 +229,7 @@ function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDis
         </p>
 
         {/* Timer */}
-        <div style={{ marginBottom:36, textAlign:'center' }}>
+        <div style={{ marginBottom:36 }}>
           <p style={{ color:'rgba(255,255,255,0.2)', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.16em', margin:'0 0 8px' }}>
             Tiempo fuera
           </p>
@@ -200,14 +243,13 @@ function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDis
           <div style={{ display:'flex', gap:8, marginBottom:32, flexWrap:'wrap', justifyContent:'center' }}>
             {alerts.slice(1).map(a => (
               <div key={a.alertId} style={{ background:`${a.color}12`, border:`1px solid ${a.color}30`, borderRadius:10, padding:'7px 14px', display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:15 }}>{a.icon}</span>
+                <StatusIcon iconKey={a.iconKey} size={14} color={a.color} strokeWidth={2} />
                 <span style={{ fontSize:12, fontWeight:700, color:a.color }}>{a.name}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Dismiss button */}
         <button
           onClick={onDismiss}
           style={{
@@ -218,7 +260,7 @@ function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDis
           onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.1)'; e.currentTarget.style.color='#fff'; }}
           onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.55)'; }}
         >
-          Entendido, volver al trabajo →
+          Entendido, volver al trabajo
         </button>
       </div>
     </div>
@@ -228,42 +270,45 @@ function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDis
 // ─── Radar Team Row ───────────────────────────────────────────────────────────
 
 function RadarRow({ entry, isMe }: { entry: RadarEntry; isMe: boolean }) {
-  const time = useElapsed(entry.timestamp);
-  const preset = AFK_PRESETS.find(p => p.text === entry.statusText);
+  const time     = useElapsed(entry.timestamp);
+  const preset   = AFK_PRESETS.find(p => p.iconKey === entry.iconKey);
   const afkColor = preset?.color ?? '#E74C3C';
+
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'12px 14px', borderRadius:14,
+      padding:'11px 13px', borderRadius:13,
       background: entry.isAFK ? `${afkColor}08` : 'rgba(255,255,255,0.025)',
       border:`1px solid ${entry.isAFK ? `${afkColor}22` : 'rgba(255,255,255,0.05)'}`,
       transition:'all 0.3s',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
         {/* Avatar */}
         <div style={{
-          width:38, height:38, borderRadius:11,
+          width:36, height:36, borderRadius:10,
           background:`${entry.color}20`, border:`1.5px solid ${entry.color}40`,
           display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:14, fontWeight:900, color:entry.color, flexShrink:0,
-          boxShadow: entry.isAFK ? `0 0 14px ${afkColor}25` : 'none',
+          fontSize:13, fontWeight:900, color:entry.color, flexShrink:0,
+          boxShadow: entry.isAFK ? `0 0 12px ${afkColor}25` : 'none',
         }}>
           {entry.name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <div style={{ fontSize:13, fontWeight:800, color:'#F4F5F7', display:'flex', alignItems:'center', gap:6 }}>
+          <div style={{ fontSize:12, fontWeight:800, color:'#F4F5F7', display:'flex', alignItems:'center', gap:5 }}>
             {entry.name}
-            {isMe && <span style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.3)', background:'rgba(255,255,255,0.06)', padding:'2px 6px', borderRadius:5, textTransform:'uppercase', letterSpacing:'0.06em' }}>tú</span>}
+            {isMe && <span style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.3)', background:'rgba(255,255,255,0.06)', padding:'2px 5px', borderRadius:4, textTransform:'uppercase', letterSpacing:'0.06em' }}>tú</span>}
           </div>
-          <div style={{ fontSize:11, marginTop:2, color: entry.isAFK ? afkColor : 'rgba(255,255,255,0.4)', fontWeight: entry.isAFK ? 700 : 500 }}>
-            {entry.icon} {entry.statusText}
+          <div style={{ fontSize:11, marginTop:3, color: entry.isAFK ? afkColor : 'rgba(255,255,255,0.4)', fontWeight: entry.isAFK ? 700 : 500, display:'flex', alignItems:'center', gap:5 }}>
+            <StatusIcon iconKey={entry.iconKey} size={11} color={entry.isAFK ? afkColor : 'rgba(255,255,255,0.35)'} strokeWidth={2} />
+            {entry.statusText}
           </div>
         </div>
       </div>
+
       {entry.isAFK && entry.timestamp > 0 && (
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em' }}>Hace</div>
-          <div style={{ fontSize:17, fontWeight:900, color:afkColor, fontFamily:'monospace' }}>{time}</div>
+          <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em' }}>Hace</div>
+          <div style={{ fontSize:16, fontWeight:900, color:afkColor, fontFamily:'monospace' }}>{time}</div>
         </div>
       )}
       {!entry.isAFK && (
@@ -278,10 +323,7 @@ function RadarRow({ entry, isMe }: { entry: RadarEntry; isMe: boolean }) {
 export default function DevToolkit({ members = [], currentUser = null }: { members?: any[], currentUser?: any }) {
   const [activeTab, setActiveTab] = useState<'radar' | 'tools' | 'staging'>('radar');
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   // DevTools
   const [toolInput, setToolInput]   = useState('');
@@ -289,40 +331,37 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   const [toolType, setToolType]     = useState<'json' | 'sql' | 'unit'>('json');
 
   // Staging
-  const [links, setLinks] = useState<StagingLink[]>([
+  const [links] = useState<StagingLink[]>([
     { id: '1', name: 'Pruebas Cliente', url: 'https://staging.example.com', type: 'staging' },
     { id: '2', name: 'API Desarrollo',  url: 'https://api-dev.example.com', type: 'api'     },
   ]);
 
   // Radar
-  const [radarMap, setRadarMap]         = useState<Record<string, RadarEntry>>({});
-  const [myStatus, setMyStatus]         = useState<RadarEntry | null>(null);
+  const [radarMap, setRadarMap]           = useState<Record<string, RadarEntry>>({});
+  const [myStatus, setMyStatus]           = useState<RadarEntry | null>(null);
   const [pendingAlerts, setPendingAlerts] = useState<PendingAlert[]>([]);
-  const channelRef  = useRef<BroadcastChannel | null>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
-  // ── Load persisted radar ──
+  // Load persisted radar
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
     try {
       const data: Record<string, RadarEntry> = JSON.parse(saved);
       setRadarMap(data);
-      if (currentUser?.id && data[currentUser.id]?.isAFK) {
-        setMyStatus(data[currentUser.id]);
-      }
+      if (currentUser?.id && data[currentUser.id]?.isAFK) setMyStatus(data[currentUser.id]);
     } catch {}
   }, []);
 
-  // ── Register current user as Online on mount ──
+  // Register current user as Online on mount
   useEffect(() => {
     if (!currentUser?.id) return;
     const saved = localStorage.getItem(STORAGE_KEY);
     const data: Record<string, RadarEntry> = saved ? JSON.parse(saved) : {};
-    // Only register if not already AFK
     if (!data[currentUser.id]?.isAFK) {
       const entry: RadarEntry = {
         userId: currentUser.id, name: currentUser.name, color: currentUser.color,
-        avatarSeed: currentUser.avatarSeed, icon: '💻', statusText: 'Trabajando',
+        avatarSeed: currentUser.avatarSeed, iconKey: 'online', statusText: 'Trabajando',
         isAFK: false, timestamp: Date.now(),
       };
       const updated = { ...data, [currentUser.id]: entry };
@@ -331,21 +370,18 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
     }
   }, [currentUser]);
 
-  // ── BroadcastChannel ──
+  // BroadcastChannel
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const ch = new BroadcastChannel(CHANNEL_NAME);
     channelRef.current = ch;
-
     ch.onmessage = (ev: MessageEvent<{ type: 'AFK' | 'BACK'; entry: RadarEntry }>) => {
       const { type, entry } = ev.data;
-
       setRadarMap(prev => {
         const updated = { ...prev, [entry.userId]: entry };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         return updated;
       });
-
       if (type === 'AFK') {
         if (currentUser && entry.userId !== currentUser.id) {
           setPendingAlerts(prev => [
@@ -356,30 +392,25 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
       } else {
         setPendingAlerts(prev => prev.filter(a => a.userId !== entry.userId));
         if (currentUser && entry.userId !== currentUser.id) {
-          toast.success(`${entry.name} regresó 👋`, {
+          toast.success(`${entry.name} regresó`, {
             duration: 4000,
             style: { background:'#1C1F26', color:'#F4F5F7', border:'1px solid rgba(255,255,255,0.08)', fontFamily:"'DM Sans', system-ui, sans-serif" },
           });
         }
       }
     };
-
     return () => ch.close();
   }, [currentUser]);
 
-  // ── Change status ──
+  // Change status
   const goAFK = (preset: typeof AFK_PRESETS[0]) => {
     if (!currentUser?.id) return;
     const entry: RadarEntry = {
       userId: currentUser.id, name: currentUser.name, color: currentUser.color,
-      avatarSeed: currentUser.avatarSeed, icon: preset.icon, statusText: preset.text,
+      avatarSeed: currentUser.avatarSeed, iconKey: preset.iconKey, statusText: preset.text,
       isAFK: true, timestamp: Date.now(),
     };
-    setRadarMap(prev => {
-      const updated = { ...prev, [currentUser.id]: entry };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    setRadarMap(prev => { const u = { ...prev, [currentUser.id]: entry }; localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); return u; });
     setMyStatus(entry);
     channelRef.current?.postMessage({ type: 'AFK', entry });
   };
@@ -388,19 +419,15 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
     if (!currentUser?.id) return;
     const entry: RadarEntry = {
       userId: currentUser.id, name: currentUser.name, color: currentUser.color,
-      avatarSeed: currentUser.avatarSeed, icon: '💻', statusText: 'Trabajando',
+      avatarSeed: currentUser.avatarSeed, iconKey: 'online', statusText: 'Trabajando',
       isAFK: false, timestamp: Date.now(),
     };
-    setRadarMap(prev => {
-      const updated = { ...prev, [currentUser.id]: entry };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    setRadarMap(prev => { const u = { ...prev, [currentUser.id]: entry }; localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); return u; });
     setMyStatus(null);
     channelRef.current?.postMessage({ type: 'BACK', entry });
   };
 
-  // ── DevTools ──
+  // DevTools
   const handleFormatJSON = () => {
     try { setToolOutput(JSON.stringify(JSON.parse(toolInput), null, 2)); toast.success("JSON Formateado"); }
     catch { toast.error("JSON Inválido"); }
@@ -416,15 +443,15 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   };
   const copyOutput = () => { navigator.clipboard.writeText(toolOutput); toast.success("Copiado"); };
 
-  // ── Team list: solo miembros con estado registrado, excluyendo al usuario actual ──
+  // Team list: only members with registered status, excluding current user
   const teamList: RadarEntry[] = members
     .filter((m: any) => m.id !== currentUser?.id && radarMap[m.id])
     .map((m: any) => radarMap[m.id]);
 
-  const isAFK          = myStatus !== null;
-  const hasPending     = pendingAlerts.length > 0;
+  const isAFK      = myStatus !== null;
+  const hasPending = pendingAlerts.length > 0;
+  const myPreset   = AFK_PRESETS.find(p => p.iconKey === myStatus?.iconKey);
 
-  // ─── Tab Button ──────────────────────────────────────────────────────────────
   const TabBtn = ({ id, icon: Icon, label }: { id: any; icon: any; label: string }) => (
     <button onClick={() => setActiveTab(id)} style={{
       flex:1, padding:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
@@ -439,14 +466,13 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
 
   return (
     <>
-      {/* ── Overlays (fixed, full-screen) ── */}
-      {isAFK && mounted && createPortal(<MyAFKOverlay status={myStatus!} onReturn={goOnline} />, document.body)}
+      {/* Overlays */}
+      {isAFK      && mounted && createPortal(<MyAFKOverlay    status={myStatus!}    onReturn={goOnline}                       />, document.body)}
       {!isAFK && hasPending && mounted && createPortal(<TeamAlertOverlay alerts={pendingAlerts} onDismiss={() => setPendingAlerts([])} />, document.body)}
 
-      {/* ── Panel ── */}
+      {/* Panel */}
       <div style={{ background:'rgba(15,18,25,0.85)', backdropFilter:'blur(16px)', borderRadius:24, border:'1px solid rgba(255,255,255,0.1)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 20px 50px rgba(0,0,0,0.5)' }}>
 
-        {/* Tabs header */}
         <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.3)' }}>
           <TabBtn id="radar"   icon={Activity} label="Live Radar" />
           <TabBtn id="tools"   icon={Terminal} label="DevTools"   />
@@ -455,31 +481,31 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
 
         <div style={{ flex:1, overflowY:'auto', padding:'20px', display:'flex', flexDirection:'column', gap:16 }} className="custom-scrollbar">
 
-          {/* ── RADAR TAB ── */}
+          {/* ── RADAR ── */}
           {activeTab === 'radar' && (
             <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
               {/* My status card */}
               {currentUser && (
                 <div style={{
-                  background:`${currentUser.color}10`,
-                  border:`1px solid ${currentUser.color}30`,
-                  borderRadius:18, padding:'14px 16px',
+                  background:`${currentUser.color}10`, border:`1px solid ${currentUser.color}30`,
+                  borderRadius:16, padding:'13px 15px',
                   display:'flex', alignItems:'center', justifyContent:'space-between',
                 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ width:38, height:38, borderRadius:11, background:`${currentUser.color}25`, border:`1.5px solid ${currentUser.color}50`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:900, color:currentUser.color }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${currentUser.color}25`, border:`1.5px solid ${currentUser.color}50`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900, color:currentUser.color }}>
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div style={{ fontSize:12, fontWeight:800, color:'#F4F5F7' }}>{currentUser.name}</div>
-                      <div style={{ fontSize:11, color: isAFK ? '#E74C3C' : '#27AE60', fontWeight:700, marginTop:1 }}>
-                        {isAFK ? `${myStatus!.icon} ${myStatus!.statusText}` : '💻 Trabajando'}
+                      <div style={{ fontSize:11, color: isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60', fontWeight:700, marginTop:2, display:'flex', alignItems:'center', gap:5 }}>
+                        <StatusIcon iconKey={isAFK ? (myStatus!.iconKey) : 'online'} size={11} color={isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60'} strokeWidth={2.2} />
+                        {isAFK ? myStatus!.statusText : 'Trabajando'}
                       </div>
                     </div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <div style={{ width:7, height:7, borderRadius:'50%', background: isAFK ? '#E74C3C' : '#27AE60', boxShadow:`0 0 8px ${isAFK?'#E74C3C':'#27AE60'}80` }} />
+                    <div style={{ width:7, height:7, borderRadius:'50%', background: isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60', boxShadow:`0 0 8px ${isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60'}80` }} />
                     <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
                       {isAFK ? 'ausente' : 'online'}
                     </span>
@@ -498,45 +524,40 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                       key={p.text}
                       onClick={() => goAFK(p)}
                       style={{
-                        padding:'12px 6px', borderRadius:14,
+                        padding:'14px 6px', borderRadius:14,
                         background:p.bg, border:`1px solid ${p.border}`,
                         color:p.color, display:'flex', flexDirection:'column',
-                        alignItems:'center', gap:5, cursor:'pointer',
-                        transition:'all 0.15s', fontSize:'inherit',
+                        alignItems:'center', gap:8, cursor:'pointer',
+                        transition:'all 0.15s', fontFamily:'inherit',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 8px 20px ${p.color}25`; }}
                       onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}
                     >
-                      <span style={{ fontSize:22 }}>{p.icon}</span>
+                      <StatusIcon iconKey={p.iconKey} size={22} color={p.color} strokeWidth={1.75} />
                       <span style={{ fontSize:10, fontWeight:800, textAlign:'center', lineHeight:1.2 }}>{p.text}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Divider */}
               <div style={{ height:1, background:'rgba(255,255,255,0.05)' }} />
 
-              {/* Team status list */}
+              {/* Team list */}
               <div>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-                  <p style={{ fontSize:10, fontWeight:800, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', margin:0 }}>
-                    Estado del equipo
-                  </p>
+                  <p style={{ fontSize:10, fontWeight:800, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', margin:0 }}>Estado del equipo</p>
                   <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.2)', fontFamily:'monospace' }}>
-                    {teamList.filter(t => t.isAFK).length} ausente{teamList.filter(t=>t.isAFK).length!==1?'s':''}
+                    {teamList.filter(t=>t.isAFK).length} ausente{teamList.filter(t=>t.isAFK).length!==1?'s':''}
                   </span>
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
                   {teamList.length === 0 && (
                     <div style={{ textAlign:'center', padding:'24px 16px', border:'1px dashed rgba(255,255,255,0.07)', borderRadius:14 }}>
-                      <p style={{ fontSize:22, margin:'0 0 6px' }}>👥</p>
-                      <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>
-                        Nadie más conectado aún
-                      </p>
-                      <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>
-                        Aparecerán aquí cuando abran la app
-                      </p>
+                      <div style={{ display:'flex', justifyContent:'center', marginBottom:8, color:'rgba(255,255,255,0.15)' }}>
+                        <Users size={24} />
+                      </div>
+                      <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>Nadie más conectado aún</p>
+                      <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>Aparecerán aquí cuando abran la app</p>
                     </div>
                   )}
                   {teamList.map(entry => (
@@ -545,28 +566,24 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                 </div>
               </div>
 
-              {/* AFK marquee banner */}
-              {teamList.some(t => t.isAFK) && (
-                <div style={{ background:'rgba(231,76,60,0.1)', border:'1px solid rgba(231,76,60,0.25)', borderRadius:10, padding:'8px 12px', overflow:'hidden', whiteSpace:'nowrap' }}>
-                  <div className="marquee-scroll" style={{ fontSize:12, fontWeight:700, color:'#E74C3C', display:'inline-block' }}>
-                    ⚠️ {teamList.filter(t=>t.isAFK).map(t=>`${t.name} — ${t.statusText}`).join('  ·  ')}
+              {/* AFK marquee */}
+              {teamList.some(t=>t.isAFK) && (
+                <div style={{ background:'rgba(231,76,60,0.08)', border:'1px solid rgba(231,76,60,0.2)', borderRadius:10, padding:'7px 12px', overflow:'hidden', whiteSpace:'nowrap' }}>
+                  <div className="marquee-scroll" style={{ fontSize:11, fontWeight:700, color:'#E74C3C', display:'inline-block' }}>
+                    {teamList.filter(t=>t.isAFK).map(t=>`${t.name} — ${t.statusText}`).join('   ·   ')}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── DEV TOOLS TAB ── */}
+          {/* ── DEV TOOLS ── */}
           {activeTab === 'tools' && (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div style={{ display:'flex', gap:8 }}>
                 {(['json','sql','unit'] as const).map(t => {
                   const colors = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22' };
-                  return (
-                    <button key={t} onClick={() => setToolType(t)} style={{ padding:'6px 10px', borderRadius:8, border:'1px solid', borderColor: toolType===t ? colors[t] : 'rgba(255,255,255,0.1)', background: toolType===t ? `${colors[t]}18` : 'transparent', color: toolType===t ? colors[t] : '#fff', fontSize:10, cursor:'pointer' }}>
-                      {t.toUpperCase()}
-                    </button>
-                  );
+                  return <button key={t} onClick={() => setToolType(t)} style={{ padding:'6px 10px', borderRadius:8, border:'1px solid', borderColor: toolType===t ? colors[t] : 'rgba(255,255,255,0.1)', background: toolType===t ? `${colors[t]}18` : 'transparent', color: toolType===t ? colors[t] : '#fff', fontSize:10, cursor:'pointer' }}>{t.toUpperCase()}</button>;
                 })}
               </div>
               <textarea placeholder="Pega aquí tu código…" value={toolInput} onChange={e => setToolInput(e.target.value)}
@@ -584,7 +601,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
             </div>
           )}
 
-          {/* ── STAGING TAB ── */}
+          {/* ── STAGING ── */}
           {activeTab === 'staging' && (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
@@ -613,13 +630,8 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .marquee-scroll {
-          animation: marquee 18s linear infinite;
-        }
-        @keyframes marquee {
-          0%   { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
-        }
+        .marquee-scroll { animation: marquee 18s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
       `}</style>
     </>
   );
