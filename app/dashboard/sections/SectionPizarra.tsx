@@ -333,16 +333,18 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
 // ─── Shape Editor ─────────────────────────────────────────────────────────────
 const EDITOR_COLORS = ['#F4F5F7','#E85D2F','#E74C3C','#F39C12','#2ECC71','#3498DB','#1ABC9C','#5DADE2','#9B59B6','#E67E22','#95A5A6','#000000'];
 
-type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri';
-type FillMode = 'none' | 'light' | 'solid';
+type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri' | 'curve' | 'polygon' | 'star' | 'roundrect' | 'polyline' | 'editnode';
 export type EStroke = { color: string; sw: number; fill: string } & (
   | { kind: 'path'; pts: {x:number;y:number}[] }
   | { kind: 'poly'; pts: {x:number;y:number}[] }
+  | { kind: 'polyline'; pts: {x:number;y:number}[]; arcs?: ({cp:{x:number;y:number}}|null)[] }
   | { kind: 'rect'; x:number; y:number; rw:number; rh:number }
+  | { kind: 'roundrect'; x:number; y:number; rw:number; rh:number; r:number }
   | { kind: 'ellipse'; cx:number; cy:number; rx:number; ry:number }
   | { kind: 'line'; x1:number; y1:number; x2:number; y2:number }
   | { kind: 'arrow'; x1:number; y1:number; x2:number; y2:number }
   | { kind: 'tri'; x1:number; y1:number; x2:number; y2:number }
+  | { kind: 'curve'; x1:number; y1:number; cpX:number; cpY:number; x2:number; y2:number }
 );
 
 function ptPath(pts: {x:number;y:number}[]): string {
@@ -361,13 +363,17 @@ function calcBBox(strokes: EStroke[]): {minX:number;minY:number;maxX:number;maxY
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   const ex=(x:number,y:number)=>{minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);};
   strokes.forEach(s=>{
-    if(s.kind==='path'||s.kind==='poly') s.pts.forEach(p=>ex(p.x,p.y));
+    if(s.kind==='path'||s.kind==='poly'||s.kind==='polyline') s.pts.forEach(p=>ex(p.x,p.y));
     else if(s.kind==='rect'){ex(s.x,s.y);ex(s.x+s.rw,s.y+s.rh);}
+    else if(s.kind==='roundrect'){ex(s.x,s.y);ex(s.x+s.rw,s.y+s.rh);}
     else if(s.kind==='ellipse'){ex(s.cx-s.rx,s.cy-s.ry);ex(s.cx+s.rx,s.cy+s.ry);}
     else if(s.kind==='line'||s.kind==='arrow'){ex(s.x1,s.y1);ex(s.x2,s.y2);}
     else if(s.kind==='tri'){
       const mx=(s.x1+s.x2)/2;
       ex(s.x1,s.y2);ex(s.x2,s.y2);ex(mx,s.y1);
+    }
+    else if(s.kind==='curve'){
+      ex(s.x1,s.y1);ex(s.x2,s.y2);ex(s.cpX,s.cpY);
     }
   });
   return {minX,minY,maxX,maxY};
@@ -381,6 +387,7 @@ function renderEStroke(s: EStroke, i: number): React.ReactElement {
     return <polygon key={i} {...common} points={pts}/>;
   }
   if (s.kind==='rect') return <rect key={i} {...common} x={Math.min(s.x,s.x+s.rw)} y={Math.min(s.y,s.y+s.rh)} width={Math.abs(s.rw)} height={Math.abs(s.rh)} rx={3}/>;
+  if (s.kind==='roundrect') { const x=Math.min(s.x,s.x+s.rw),y=Math.min(s.y,s.y+s.rh),w=Math.abs(s.rw),h=Math.abs(s.rh); return <rect key={i} {...common} x={x} y={y} width={w} height={h} rx={Math.min(s.r, w/2, h/2)}/>; }
   if (s.kind==='ellipse') return <ellipse key={i} {...common} cx={s.cx} cy={s.cy} rx={Math.abs(s.rx)} ry={Math.abs(s.ry)}/>;
   if (s.kind==='line') return <line key={i} {...common} fill="none" x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}/>;
   if (s.kind==='arrow') {
@@ -396,6 +403,18 @@ function renderEStroke(s: EStroke, i: number): React.ReactElement {
   if (s.kind==='tri') {
     const mx=(s.x1+s.x2)/2;
     return <polygon key={i} {...common} points={`${mx},${s.y1} ${s.x2},${s.y2} ${s.x1},${s.y2}`}/>;
+  }
+  if (s.kind==='curve') {
+    return <path key={i} {...common} fill="none" d={`M ${s.x1.toFixed(1)} ${s.y1.toFixed(1)} Q ${s.cpX.toFixed(1)} ${s.cpY.toFixed(1)} ${s.x2.toFixed(1)} ${s.y2.toFixed(1)}`}/>;
+  }
+  if (s.kind==='polyline') {
+    let d=`M${s.pts[0].x.toFixed(1)},${s.pts[0].y.toFixed(1)}`;
+    for(let j=0;j<s.pts.length-1;j++){
+      const arc=s.arcs?.[j];
+      if(arc) d+=` Q${arc.cp.x.toFixed(1)},${arc.cp.y.toFixed(1)} ${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+      else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+    }
+    return <path key={i} {...common} fill="none" d={d}/>;
   }
   return <g key={i}/>;
 }
@@ -415,6 +434,21 @@ function strokeToSvgStr(s: EStroke, nx:(x:number)=>number, ny:(y:number)=>number
     const w=Math.abs(nx(s.x+s.rw)-nx(s.x)),h=Math.abs(ny(s.y+s.rh)-ny(s.y));
     return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" rx="2" ${strokeAttr}/>`;
   }
+  if (s.kind==='roundrect') {
+    const x=Math.min(nx(s.x),nx(s.x+s.rw)),y=Math.min(ny(s.y),ny(s.y+s.rh));
+    const w=Math.abs(nx(s.x+s.rw)-nx(s.x)),h=Math.abs(ny(s.y+s.rh)-ny(s.y));
+    const scaledR = s.r * (w / (Math.abs(s.rw) || 1));
+    return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(scaledR, w/2, h/2).toFixed(2)}" ${strokeAttr}/>`;
+  }
+  if (s.kind==='polyline') {
+    let d=`M${nx(s.pts[0].x).toFixed(2)},${ny(s.pts[0].y).toFixed(2)}`;
+    for(let j=0;j<s.pts.length-1;j++){
+      const arc=s.arcs?.[j];
+      if(arc) d+=` Q${nx(arc.cp.x).toFixed(2)},${ny(arc.cp.y).toFixed(2)} ${nx(s.pts[j+1].x).toFixed(2)},${ny(s.pts[j+1].y).toFixed(2)}`;
+      else d+=` L${nx(s.pts[j+1].x).toFixed(2)},${ny(s.pts[j+1].y).toFixed(2)}`;
+    }
+    return `<path d="${d}" ${strokeAttr} fill="none"/>`;
+  }
   if (s.kind==='ellipse') {
     const cx=nx(s.cx),cy=ny(s.cy),rx=Math.abs(nx(s.cx+s.rx)-nx(s.cx)),ry=Math.abs(ny(s.cy+s.ry)-ny(s.cy));
     return `<ellipse cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${ry.toFixed(2)}" ${strokeAttr}/>`;
@@ -431,6 +465,9 @@ function strokeToSvgStr(s: EStroke, nx:(x:number)=>number, ny:(y:number)=>number
   if (s.kind==='tri') {
     const mx=(s.x1+s.x2)/2;
     return `<polygon points="${nx(mx).toFixed(2)},${ny(s.y1).toFixed(2)} ${nx(s.x2).toFixed(2)},${ny(s.y2).toFixed(2)} ${nx(s.x1).toFixed(2)},${ny(s.y2).toFixed(2)}" ${strokeAttr}/>`;
+  }
+  if (s.kind==='curve') {
+    return `<path d="M ${nx(s.x1).toFixed(2)} ${ny(s.y1).toFixed(2)} Q ${nx(s.cpX).toFixed(2)} ${ny(s.cpY).toFixed(2)} ${nx(s.x2).toFixed(2)} ${ny(s.y2).toFixed(2)}" ${strokeAttr} fill="none"/>`;
   }
   return '';
 }
@@ -468,30 +505,129 @@ function remasterStrokes(strokes: EStroke[]): EStroke[] {
   });
 }
 
+function computeNgon(cx:number, cy:number, r:number, n:number): {x:number;y:number}[] {
+  return Array.from({length:n}, (_,i) => {
+    const a = (i * 2 * Math.PI / n) - Math.PI / 2;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  });
+}
+function computeStar(cx:number, cy:number, ro:number, ri:number, n:number): {x:number;y:number}[] {
+  const pts: {x:number;y:number}[] = [];
+  for (let i=0; i<n*2; i++) {
+    const a = (i * Math.PI / n) - Math.PI / 2;
+    pts.push({ x: cx + (i%2===0?ro:ri)*Math.cos(a), y: cy + (i%2===0?ro:ri)*Math.sin(a) });
+  }
+  return pts;
+}
+
+// Row 1 (6): editnode, pen, polyline, curve, line, arrow  |  Row 2 (6): shapes
 const TOOL_DEFS: {id: DrawTool; label: string; icon: React.ReactElement}[] = [
-  { id:'pen',    label:'Lápiz',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 14 L5 11 L13 3 L13 6 L2 14Z"/><path d="M11 5l2 2"/></svg> },
-  { id:'rect',   label:'Rectángulo',icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="12" height="8" rx="1.5"/></svg> },
-  { id:'ellipse',label:'Elipse',    icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="8" cy="8" rx="6" ry="4"/></svg> },
-  { id:'line',   label:'Línea',     icon:<svg viewBox="0 0 16 16" width={14} height={14} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="14" x2="14" y2="2"/></svg> },
-  { id:'arrow',  label:'Flecha',    icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="2" y1="14" x2="13" y2="3"/><polyline points="7,3 13,3 13,9"/></svg> },
-  { id:'tri',    label:'Triángulo', icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="8,2 15,14 1,14"/></svg> },
+  { id:'editnode', label:'Editar nodos',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q5 7 9 7 Q13 7 13 4"/><circle cx="3" cy="13" r="2" fill="#0A0C0F" strokeWidth="1.7"/><circle cx="13" cy="4" r="2" fill="#0A0C0F" strokeWidth="1.7"/><rect x="7.5" y="5.5" width="3" height="3" transform="rotate(45 9 7)" fill="#0A0C0F" strokeWidth="1.4"/></svg> },
+  { id:'pen',      label:'Lápiz libre',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 14 L5 11 L13 3 L13 6 L2 14Z"/><path d="M11 5l2 2"/></svg> },
+  { id:'polyline', label:'Polilínea',        icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,13 6,5 10,9 14,3"/><circle cx="2" cy="13" r="1.5" fill="currentColor"/><circle cx="6" cy="5" r="1.5" fill="currentColor"/><circle cx="10" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="3" r="1.5" fill="currentColor"/></svg> },
+  { id:'curve',    label:'Curva Bézier',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 12 C 5 2, 11 2, 14 12"/></svg> },
+  { id:'line',     label:'Línea',            icon:<svg viewBox="0 0 16 16" width={14} height={14} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="14" x2="14" y2="2"/></svg> },
+  { id:'arrow',    label:'Flecha',           icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="2" y1="14" x2="13" y2="3"/><polyline points="7,3 13,3 13,9"/></svg> },
+  { id:'rect',     label:'Rectángulo',       icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="12" height="8" rx="1"/></svg> },
+  { id:'roundrect',label:'Rect. redondeado', icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="12" height="8" rx="3.5"/></svg> },
+  { id:'ellipse',  label:'Elipse / Círculo', icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="8" cy="8" rx="6" ry="4"/></svg> },
+  { id:'tri',      label:'Triángulo',        icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="8,2 15,14 1,14"/></svg> },
+  { id:'polygon',  label:'Polígono',         icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="8,2 13.5,5 13.5,11 8,14 2.5,11 2.5,5"/></svg> },
+  { id:'star',     label:'Estrella',         icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="8,2 9.5,6.5 14,6.5 10.4,9.1 11.8,13.5 8,11 4.2,13.5 5.6,9.1 2,6.5 6.5,6.5"/></svg> },
 ];
 
 function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; onCancel: () => void }) {
   const [strokes, setStrokes] = useState<EStroke[]>([]);
   const [tool, setTool] = useState<DrawTool>('pen');
-  const [fillMode, setFillMode] = useState<FillMode>('none');
   const [color, setColor] = useState('#E85D2F');
+  const [fillColor, setFillColor] = useState<string>('none');
   const [sw, setSw] = useState(2.5);
   const [label, setLabel] = useState('');
+  const [sides, setSides] = useState(6);
+  const [starPts, setStarPts] = useState(5);
+  const [cornerR, setCornerR] = useState(14);
   const [curPts, setCurPts] = useState<{x:number;y:number}[]|null>(null);
+  const [polylinePts, setPolylinePts] = useState<{x:number;y:number}[]>([]);
+  const [polylineLive, setPolylineLive] = useState<{x:number;y:number}|null>(null);
+  const [editingIdx, setEditingIdx] = useState<number>(-1);
+  const [handleDrag, setHandleDrag] = useState<{kind:'arc'|'vertex'; segIdx:number}|null>(null);
   const [dragStart, setDragStart] = useState<{x:number;y:number}|null>(null);
   const [dragCur, setDragCur] = useState<{x:number;y:number}|null>(null);
   const [remastered, setRemastered] = useState(false);
+
+  // Estados para curva interactiva de 3 puntos
+  const [curvePhase, setCurvePhase] = useState<0 | 1 | 2>(0);
+  const [curveStart, setCurveStart] = useState<{x:number;y:number}|null>(null);
+  const [curveEnd, setCurveEnd] = useState<{x:number;y:number}|null>(null);
+  const [curveCP, setCurveCP] = useState<{x:number;y:number}|null>(null);
+
   const svgRef = useRef<SVGSVGElement>(null);
   const SIZE = 340;
 
+  // Reset transient state on tool change
+  useEffect(() => {
+    setCurvePhase(0); setCurveStart(null); setCurveEnd(null); setCurveCP(null);
+    setDragStart(null); setDragCur(null);
+    setPolylinePts([]); setPolylineLive(null);
+    setEditingIdx(-1); setHandleDrag(null);
+  }, [tool]);
+
+  // Enter → commit polyline or exit edit mode; Escape → cancel
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        if (tool === 'polyline' && polylinePts.length >= 2) {
+          e.preventDefault();
+          const pts = [...polylinePts];
+          setStrokes(prev => {
+            setEditingIdx(prev.length);
+            return [...prev, {kind:'polyline',color,sw,fill:'none',pts}];
+          });
+          setPolylinePts([]); setPolylineLive(null);
+        } else if (editingIdx >= 0) {
+          setEditingIdx(-1);
+        }
+      }
+      if (e.key === 'Escape') {
+        setPolylinePts([]); setPolylineLive(null); setEditingIdx(-1); setHandleDrag(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tool, polylinePts, color, sw, editingIdx]);
+
+  // Global drag for edit handles (works even when cursor leaves SVG)
+  useEffect(() => {
+    if (!handleDrag || editingIdx < 0) return;
+    const onWinMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      setStrokes(prev => prev.map((s, i) => {
+        if (i !== editingIdx || s.kind !== 'polyline') return s;
+        if (handleDrag.kind === 'arc') {
+          const newArcs: ({cp:{x:number;y:number}}|null)[] =
+            Array.isArray(s.arcs) ? [...s.arcs] : Array(s.pts.length - 1).fill(null);
+          newArcs[handleDrag.segIdx] = { cp: p };
+          return { ...s, arcs: newArcs };
+        }
+        if (handleDrag.kind === 'vertex') {
+          const newPts = [...s.pts];
+          newPts[handleDrag.segIdx] = p;
+          return { ...s, pts: newPts };
+        }
+        return s;
+      }));
+    };
+    const onWinUp = () => setHandleDrag(null);
+    window.addEventListener('mousemove', onWinMove);
+    window.addEventListener('mouseup', onWinUp);
+    return () => { window.removeEventListener('mousemove', onWinMove); window.removeEventListener('mouseup', onWinUp); };
+  }, [handleDrag, editingIdx]);
+
   const hasPenStrokes = strokes.some(s => s.kind === 'path');
+  const closedTools: DrawTool[] = ['rect','roundrect','ellipse','tri','polygon','star'];
+  const isClosed = closedTools.includes(tool);
 
   const handleRemaster = () => {
     setStrokes(prev => remasterStrokes(prev));
@@ -499,11 +635,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
     setTimeout(() => setRemastered(false), 1400);
   };
 
-  const getFill = () => {
-    if (fillMode==='none') return 'none';
-    if (fillMode==='light') return color+'33';
-    return color;
-  };
+  const getFill = () => isClosed ? fillColor : 'none';
 
   const getpt = (e: React.MouseEvent) => {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -511,34 +643,99 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   };
 
   const buildPreview = (): EStroke|null => {
-    if (!dragStart || !dragCur) return null;
     const f = getFill();
+    if (tool==='curve') {
+      if (curvePhase===1 && dragStart && dragCur)
+        return {kind:'line',color,sw,fill:'none',x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
+      if (curvePhase===2 && curveStart && curveEnd && curveCP)
+        return {kind:'curve',color,sw,fill:'none',x1:curveStart.x,y1:curveStart.y,cpX:curveCP.x,cpY:curveCP.y,x2:curveEnd.x,y2:curveEnd.y};
+      return null;
+    }
+    if (!dragStart || !dragCur) return null;
+    const cx=(dragStart.x+dragCur.x)/2, cy=(dragStart.y+dragCur.y)/2;
+    const r=Math.hypot(dragCur.x-cx,dragCur.y-cy);
     if (tool==='rect') return {kind:'rect',color,sw,fill:f,x:dragStart.x,y:dragStart.y,rw:dragCur.x-dragStart.x,rh:dragCur.y-dragStart.y};
-    if (tool==='ellipse') return {kind:'ellipse',color,sw,fill:f,cx:(dragStart.x+dragCur.x)/2,cy:(dragStart.y+dragCur.y)/2,rx:Math.abs(dragCur.x-dragStart.x)/2,ry:Math.abs(dragCur.y-dragStart.y)/2};
+    if (tool==='roundrect') return {kind:'roundrect',color,sw,fill:f,x:dragStart.x,y:dragStart.y,rw:dragCur.x-dragStart.x,rh:dragCur.y-dragStart.y,r:cornerR};
+    if (tool==='ellipse') return {kind:'ellipse',color,sw,fill:f,cx,cy,rx:Math.abs(dragCur.x-dragStart.x)/2,ry:Math.abs(dragCur.y-dragStart.y)/2};
     if (tool==='line') return {kind:'line',color,sw,fill:'none',x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
     if (tool==='arrow') return {kind:'arrow',color,sw,fill:'none',x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
     if (tool==='tri') return {kind:'tri',color,sw,fill:f,x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
+    if (tool==='polygon') return {kind:'poly',color,sw,fill:f,pts:computeNgon(cx,cy,r,sides)};
+    if (tool==='star') return {kind:'poly',color,sw,fill:f,pts:computeStar(cx,cy,r,r*0.42,starPts)};
     return null;
   };
 
   const onDown = (e: React.MouseEvent) => {
     e.preventDefault();
     const p = getpt(e);
+    if (tool==='editnode') { setEditingIdx(-1); return; } // background click deselects; hits stop propagation
     if (tool==='pen') { setCurPts([p]); return; }
+    if (tool==='polyline') return; // handled by onClick/onDoubleClick
+    if (tool==='curve') {
+      if (curvePhase===0) { setCurvePhase(1); setDragStart(p); setDragCur(p); }
+      else if (curvePhase===2 && curveStart && curveEnd && curveCP) {
+        setStrokes(prev=>[...prev,{kind:'curve',color,sw,fill:'none',x1:curveStart.x,y1:curveStart.y,cpX:curveCP.x,cpY:curveCP.y,x2:curveEnd.x,y2:curveEnd.y}]);
+        setCurvePhase(0); setCurveStart(null); setCurveEnd(null); setCurveCP(null);
+      }
+      return;
+    }
     setDragStart(p); setDragCur(p);
   };
-  const onMove = (e: React.MouseEvent) => {
-    if (tool==='pen') { if (!curPts) return; setCurPts(prev => [...(prev||[]), getpt(e)]); return; }
-    if (!dragStart) return;
-    setDragCur(getpt(e));
+
+  const handlePolylineClick = (e: React.MouseEvent) => {
+    if (tool !== 'polyline') return;
+    e.preventDefault();
+    if (editingIdx >= 0) { setEditingIdx(-1); return; } // click canvas → exit edit mode
+    setPolylinePts(prev => [...prev, getpt(e)]);
   };
+
+  const handlePolylineDblClick = (e: React.MouseEvent) => {
+    if (tool !== 'polyline') return;
+    e.preventDefault();
+    const pts = polylinePts.slice(0, -2);
+    if (pts.length >= 2) {
+      setStrokes(prev => {
+        setEditingIdx(prev.length);
+        return [...prev, {kind:'polyline',color,sw,fill:'none',pts}];
+      });
+    }
+    setPolylinePts([]); setPolylineLive(null);
+  };
+
+  const onMove = (e: React.MouseEvent) => {
+    const p = getpt(e);
+    if (tool==='pen') { if (!curPts) return; setCurPts(prev=>[...(prev||[]),p]); return; }
+    if (tool==='polyline') { setPolylineLive(p); return; }
+    if (tool==='curve') {
+      if (curvePhase===1 && dragStart) setDragCur(p);
+      else if (curvePhase===2 && curveStart && curveEnd) {
+        const cpX=2*p.x-0.5*(curveStart.x+curveEnd.x);
+        const cpY=2*p.y-0.5*(curveStart.y+curveEnd.y);
+        setCurveCP({x:cpX,y:cpY});
+      }
+      return;
+    }
+    if (!dragStart) return;
+    setDragCur(p);
+  };
+
   const onUp = () => {
+    if (handleDrag) return; // window listener handles this
     if (tool==='pen') {
-      if (curPts && curPts.length > 1) setStrokes(p => [...p, {kind:'path',color,sw,fill:'none',pts:curPts}]);
+      if (curPts && curPts.length>1) setStrokes(p=>[...p,{kind:'path',color,sw,fill:'none',pts:curPts}]);
       setCurPts(null); return;
     }
-    const prev = buildPreview();
-    if (prev) setStrokes(p => [...p, prev]);
+    if (tool==='polyline') return;
+    if (tool==='curve') {
+      if (curvePhase===1 && dragStart && dragCur) {
+        setCurveStart(dragStart); setCurveEnd(dragCur);
+        setCurveCP({x:(dragStart.x+dragCur.x)/2,y:(dragStart.y+dragCur.y)/2});
+        setCurvePhase(2); setDragStart(null); setDragCur(null);
+      }
+      return;
+    }
+    const prev=buildPreview();
+    if (prev) setStrokes(p=>[...p,prev]);
     setDragStart(null); setDragCur(null);
   };
 
@@ -556,101 +753,237 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   };
 
   const preview = buildPreview();
-  const closedTools: DrawTool[] = ['rect','ellipse','tri'];
-  const isClosed = closedTools.includes(tool);
+
+  const FILL_COLORS = ['none', '#F4F5F7', '#E85D2F', '#E74C3C', '#F39C12', '#2ECC71', '#3498DB', '#1ABC9C', '#9B59B6', '#E67E22', '#000000'];
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(8px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
       onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
-      <div style={{background:'rgba(14,17,24,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:22,display:'flex',flexDirection:'column',gap:14,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',width:SIZE+56}}>
+      <div style={{background:'rgba(12,15,22,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:20,display:'flex',flexDirection:'column',gap:12,boxShadow:'0 32px 80px rgba(0,0,0,0.85)',width:SIZE+60}}>
 
         {/* Header */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div>
-            <p style={{margin:0,fontWeight:800,fontSize:15,color:'#F4F5F7'}}>Crear Forma</p>
-            <p style={{margin:0,fontSize:11,color:'#5A6270',marginTop:2}}>Dibuja con herramientas — se guarda en el panel</p>
+            <p style={{margin:0,fontWeight:800,fontSize:15,color:'#F4F5F7'}}>Editor de Formas</p>
+            <p style={{margin:0,fontSize:11,color:'#5A6270',marginTop:2}}>
+              {editingIdx >= 0
+                ? 'Arrastra ◆ para arquear · ○ para mover vértice · Esc o clic vacío para salir'
+                : tool==='editnode'
+                  ? 'Haz clic en una polilínea para editar sus nodos'
+                  : tool==='polyline'
+                    ? 'Clic para puntos · Enter o doble clic para finalizar'
+                    : 'Dibuja con herramientas — se guarda en el panel'}
+            </p>
           </div>
           <button onClick={onCancel} style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
             <svg viewBox="0 0 12 12" width={11} height={11} stroke="currentColor" strokeWidth="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>
           </button>
         </div>
 
-        {/* Tool selector */}
-        <div style={{display:'flex',gap:5}}>
-          {TOOL_DEFS.map(t=>(
-            <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
-              style={{flex:1,height:32,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s'}}>
-              {t.icon}
-            </button>
+        {/* Tool selector — 2 rows: drawing (5) + shapes (6) */}
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+          {[TOOL_DEFS.slice(0,6), TOOL_DEFS.slice(6)].map((row,ri)=>(
+            <div key={ri} style={{display:'flex',gap:4}}>
+              {row.map(t=>(
+                <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
+                  style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
+                  {t.icon}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
 
-        {/* Colors + stroke + fill */}
+        {/* Stroke color + width + undo/clear */}
         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-          <div style={{display:'flex',gap:4,flexWrap:'wrap',flex:1}}>
+          <div style={{display:'flex',gap:3,flexWrap:'wrap',flex:1,alignItems:'center'}}>
+            <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginRight:2}}>Trazo</span>
             {EDITOR_COLORS.map(c=>(
               <button key={c} onClick={()=>setColor(c)}
-                style={{width:17,height:17,borderRadius:'50%',background:c,border:color===c?'2px solid #fff':'2px solid transparent',cursor:'pointer',flexShrink:0,transition:'transform 0.1s',boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':'none'}}
-                onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.25)';}}
+                style={{width:16,height:16,borderRadius:'50%',background:c,border:color===c?'2px solid #fff':'2px solid transparent',cursor:'pointer',flexShrink:0,transition:'transform 0.1s',boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':'none'}}
+                onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.3)';}}
                 onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';}}/>
             ))}
           </div>
-          <div style={{display:'flex',gap:4}}>
+          <div style={{display:'flex',gap:3}}>
             {[1.5,2.5,4,7].map(w=>(
               <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
-                style={{width:26,height:26,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,14),height:Math.min(w*2,14)}}/>
+                style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
               </button>
             ))}
-            <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer" disabled={strokes.length===0}
-              style={{width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>↩</button>
-            <button onClick={()=>setStrokes([])} title="Limpiar" disabled={strokes.length===0}
-              style={{width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>✕</button>
+            <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
+              style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>↩</button>
+            <button onClick={()=>{setStrokes([]); setPolylinePts([]); setPolylineLive(null);}} title="Limpiar todo" disabled={strokes.length===0}
+              style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>✕</button>
           </div>
         </div>
+
+        {/* Fill color — only for closed shapes */}
+        {isClosed && (
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>Relleno</span>
+            {FILL_COLORS.map(c=>(
+              <button key={c} onClick={()=>setFillColor(c)} title={c==='none'?'Sin relleno':c}
+                style={{width:16,height:16,borderRadius:'50%',flexShrink:0,cursor:'pointer',transition:'transform 0.1s',
+                  background:c==='none'?'transparent':c,
+                  border:fillColor===c?'2px solid #fff':'2px solid rgba(255,255,255,0.2)',
+                  boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':undefined,
+                  position:'relative',
+                }}>
+                {c==='none' && <svg viewBox="0 0 12 12" width={8} height={8} style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}} stroke="rgba(255,255,255,0.5)" strokeWidth="2"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>}
+              </button>
+            ))}
+            {fillColor!=='none' && (
+              <div style={{width:18,height:18,borderRadius:5,border:`1px solid ${fillColor}`,background:fillColor,flexShrink:0}}/>
+            )}
+          </div>
+        )}
+
+        {/* Polygon/star config */}
+        {(tool==='polygon'||tool==='star') && (
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            {tool==='polygon' && <>
+              <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Lados:</span>
+              {[3,4,5,6,8,10,12].map(n=>(
+                <button key={n} onClick={()=>setSides(n)}
+                  style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                    background:sides===n?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',
+                    border:`1px solid ${sides===n?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,
+                    color:sides===n?'#E85D2F':'#8A9099'}}>
+                  {n}
+                </button>
+              ))}
+            </>}
+            {tool==='star' && <>
+              <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Puntas:</span>
+              {[3,4,5,6,7,8].map(n=>(
+                <button key={n} onClick={()=>setStarPts(n)}
+                  style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                    background:starPts===n?'rgba(241,196,15,0.25)':'rgba(255,255,255,0.05)',
+                    border:`1px solid ${starPts===n?'rgba(241,196,15,0.7)':'rgba(255,255,255,0.08)'}`,
+                    color:starPts===n?'#F1C40F':'#8A9099'}}>
+                  {n}
+                </button>
+              ))}
+            </>}
+          </div>
+        )}
+
+        {/* Rounded rect corner radius */}
+        {tool==='roundrect' && (
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Radio esquina:</span>
+            {[4,8,14,20,32].map(r=>(
+              <button key={r} onClick={()=>setCornerR(r)}
+                style={{width:30,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                  background:cornerR===r?'rgba(52,152,219,0.25)':'rgba(255,255,255,0.05)',
+                  border:`1px solid ${cornerR===r?'rgba(52,152,219,0.7)':'rgba(255,255,255,0.08)'}`,
+                  color:cornerR===r?'#3498DB':'#8A9099'}}>
+                {r}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Remaster button */}
         {hasPenStrokes && (
           <button onClick={handleRemaster}
-            style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'7px 0',borderRadius:10,
-              background: remastered ? 'rgba(46,204,113,0.18)' : 'rgba(52,152,219,0.14)',
-              border: `1px solid ${remastered ? 'rgba(46,204,113,0.5)' : 'rgba(52,152,219,0.45)'}`,
-              color: remastered ? '#2ECC71' : '#5DADE2',
-              fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.25s', width:'100%'}}>
+            style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'6px 0',borderRadius:10,
+              background:remastered?'rgba(46,204,113,0.18)':'rgba(52,152,219,0.14)',
+              border:`1px solid ${remastered?'rgba(46,204,113,0.5)':'rgba(52,152,219,0.45)'}`,
+              color:remastered?'#2ECC71':'#5DADE2',fontSize:11,fontWeight:700,cursor:'pointer',transition:'all 0.25s',width:'100%'}}>
             {remastered
-              ? <><svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="2,9 6,13 14,4"/></svg> ¡Remasterizado!</>
-              : <><svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q1 8 5 5 Q8 2 11 5 Q14 8 12 12"/><path d="M10 14l2-2-2-2"/></svg> Remasterizar trazos</>
+              ? <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="2,9 6,13 14,4"/></svg> ¡Remasterizado!</>
+              : <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q1 8 5 5 Q8 2 11 5 Q14 8 12 12"/><path d="M10 14l2-2-2-2"/></svg> Remasterizar trazos del lápiz</>
             }
           </button>
         )}
 
-        {/* Fill mode (only for closed shapes) */}
-        {isClosed && (
-          <div style={{display:'flex',gap:6,alignItems:'center'}}>
-            <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Relleno:</span>
-            {([['none','Sin relleno'],['light','Suave'],['solid','Sólido']] as [FillMode,string][]).map(([fm,lbl])=>(
-              <button key={fm} onClick={()=>setFillMode(fm)}
-                style={{padding:'3px 10px',borderRadius:7,fontSize:11,fontWeight:600,border:`1px solid ${fillMode===fm?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,background:fillMode===fm?'rgba(232,93,47,0.2)':'rgba(255,255,255,0.04)',color:fillMode===fm?'#E85D2F':'#8A9099',cursor:'pointer'}}>
-                {lbl}
-              </button>
-            ))}
-            <div style={{marginLeft:4,width:22,height:22,borderRadius:6,border:`1px solid ${color}`,background:fillMode==='none'?'transparent':fillMode==='light'?color+'33':color}}/>
-          </div>
-        )}
-
         {/* Canvas SVG */}
         <svg ref={svgRef} width={SIZE} height={SIZE}
-          style={{borderRadius:14,cursor:tool==='pen'?'crosshair':'default',background:'#0D0F14',border:'1px solid rgba(255,255,255,0.07)',touchAction:'none',userSelect:'none',display:'block'}}
-          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
-          <defs><pattern id="eg" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.7" fill="rgba(255,255,255,0.07)"/></pattern></defs>
+          style={{borderRadius:14,
+            cursor: tool==='polyline' ? 'crosshair' : tool==='pen' ? 'crosshair' : 'crosshair',
+            background:'#0D0F14',border:'1px solid rgba(255,255,255,0.07)',touchAction:'none',userSelect:'none',display:'block'}}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+          onClick={handlePolylineClick} onDoubleClick={handlePolylineDblClick}>
+          <defs>
+            <pattern id="eg" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.7" fill="rgba(255,255,255,0.07)"/>
+            </pattern>
+          </defs>
           <rect width={SIZE} height={SIZE} fill="url(#eg)"/>
           {strokes.map((s,i)=>renderEStroke(s,i))}
+          {/* Clickable hit areas for polylines when in editnode tool */}
+          {tool==='editnode' && strokes.map((s,i) => {
+            if (s.kind !== 'polyline') return null;
+            let d=`M${s.pts[0].x.toFixed(1)},${s.pts[0].y.toFixed(1)}`;
+            for(let j=0;j<s.pts.length-1;j++){
+              const arc=s.arcs?.[j];
+              if(arc) d+=` Q${arc.cp.x.toFixed(1)},${arc.cp.y.toFixed(1)} ${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+              else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+            }
+            const isSelected = editingIdx === i;
+            return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(232,93,47,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
+              onMouseDown={e=>{e.preventDefault();e.stopPropagation();setEditingIdx(i);}}/>;
+          })}
           {tool==='pen' && curPts && curPts.length>1 && (
             <path d={ptPath(curPts)} stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           )}
+          {/* Polyline in-progress */}
+          {tool==='polyline' && polylinePts.length>0 && (<>
+            {polylinePts.length>1 && (
+              <path d={polylinePts.map((p,j)=>`${j===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
+                stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            )}
+            {polylineLive && (
+              <line x1={polylinePts[polylinePts.length-1].x} y1={polylinePts[polylinePts.length-1].y}
+                x2={polylineLive.x} y2={polylineLive.y}
+                stroke={color} strokeWidth={sw} strokeOpacity={0.45} strokeDasharray="5,4"/>
+            )}
+            {polylinePts.map((p,j)=>(
+              <circle key={j} cx={p.x} cy={p.y} r={3.5} fill={color} opacity={0.85}/>
+            ))}
+          </>)}
           {preview && renderEStroke(preview, -1)}
-          {strokes.length===0 && !curPts && !preview && (
-            <text x={SIZE/2} y={SIZE/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.12)" fontSize={13} fontFamily="'DM Sans',sans-serif">
+          {/* Curve phase hints */}
+          {tool==='curve' && curvePhase===2 && curveStart && curveEnd && (
+            <><circle cx={curveStart.x} cy={curveStart.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/>
+            <circle cx={curveEnd.x} cy={curveEnd.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/></>
+          )}
+          {/* Edit handles for selected polyline */}
+          {editingIdx >= 0 && (() => {
+            const es = strokes[editingIdx];
+            if (!es || es.kind !== 'polyline') return null;
+            const pts = es.pts;
+            return <>
+              {/* Segment arc handles */}
+              {pts.slice(0, -1).map((_, si) => {
+                const a = pts[si], b = pts[si+1];
+                const arc = es.arcs?.[si];
+                if (arc) {
+                  return <g key={`arc${si}`}>
+                    <line x1={a.x} y1={a.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
+                    <line x1={b.x} y1={b.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
+                    <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#E85D2F" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
+                      onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
+                  </g>;
+                }
+                const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+                return <g key={`mid${si}`} transform={`translate(${mx},${my}) rotate(45)`}>
+                  <rect x={-5} y={-5} width={10} height={10} fill="#0D0F14" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} style={{cursor:'crosshair'}}
+                    onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
+                </g>;
+              })}
+              {/* Vertex handles */}
+              {pts.map((p, pi) => (
+                <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#E85D2F" strokeWidth={2} style={{cursor:'grab'}}
+                  onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'vertex',segIdx:pi});}}/>
+              ))}
+            </>;
+          })()}
+          {strokes.length===0 && !curPts && !preview && polylinePts.length===0 && (
+            <text x={SIZE/2} y={SIZE/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.1)" fontSize={12} fontFamily="'DM Sans',sans-serif">
               Selecciona una herramienta y dibuja
             </text>
           )}
@@ -659,12 +992,12 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         {/* Footer */}
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Nombre de la forma"
-            style={{flex:1,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'8px 12px',color:'#F4F5F7',fontSize:13,outline:'none',fontFamily:"'DM Sans',sans-serif"}}
+            style={{flex:1,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'7px 12px',color:'#F4F5F7',fontSize:13,outline:'none',fontFamily:"'DM Sans',sans-serif"}}
             onFocus={e=>{e.target.style.borderColor='rgba(155,89,182,0.6)';}}
             onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,0.1)';}}/>
-          <button onClick={onCancel} style={{padding:'8px 14px',borderRadius:9,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
+          <button onClick={onCancel} style={{padding:'7px 14px',borderRadius:9,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
           <button onClick={handleSave} disabled={strokes.length===0}
-            style={{padding:'8px 16px',borderRadius:9,background:strokes.length===0?'rgba(155,89,182,0.2)':'#9B59B6',border:'none',color:strokes.length===0?'#5A3070':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
+            style={{padding:'7px 16px',borderRadius:9,background:strokes.length===0?'rgba(155,89,182,0.2)':'#9B59B6',border:'none',color:strokes.length===0?'#5A3070':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
             onMouseEnter={e=>{if(strokes.length>0)e.currentTarget.style.background='#8E44AD';}}
             onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='#9B59B6';}}>
             Guardar Forma
