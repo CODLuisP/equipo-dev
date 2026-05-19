@@ -9,7 +9,8 @@ import {
   Download, FileText, Image as ImageIcon, FileCode, Archive, Film, Music,
   Link as LinkIcon, UploadCloud, X, GripVertical, ChevronLeft, Bell,
   ChevronRight as ChevronRightIcon, Pencil, Check, Clock, AlertCircle,
-  Calendar, ArrowRight, Globe, Share2, User, Info, Trophy, Sparkles, Shield
+  Calendar, ArrowRight, Globe, Share2, User, Info, Trophy, Sparkles, Shield,
+  Mic, MicOff
 } from "lucide-react";
 import ButtonBase from "@/components/ui/ButtonBase";
 import ModalBase from "@/components/modal/ModalBase";
@@ -26,8 +27,7 @@ import { SectionBoveda, VaultProjectForm, type VaultProject } from "@/components
 
 interface Member { id: string; name: string; role: string; color: string; avatarSeed?: string; }
 interface Task {
-  id: string; title: string; description: string;
-  priority: 'alta' | 'media' | 'baja';
+  id: string; title: string;
   status: 'pendiente' | 'en progreso' | 'completada';
   assignedTo: string; createdAt: number;
 }
@@ -101,6 +101,7 @@ export default function EquipoDevClient() {
   const [openDeleteModal, setOpenDeleteModal]   = useState(false);
   const [deleteConfig, setDeleteConfig] = useState<{ type: string; id: string; name: string } | null>(null);
   const [editingTask, setEditingTask]       = useState<Task | null>(null);
+  const [assignModal, setAssignModal]       = useState<{ taskId: string } | null>(null);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [editingVaultProject, setEditingVaultProject] = useState<VaultProject | null>(null);
 
@@ -194,19 +195,17 @@ export default function EquipoDevClient() {
     toast.success("Avatar actualizado");
   };
 
-  const handleSaveTask = (data: Partial<Task>) => {
-    if (editingTask) {
-      saveTasks(tasks.map(t => t.id === editingTask.id ? { ...t, ...data } as Task : t));
-      if (currentUser && data.assignedTo === currentUser.id && editingTask.assignedTo !== currentUser.id) {
-        showTaskAlert(data.title || editingTask.title);
+  const handleSaveTask = (payload: string[] | Partial<Task>) => {
+    if (Array.isArray(payload)) {
+      const newTasks = payload.map(title => ({ id: crypto.randomUUID(), title, status: 'pendiente' as const, assignedTo: '', createdAt: Date.now() }));
+      saveTasks([...newTasks, ...tasks]);
+      toast.success(`${newTasks.length} tarea${newTasks.length > 1 ? 's' : ''} agregada${newTasks.length > 1 ? 's' : ''}`);
+    } else if (editingTask) {
+      saveTasks(tasks.map(t => t.id === editingTask.id ? { ...t, ...payload } as Task : t));
+      if (currentUser && payload.assignedTo === currentUser.id && editingTask.assignedTo !== currentUser.id) {
+        showTaskAlert(payload.title || editingTask.title);
       }
       toast.success("Tarea actualizada");
-    } else {
-      saveTasks([{ id: crypto.randomUUID(), title: data.title || '', description: data.description || '', priority: data.priority || 'media', status: 'pendiente', assignedTo: data.assignedTo || '', createdAt: Date.now() }, ...tasks]);
-      if (currentUser && data.assignedTo === currentUser.id) {
-        setTimeout(() => showTaskAlert(data.title || ''), 400);
-      }
-      toast.success("Tarea creada");
     }
     setOpenTaskModal(false); setEditingTask(null);
   };
@@ -229,7 +228,17 @@ export default function EquipoDevClient() {
     ), { duration: 6000, position: 'bottom-left' });
   };
 
-  const handleChangeTaskStatus = (id: string, status: Task['status']) => saveTasks(tasks.map(t => t.id === id ? { ...t, status } : t));
+  const handleChangeTaskStatus = (id: string, status: Task['status']) =>
+    saveTasks(tasks.map(t => t.id === id ? { ...t, status, ...(status === 'pendiente' ? { assignedTo: '' } : {}) } : t));
+  const handleStartTask = (id: string) => setAssignModal({ taskId: id });
+  const handleAssignAndStart = (memberId: string) => {
+    if (!assignModal) return;
+    const task = tasks.find(t => t.id === assignModal.taskId);
+    saveTasks(tasks.map(t => t.id === assignModal.taskId ? { ...t, status: 'en progreso' as const, assignedTo: memberId } : t));
+    if (currentUser && memberId === currentUser.id && task) showTaskAlert(task.title);
+    setAssignModal(null);
+    toast.success("Tarea iniciada");
+  };
   const handleDeleteTask        = (id: string) => { saveTasks(tasks.filter(t => t.id !== id)); toast.success("Tarea eliminada"); };
   const handleClearCompleted    = () => { saveTasks(tasks.filter(t => t.status !== 'completada')); toast.success("Completadas eliminadas"); };
 
@@ -408,6 +417,7 @@ export default function EquipoDevClient() {
               onAddTask={() => { setEditingTask(null); setOpenTaskModal(true); }}
               onEditTask={t => { setEditingTask(t); setOpenTaskModal(true); }}
               onChangeStatus={handleChangeTaskStatus}
+              onStartTask={handleStartTask}
               onDeleteTask={t => { setDeleteConfig({type:'task',id:t.id,name:t.title}); setOpenDeleteModal(true); }}
               onClearCompleted={handleClearCompleted}/>
           )}
@@ -433,7 +443,14 @@ export default function EquipoDevClient() {
         <MemberForm onAdd={(n,r) => { handleAddMember(n,r); setOpenMemberModal(false); }}/>
       </ModalBase>
       <ModalBase open={openTaskModal} title={editingTask ? "Editar Tarea" : "Nueva Tarea"} onClose={() => setOpenTaskModal(false)}>
-        <TaskForm members={members} initialData={editingTask||undefined} currentUser={currentUser} onSave={handleSaveTask} onCancel={() => setOpenTaskModal(false)}/>
+        <TaskForm members={members} initialData={editingTask||undefined} currentUser={currentUser} onSave={handleSaveTask} onCancel={() => { setOpenTaskModal(false); setEditingTask(null); }}/>
+      </ModalBase>
+      <ModalBase open={!!assignModal} title="¿Quién se encarga?" onClose={() => setAssignModal(null)}>
+        <div className="flex flex-col gap-5">
+          <p className="text-gray-400 text-sm">Selecciona al miembro que tomará esta tarea.</p>
+          <MemberPicker members={members} value="" currentUser={currentUser} onChange={handleAssignAndStart}/>
+          <div className="flex justify-end"><ButtonBase variant="secondary" onClick={() => setAssignModal(null)}>Cancelar</ButtonBase></div>
+        </div>
       </ModalBase>
       <ModalBase open={openSnippetModal} title={editingSnippet ? "Editar Snippet" : "Nuevo Snippet"} onClose={() => setOpenSnippetModal(false)}>
         <SnippetForm members={members} initialData={editingSnippet||undefined} onSave={handleSaveSnippet} onCancel={() => setOpenSnippetModal(false)}/>
@@ -496,13 +513,10 @@ function SectionEquipo({ members, tasks }: { members: Member[]; tasks: Task[] })
       {members.map(m => {
         const mt = tasks.filter(t => t.assignedTo === m.id);
         const done = mt.filter(t => t.status === 'completada').length;
-        const prog = mt.length > 0 ? (done / mt.length) * 100 : 0;
-        
-        // Carga de trabajo por prioridad
-        const high = mt.filter(t => t.priority === 'alta').length;
-        const med  = mt.filter(t => t.priority === 'media').length;
-        const low  = mt.filter(t => t.priority === 'baja').length;
-        const total = high + med + low;
+        const inProg = mt.filter(t => t.status === 'en progreso').length;
+        const pend = mt.filter(t => t.status === 'pendiente').length;
+        const total = mt.length;
+        const prog = total > 0 ? (done / total) * 100 : 0;
 
         const getPct = (n: number) => total > 0 ? (n / total) * 100 : 0;
 
@@ -549,15 +563,15 @@ function SectionEquipo({ members, tasks }: { members: Member[]; tasks: Task[] })
               </div>
               
               <div className="flex h-6 w-full rounded-lg overflow-hidden bg-white/5 p-1 gap-1">
-                <div style={{ width: `${getPct(high)}%`, background: '#FF4D4D', opacity: high > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`Alta: ${high}`} />
-                <div style={{ width: `${getPct(med)}%`, background: '#FFB84D', opacity: med > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`Media: ${med}`} />
-                <div style={{ width: `${getPct(low)}%`, background: '#4DABFF', opacity: low > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`Baja: ${low}`} />
+                <div style={{ width: `${getPct(inProg)}%`, background: '#E85D2F', opacity: inProg > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`En progreso: ${inProg}`} />
+                <div style={{ width: `${getPct(done)}%`, background: '#2ECC71', opacity: done > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`Completadas: ${done}`} />
+                <div style={{ width: `${getPct(pend)}%`, background: '#5A6270', opacity: pend > 0 ? 1 : 0 }} className="h-full rounded-sm transition-all duration-500" title={`Pendientes: ${pend}`} />
               </div>
 
               <div className="grid grid-cols-3 gap-2 mt-3">
-                <PriorityStat count={high} color="#FF4D4D" label="Alta" />
-                <PriorityStat count={med}  color="#FFB84D" label="Media" />
-                <PriorityStat count={low}  color="#4DABFF" label="Baja" />
+                <PriorityStat count={inProg} color="#E85D2F" label="Activas" />
+                <PriorityStat count={done}   color="#2ECC71" label="Listas" />
+                <PriorityStat count={pend}   color="#5A6270" label="Espera" />
               </div>
             </div>
           </div>
@@ -581,39 +595,24 @@ function PriorityStat({ count, color, label }: { count: number; color: string; l
 }
 
 // ─── Sub-componente: Task Card (Estilo HUD) ──────────────────────────────────
-function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, onChangeStatus }: {
+function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, onChangeStatus, onStart }: {
   task: Task; member?: Member; isCurrentUser: boolean; size?: 'sm' | 'md' | 'lg';
   onEdit: (t: Task) => void; onDelete: (t: Task) => void;
   onChangeStatus: (id: string, s: Task['status']) => void;
+  onStart: (id: string) => void;
 }) {
-  const PC: Record<string, { color: string, glow: string }> = {
-    alta:  { color: '#FF4D4D', glow: 'rgba(255, 77, 77, 0.4)' },
-    media: { color: '#FFB84D', glow: 'rgba(255, 184, 77, 0.4)' },
-    baja:  { color: '#4DABFF', glow: 'rgba(77, 171, 255, 0.4)' }
-  };
-  const p = PC[task.priority] || PC.media;
-
   return (
-    <div 
+    <div
       className={`group relative flex flex-col gap-3 rounded-2xl transition-all duration-500 hover:-translate-y-1 ${size === 'lg' ? 'p-6' : 'p-4'}`}
-      style={{ 
+      style={{
         background: isCurrentUser ? 'rgba(30, 34, 45, 0.8)' : 'rgba(22, 25, 31, 0.6)',
         border: `1px solid ${isCurrentUser ? 'rgba(232,93,47,0.3)' : 'rgba(255,255,255,0.08)'}`,
         backdropFilter: 'blur(12px)',
         boxShadow: isCurrentUser ? `0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,93,47,0.1)` : '0 10px 30px -10px rgba(0,0,0,0.3)'
       }}
     >
-      {/* Decorative Corner */}
-      <div className="absolute top-0 left-0 w-8 h-8 pointer-events-none overflow-hidden opacity-20">
-        <div className="absolute top-0 left-0 w-px h-full" style={{ background: `linear-gradient(to bottom, ${p.color}, transparent)` }} />
-        <div className="absolute top-0 left-0 h-px w-full" style={{ background: `linear-gradient(to right, ${p.color}, transparent)` }} />
-      </div>
-
       <div className="flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: p.color, boxShadow: `0 0 8px ${p.glow}` }} />
-          <span className="text-[9px] font-bold uppercase tracking-wider opacity-60" style={{ color: p.color }}>{task.priority}</span>
-        </div>
+        <div className="w-1.5 h-1.5 rounded-full bg-[#E85D2F]/50" />
         <div className="flex gap-1.5">
           <button onClick={() => onEdit(task)} className="p-1 text-gray-500 hover:text-white transition-colors"><Settings size={12}/></button>
           <button onClick={() => onDelete(task)} className="p-1 text-gray-500 hover:text-red-500 transition-colors"><Trash2 size={12}/></button>
@@ -621,14 +620,9 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
       </div>
 
       <div className="z-10 flex-1">
-        <h4 className={`text-white font-bold leading-tight mb-2 group-hover:text-[#E85D2F] transition-colors ${size === 'lg' ? 'text-lg' : 'text-sm'}`}>
+        <h4 className={`text-white font-bold leading-tight group-hover:text-[#E85D2F] transition-colors ${size === 'lg' ? 'text-lg' : 'text-sm'}`}>
           {task.title}
         </h4>
-        {task.description && (
-          <p className="text-gray-500 text-[11px] leading-relaxed line-clamp-2 font-medium">
-            {task.description}
-          </p>
-        )}
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-white/5 z-10 mt-auto">
@@ -646,11 +640,18 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
               <ChevronLeft size={14} />
             </button>
           )}
-          {task.status !== 'completada' && (
-            <button onClick={() => onChangeStatus(task.id, task.status === 'pendiente' ? 'en progreso' : 'completada')}
+          {task.status === 'pendiente' && (
+            <button onClick={() => onStart(task.id)}
               className="px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
               style={{ background: '#E85D2F', color: '#fff', boxShadow: '0 4px 15px rgba(232,93,47,0.3)' }}>
-              {task.status === 'pendiente' ? 'Iniciar' : 'Finalizar'}
+              Iniciar
+            </button>
+          )}
+          {task.status === 'en progreso' && (
+            <button onClick={() => onChangeStatus(task.id, 'completada')}
+              className="px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+              style={{ background: '#E85D2F', color: '#fff', boxShadow: '0 4px 15px rgba(232,93,47,0.3)' }}>
+              Finalizar
             </button>
           )}
           {task.status === 'completada' && (
@@ -665,10 +666,11 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
 }
 
 // ─── Sección: Tareas — Centro de Comando Bento ────────────────────────────────
-function SectionTareas({ tasks, members, filterMember, setFilterMember, currentUser, onAddTask, onEditTask, onChangeStatus, onDeleteTask, onClearCompleted }: {
+function SectionTareas({ tasks, members, filterMember, setFilterMember, currentUser, onAddTask, onEditTask, onChangeStatus, onStartTask, onDeleteTask, onClearCompleted }: {
   tasks: Task[]; members: Member[]; filterMember: string; setFilterMember: (v: string) => void;
   currentUser: Member | null; onAddTask: () => void; onEditTask: (t: Task) => void;
-  onChangeStatus: (id: string, s: Task['status']) => void; onDeleteTask: (t: Task) => void; onClearCompleted: () => void;
+  onChangeStatus: (id: string, s: Task['status']) => void; onStartTask: (id: string) => void;
+  onDeleteTask: (t: Task) => void; onClearCompleted: () => void;
 }) {
   const pending    = tasks.filter(t => t.status === 'pendiente');
   const inProgress = tasks.filter(t => t.status === 'en progreso');
@@ -737,7 +739,7 @@ function SectionTareas({ tasks, members, filterMember, setFilterMember, currentU
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3">
             {pending.map(task => (
-              <TaskCard key={task.id} task={task} member={members.find(m => m.id === task.assignedTo)} isCurrentUser={currentUser?.id === task.assignedTo} size="sm" onEdit={onEditTask} onDelete={onDeleteTask} onChangeStatus={onChangeStatus} />
+              <TaskCard key={task.id} task={task} member={members.find(m => m.id === task.assignedTo)} isCurrentUser={currentUser?.id === task.assignedTo} size="sm" onEdit={onEditTask} onDelete={onDeleteTask} onChangeStatus={onChangeStatus} onStart={onStartTask} />
             ))}
             {pending.length === 0 && <div className="py-10 text-center opacity-20 italic text-xs">En espera...</div>}
           </div>
@@ -759,7 +761,7 @@ function SectionTareas({ tasks, members, filterMember, setFilterMember, currentU
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 grid grid-cols-1 md:grid-cols-2 gap-5 content-start">
             {inProgress.map(task => (
-              <TaskCard key={task.id} task={task} member={members.find(m => m.id === task.assignedTo)} isCurrentUser={currentUser?.id === task.assignedTo} size="lg" onEdit={onEditTask} onDelete={onDeleteTask} onChangeStatus={onChangeStatus} />
+              <TaskCard key={task.id} task={task} member={members.find(m => m.id === task.assignedTo)} isCurrentUser={currentUser?.id === task.assignedTo} size="lg" onEdit={onEditTask} onDelete={onDeleteTask} onChangeStatus={onChangeStatus} onStart={onStartTask} />
             ))}
             {inProgress.length === 0 && (
               <div className="col-span-2 flex flex-col items-center justify-center py-20 border-2 border-dashed border-white/5 rounded-[32px]">
@@ -990,29 +992,7 @@ function SectionPizarra({ notes, drawings, images, shapes, customShapes, members
     toast.success(`"${label}" guardada en el panel de formas`);
   };
 
-  const handleImportSvg = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        if (!svgEl) { toast.error('SVG inválido'); return; }
-        const vb = svgEl.getAttribute('viewBox') || `0 0 ${svgEl.getAttribute('width')||100} ${svgEl.getAttribute('height')||100}`;
-        svgEl.querySelectorAll('script').forEach(s => s.remove());
-        svgEl.querySelectorAll('*').forEach(el => { Array.from(el.attributes).filter(a=>a.name.startsWith('on')).forEach(a=>el.removeAttribute(a.name)); });
-        const [,,vw,vh] = vb.split(/[\s,]+/).map(Number);
-        const aspect = (vw||1)/(vh||1);
-        const dw = Math.round(aspect>=1 ? 100 : 100*aspect);
-        const dh = Math.round(aspect>=1 ? 100/aspect : 100);
-        const label = file.name.replace(/\.svg$/i,'');
-        onSaveCustomShapes([...customShapes, { id: crypto.randomUUID(), label, svgContent: svgEl.innerHTML, viewBox: vb, defaultW: dw, defaultH: dh }]);
-        toast.success(`"${label}" importada al panel`);
-      } catch { toast.error('Error leyendo el SVG'); }
-    };
-    reader.readAsText(file);
-  };
+  const [showShapeEditor, setShowShapeEditor] = useState(false);
 
   useEffect(() => {
     if (!panelDrag) return;
@@ -1314,7 +1294,8 @@ function SectionPizarra({ notes, drawings, images, shapes, customShapes, members
   return (
     <div className="h-full relative overflow-hidden">
       {/* Shapes Panel (Right Center) */}
-      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onImportSvg={handleImportSvg} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
+      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onOpenEditor={() => { setShowShapesPanel(false); setShowShapeEditor(true); }} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
+      {showShapeEditor && <ShapeEditor onSave={shape => { onSaveCustomShapes([...customShapes, shape]); setShowShapeEditor(false); toast.success(`"${shape.label}" guardada en Mis Formas`); }} onCancel={() => setShowShapeEditor(false)} />}
 
       {/* Ghost mientras arrastra desde el panel */}
       {panelDrag && (
@@ -2033,15 +2014,358 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
   );
 }
 
-function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor, customTemplates, onDeleteCustom, onImportSvg, selectedPathCount, onSaveSelectionAsShape }: {
+// ─── Shape Editor ─────────────────────────────────────────────────────────────
+const EDITOR_COLORS = ['#F4F5F7','#E85D2F','#E74C3C','#F39C12','#2ECC71','#3498DB','#1ABC9C','#5DADE2','#9B59B6','#E67E22','#95A5A6','#000000'];
+
+type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri';
+type FillMode = 'none' | 'light' | 'solid';
+type EStroke = { color: string; sw: number; fill: string } & (
+  | { kind: 'path'; pts: {x:number;y:number}[] }
+  | { kind: 'poly'; pts: {x:number;y:number}[] }
+  | { kind: 'rect'; x:number; y:number; rw:number; rh:number }
+  | { kind: 'ellipse'; cx:number; cy:number; rx:number; ry:number }
+  | { kind: 'line'; x1:number; y1:number; x2:number; y2:number }
+  | { kind: 'arrow'; x1:number; y1:number; x2:number; y2:number }
+  | { kind: 'tri'; x1:number; y1:number; x2:number; y2:number }
+);
+
+function ptPath(pts: {x:number;y:number}[]): string {
+  if (pts.length < 2) return '';
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = ((pts[i].x + pts[i+1].x) / 2).toFixed(1);
+    const my = ((pts[i].y + pts[i+1].y) / 2).toFixed(1);
+    d += ` Q${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)} ${mx},${my}`;
+  }
+  d += ` L${pts[pts.length-1].x.toFixed(1)},${pts[pts.length-1].y.toFixed(1)}`;
+  return d;
+}
+
+function calcBBox(strokes: EStroke[]): {minX:number;minY:number;maxX:number;maxY:number} {
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  const ex=(x:number,y:number)=>{minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);};
+  strokes.forEach(s=>{
+    if(s.kind==='path'||s.kind==='poly') s.pts.forEach(p=>ex(p.x,p.y));
+    else if(s.kind==='rect'){ex(s.x,s.y);ex(s.x+s.rw,s.y+s.rh);}
+    else if(s.kind==='ellipse'){ex(s.cx-s.rx,s.cy-s.ry);ex(s.cx+s.rx,s.cy+s.ry);}
+    else if(s.kind==='line'||s.kind==='arrow'){ex(s.x1,s.y1);ex(s.x2,s.y2);}
+    else if(s.kind==='tri'){
+      const mx=(s.x1+s.x2)/2;
+      ex(s.x1,s.y2);ex(s.x2,s.y2);ex(mx,s.y1);
+    }
+  });
+  return {minX,minY,maxX,maxY};
+}
+
+function renderEStroke(s: EStroke, i: number): React.ReactElement {
+  const common = { stroke: s.color, strokeWidth: s.sw, fill: s.fill, strokeLinecap:'round' as const, strokeLinejoin:'round' as const };
+  if (s.kind==='path') return <path key={i} {...common} d={ptPath(s.pts)}/>;
+  if (s.kind==='poly') {
+    const pts = s.pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    return <polygon key={i} {...common} points={pts}/>;
+  }
+  if (s.kind==='rect') return <rect key={i} {...common} x={Math.min(s.x,s.x+s.rw)} y={Math.min(s.y,s.y+s.rh)} width={Math.abs(s.rw)} height={Math.abs(s.rh)} rx={3}/>;
+  if (s.kind==='ellipse') return <ellipse key={i} {...common} cx={s.cx} cy={s.cy} rx={Math.abs(s.rx)} ry={Math.abs(s.ry)}/>;
+  if (s.kind==='line') return <line key={i} {...common} fill="none" x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}/>;
+  if (s.kind==='arrow') {
+    const dx=s.x2-s.x1,dy=s.y2-s.y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ux=dx/len,uy=dy/len,hw=Math.max(s.sw*3.5,10);
+    const lx=s.x2-ux*hw-uy*hw*0.4,ly=s.y2-uy*hw+ux*hw*0.4;
+    const rx2=s.x2-ux*hw+uy*hw*0.4,ry2=s.y2-uy*hw-ux*hw*0.4;
+    return <g key={i}>
+      <line {...common} fill="none" x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}/>
+      <polygon {...common} fill={s.color} points={`${s.x2},${s.y2} ${lx},${ly} ${rx2},${ry2}`}/>
+    </g>;
+  }
+  if (s.kind==='tri') {
+    const mx=(s.x1+s.x2)/2;
+    return <polygon key={i} {...common} points={`${mx},${s.y1} ${s.x2},${s.y2} ${s.x1},${s.y2}`}/>;
+  }
+  return <g key={i}/>;
+}
+
+function strokeToSvgStr(s: EStroke, nx:(x:number)=>number, ny:(y:number)=>number): string {
+  const strokeAttr = `stroke="${s.color}" stroke-width="${s.sw}" fill="${s.fill}" stroke-linecap="round" stroke-linejoin="round"`;
+  if (s.kind==='path') {
+    const pts2 = s.pts.map(p=>({x:nx(p.x),y:ny(p.y)}));
+    return `<path d="${ptPath(pts2)}" ${strokeAttr}/>`;
+  }
+  if (s.kind==='poly') {
+    const pts2 = s.pts.map(p=>`${nx(p.x).toFixed(2)},${ny(p.y).toFixed(2)}`).join(' ');
+    return `<polygon points="${pts2}" ${strokeAttr}/>`;
+  }
+  if (s.kind==='rect') {
+    const x=Math.min(nx(s.x),nx(s.x+s.rw)),y=Math.min(ny(s.y),ny(s.y+s.rh));
+    const w=Math.abs(nx(s.x+s.rw)-nx(s.x)),h=Math.abs(ny(s.y+s.rh)-ny(s.y));
+    return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" rx="2" ${strokeAttr}/>`;
+  }
+  if (s.kind==='ellipse') {
+    const cx=nx(s.cx),cy=ny(s.cy),rx=Math.abs(nx(s.cx+s.rx)-nx(s.cx)),ry=Math.abs(ny(s.cy+s.ry)-ny(s.cy));
+    return `<ellipse cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${ry.toFixed(2)}" ${strokeAttr}/>`;
+  }
+  if (s.kind==='line') return `<line x1="${nx(s.x1).toFixed(2)}" y1="${ny(s.y1).toFixed(2)}" x2="${nx(s.x2).toFixed(2)}" y2="${ny(s.y2).toFixed(2)}" ${strokeAttr} fill="none"/>`;
+  if (s.kind==='arrow') {
+    const dx=s.x2-s.x1,dy=s.y2-s.y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ux=dx/len,uy=dy/len,hw=Math.max(s.sw*3.5,10);
+    const lx=nx(s.x2-ux*hw-uy*hw*0.4),ly=ny(s.y2-uy*hw+ux*hw*0.4);
+    const rx2=nx(s.x2-ux*hw+uy*hw*0.4),ry2=ny(s.y2-uy*hw-ux*hw*0.4);
+    return `<line x1="${nx(s.x1).toFixed(2)}" y1="${ny(s.y1).toFixed(2)}" x2="${nx(s.x2).toFixed(2)}" y2="${ny(s.y2).toFixed(2)}" ${strokeAttr} fill="none"/>` +
+      `<polygon points="${nx(s.x2).toFixed(2)},${ny(s.y2).toFixed(2)} ${lx.toFixed(2)},${ly.toFixed(2)} ${rx2.toFixed(2)},${ry2.toFixed(2)}" stroke="${s.color}" stroke-width="${s.sw}" fill="${s.color}"/>`;
+  }
+  if (s.kind==='tri') {
+    const mx=(s.x1+s.x2)/2;
+    return `<polygon points="${nx(mx).toFixed(2)},${ny(s.y1).toFixed(2)} ${nx(s.x2).toFixed(2)},${ny(s.y2).toFixed(2)} ${nx(s.x1).toFixed(2)},${ny(s.y2).toFixed(2)}" ${strokeAttr}/>`;
+  }
+  return '';
+}
+
+function ptDist(a:{x:number;y:number}, b:{x:number;y:number}) {
+  const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy);
+}
+
+function dougPeucker(pts:{x:number;y:number}[], eps:number): {x:number;y:number}[] {
+  if (pts.length < 3) return pts;
+  const p1=pts[0], pN=pts[pts.length-1];
+  const dx=pN.x-p1.x, dy=pN.y-p1.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+  let maxD=0, idx=1;
+  for (let i=1; i<pts.length-1; i++) {
+    const d = Math.abs(dy*pts[i].x - dx*pts[i].y + pN.x*p1.y - pN.y*p1.x) / len;
+    if (d > maxD) { maxD=d; idx=i; }
+  }
+  if (maxD > eps) {
+    return [...dougPeucker(pts.slice(0,idx+1),eps).slice(0,-1), ...dougPeucker(pts.slice(idx),eps)];
+  }
+  return [p1, pN];
+}
+
+function remasterStrokes(strokes: EStroke[]): EStroke[] {
+  return strokes.map(s => {
+    if (s.kind !== 'path') return s;
+    const pts = s.pts;
+    if (pts.length < 4) return s;
+    let totalLen = 0;
+    for (let i=1; i<pts.length; i++) totalLen += ptDist(pts[i-1], pts[i]);
+    if (totalLen < 8) return s;
+    // Remove jitter while keeping the shape — the bezier in ptPath then curves through the control points
+    const smoothed = dougPeucker(pts, totalLen * 0.025);
+    return { ...s, pts: smoothed };
+  });
+}
+
+const TOOL_DEFS: {id: DrawTool; label: string; icon: React.ReactElement}[] = [
+  { id:'pen',    label:'Lápiz',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 14 L5 11 L13 3 L13 6 L2 14Z"/><path d="M11 5l2 2"/></svg> },
+  { id:'rect',   label:'Rectángulo',icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="12" height="8" rx="1.5"/></svg> },
+  { id:'ellipse',label:'Elipse',    icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="8" cy="8" rx="6" ry="4"/></svg> },
+  { id:'line',   label:'Línea',     icon:<svg viewBox="0 0 16 16" width={14} height={14} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="14" x2="14" y2="2"/></svg> },
+  { id:'arrow',  label:'Flecha',    icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="2" y1="14" x2="13" y2="3"/><polyline points="7,3 13,3 13,9"/></svg> },
+  { id:'tri',    label:'Triángulo', icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="8,2 15,14 1,14"/></svg> },
+];
+
+function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; onCancel: () => void }) {
+  const [strokes, setStrokes] = useState<EStroke[]>([]);
+  const [tool, setTool] = useState<DrawTool>('pen');
+  const [fillMode, setFillMode] = useState<FillMode>('none');
+  const [color, setColor] = useState('#E85D2F');
+  const [sw, setSw] = useState(2.5);
+  const [label, setLabel] = useState('');
+  const [curPts, setCurPts] = useState<{x:number;y:number}[]|null>(null);
+  const [dragStart, setDragStart] = useState<{x:number;y:number}|null>(null);
+  const [dragCur, setDragCur] = useState<{x:number;y:number}|null>(null);
+  const [remastered, setRemastered] = useState(false);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const SIZE = 340;
+
+  const hasPenStrokes = strokes.some(s => s.kind === 'path');
+
+  const handleRemaster = () => {
+    setStrokes(prev => remasterStrokes(prev));
+    setRemastered(true);
+    setTimeout(() => setRemastered(false), 1400);
+  };
+
+  const getFill = () => {
+    if (fillMode==='none') return 'none';
+    if (fillMode==='light') return color+'33';
+    return color;
+  };
+
+  const getpt = (e: React.MouseEvent) => {
+    const rect = svgRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const buildPreview = (): EStroke|null => {
+    if (!dragStart || !dragCur) return null;
+    const f = getFill();
+    if (tool==='rect') return {kind:'rect',color,sw,fill:f,x:dragStart.x,y:dragStart.y,rw:dragCur.x-dragStart.x,rh:dragCur.y-dragStart.y};
+    if (tool==='ellipse') return {kind:'ellipse',color,sw,fill:f,cx:(dragStart.x+dragCur.x)/2,cy:(dragStart.y+dragCur.y)/2,rx:Math.abs(dragCur.x-dragStart.x)/2,ry:Math.abs(dragCur.y-dragStart.y)/2};
+    if (tool==='line') return {kind:'line',color,sw,fill:'none',x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
+    if (tool==='arrow') return {kind:'arrow',color,sw,fill:'none',x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
+    if (tool==='tri') return {kind:'tri',color,sw,fill:f,x1:dragStart.x,y1:dragStart.y,x2:dragCur.x,y2:dragCur.y};
+    return null;
+  };
+
+  const onDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const p = getpt(e);
+    if (tool==='pen') { setCurPts([p]); return; }
+    setDragStart(p); setDragCur(p);
+  };
+  const onMove = (e: React.MouseEvent) => {
+    if (tool==='pen') { if (!curPts) return; setCurPts(prev => [...(prev||[]), getpt(e)]); return; }
+    if (!dragStart) return;
+    setDragCur(getpt(e));
+  };
+  const onUp = () => {
+    if (tool==='pen') {
+      if (curPts && curPts.length > 1) setStrokes(p => [...p, {kind:'path',color,sw,fill:'none',pts:curPts}]);
+      setCurPts(null); return;
+    }
+    const prev = buildPreview();
+    if (prev) setStrokes(p => [...p, prev]);
+    setDragStart(null); setDragCur(null);
+  };
+
+  const handleSave = () => {
+    if (strokes.length === 0) return;
+    const bb = calcBBox(strokes);
+    const bw=Math.max(bb.maxX-bb.minX,1),bh=Math.max(bb.maxY-bb.minY,1);
+    const nx=(x:number)=>(x-bb.minX)/bw*100;
+    const ny=(y:number)=>(y-bb.minY)/bh*100;
+    const svgContent = strokes.map(s=>strokeToSvgStr(s,nx,ny)).join('');
+    const aspect=bw/bh;
+    const dw=Math.min(Math.round(aspect>=1?100:100*aspect),120);
+    const dh=Math.min(Math.round(aspect>=1?100/aspect:100),120);
+    onSave({id:crypto.randomUUID(),label:label.trim()||'Mi Forma',svgContent,viewBox:'0 0 100 100',defaultW:dw,defaultH:dh});
+  };
+
+  const preview = buildPreview();
+  const closedTools: DrawTool[] = ['rect','ellipse','tri'];
+  const isClosed = closedTools.includes(tool);
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(8px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
+      onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
+      <div style={{background:'rgba(14,17,24,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:22,display:'flex',flexDirection:'column',gap:14,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',width:SIZE+56}}>
+
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <p style={{margin:0,fontWeight:800,fontSize:15,color:'#F4F5F7'}}>Crear Forma</p>
+            <p style={{margin:0,fontSize:11,color:'#5A6270',marginTop:2}}>Dibuja con herramientas — se guarda en el panel</p>
+          </div>
+          <button onClick={onCancel} style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg viewBox="0 0 12 12" width={11} height={11} stroke="currentColor" strokeWidth="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+          </button>
+        </div>
+
+        {/* Tool selector */}
+        <div style={{display:'flex',gap:5}}>
+          {TOOL_DEFS.map(t=>(
+            <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
+              style={{flex:1,height:32,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s'}}>
+              {t.icon}
+            </button>
+          ))}
+        </div>
+
+        {/* Colors + stroke + fill */}
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:4,flexWrap:'wrap',flex:1}}>
+            {EDITOR_COLORS.map(c=>(
+              <button key={c} onClick={()=>setColor(c)}
+                style={{width:17,height:17,borderRadius:'50%',background:c,border:color===c?'2px solid #fff':'2px solid transparent',cursor:'pointer',flexShrink:0,transition:'transform 0.1s',boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':'none'}}
+                onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.25)';}}
+                onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';}}/>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:4}}>
+            {[1.5,2.5,4,7].map(w=>(
+              <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
+                style={{width:26,height:26,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,14),height:Math.min(w*2,14)}}/>
+              </button>
+            ))}
+            <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer" disabled={strokes.length===0}
+              style={{width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>↩</button>
+            <button onClick={()=>setStrokes([])} title="Limpiar" disabled={strokes.length===0}
+              style={{width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>✕</button>
+          </div>
+        </div>
+
+        {/* Remaster button */}
+        {hasPenStrokes && (
+          <button onClick={handleRemaster}
+            style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'7px 0',borderRadius:10,
+              background: remastered ? 'rgba(46,204,113,0.18)' : 'rgba(52,152,219,0.14)',
+              border: `1px solid ${remastered ? 'rgba(46,204,113,0.5)' : 'rgba(52,152,219,0.45)'}`,
+              color: remastered ? '#2ECC71' : '#5DADE2',
+              fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.25s', width:'100%'}}>
+            {remastered
+              ? <><svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="2,9 6,13 14,4"/></svg> ¡Remasterizado!</>
+              : <><svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q1 8 5 5 Q8 2 11 5 Q14 8 12 12"/><path d="M10 14l2-2-2-2"/></svg> Remasterizar trazos</>
+            }
+          </button>
+        )}
+
+        {/* Fill mode (only for closed shapes) */}
+        {isClosed && (
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Relleno:</span>
+            {([['none','Sin relleno'],['light','Suave'],['solid','Sólido']] as [FillMode,string][]).map(([fm,lbl])=>(
+              <button key={fm} onClick={()=>setFillMode(fm)}
+                style={{padding:'3px 10px',borderRadius:7,fontSize:11,fontWeight:600,border:`1px solid ${fillMode===fm?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,background:fillMode===fm?'rgba(232,93,47,0.2)':'rgba(255,255,255,0.04)',color:fillMode===fm?'#E85D2F':'#8A9099',cursor:'pointer'}}>
+                {lbl}
+              </button>
+            ))}
+            <div style={{marginLeft:4,width:22,height:22,borderRadius:6,border:`1px solid ${color}`,background:fillMode==='none'?'transparent':fillMode==='light'?color+'33':color}}/>
+          </div>
+        )}
+
+        {/* Canvas SVG */}
+        <svg ref={svgRef} width={SIZE} height={SIZE}
+          style={{borderRadius:14,cursor:tool==='pen'?'crosshair':'default',background:'#0D0F14',border:'1px solid rgba(255,255,255,0.07)',touchAction:'none',userSelect:'none',display:'block'}}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
+          <defs><pattern id="eg" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.7" fill="rgba(255,255,255,0.07)"/></pattern></defs>
+          <rect width={SIZE} height={SIZE} fill="url(#eg)"/>
+          {strokes.map((s,i)=>renderEStroke(s,i))}
+          {tool==='pen' && curPts && curPts.length>1 && (
+            <path d={ptPath(curPts)} stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          )}
+          {preview && renderEStroke(preview, -1)}
+          {strokes.length===0 && !curPts && !preview && (
+            <text x={SIZE/2} y={SIZE/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.12)" fontSize={13} fontFamily="'DM Sans',sans-serif">
+              Selecciona una herramienta y dibuja
+            </text>
+          )}
+        </svg>
+
+        {/* Footer */}
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Nombre de la forma"
+            style={{flex:1,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'8px 12px',color:'#F4F5F7',fontSize:13,outline:'none',fontFamily:"'DM Sans',sans-serif"}}
+            onFocus={e=>{e.target.style.borderColor='rgba(155,89,182,0.6)';}}
+            onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,0.1)';}}/>
+          <button onClick={onCancel} style={{padding:'8px 14px',borderRadius:9,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
+          <button onClick={handleSave} disabled={strokes.length===0}
+            style={{padding:'8px 16px',borderRadius:9,background:strokes.length===0?'rgba(155,89,182,0.2)':'#9B59B6',border:'none',color:strokes.length===0?'#5A3070':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
+            onMouseEnter={e=>{if(strokes.length>0)e.currentTarget.style.background='#8E44AD';}}
+            onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='#9B59B6';}}>
+            Guardar Forma
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor, customTemplates, onDeleteCustom, onOpenEditor, selectedPathCount, onSaveSelectionAsShape }: {
   isVisible: boolean; onToggle: () => void; onAddShape: (t:string)=>void; onDragStart: (t:string, e:React.MouseEvent)=>void; defaultColor: string;
-  customTemplates: CustomShape[]; onDeleteCustom: (id:string)=>void; onImportSvg: (f:File)=>void;
+  customTemplates: CustomShape[]; onDeleteCustom: (id:string)=>void; onOpenEditor: ()=>void;
   selectedPathCount: number; onSaveSelectionAsShape: ()=>void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   return (
     <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
-      <input ref={fileRef} type="file" accept=".svg,image/svg+xml" style={{ display:'none' }} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImportSvg(f); e.target.value=''; }}/>
       <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#E85D2F' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#E85D2F':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
         onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(232,93,47,0.5)'; } }}
@@ -2055,13 +2379,13 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
 
           {/* Acciones */}
           <div style={{ display:'flex', gap:6 }}>
-            <button onClick={()=>fileRef.current?.click()}
-              title="Importar SVG como forma"
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(93,173,226,0.12)', border:'1px solid rgba(93,173,226,0.3)', borderRadius:9, cursor:'pointer', color:'#5DADE2', fontSize:10, fontWeight:700 }}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(93,173,226,0.22)';}}
-              onMouseLeave={e=>{e.currentTarget.style.background='rgba(93,173,226,0.12)';}}>
-              <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 2v8M5 6l3-4 3 4"/><rect x="2" y="10" width="12" height="4" rx="1.5"/></svg>
-              Importar SVG
+            <button onClick={onOpenEditor}
+              title="Abrir editor de formas"
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(155,89,182,0.12)', border:'1px solid rgba(155,89,182,0.3)', borderRadius:9, cursor:'pointer', color:'#9B59B6', fontSize:10, fontWeight:700 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(155,89,182,0.22)';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(155,89,182,0.12)';}}>
+              <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14 L6 10 L14 2 L14 6 L2 14Z"/><path d="M10 4l2 2"/></svg>
+              Crear Forma
             </button>
             {selectedPathCount > 0 && (
               <button onClick={onSaveSelectionAsShape}
@@ -2193,36 +2517,118 @@ function MemberPicker({ members, value, currentUser, onChange }: { members: Memb
   );
 }
 
-function TaskForm({ members, initialData, currentUser, onSave, onCancel }: { members: Member[]; initialData?: Task; currentUser: Member|null; onSave: (d:Partial<Task>)=>void; onCancel:()=>void; }) {
-  const [form,setForm]=useState<any>(initialData||{ title:'', description:'', priority:'media', assignedTo: currentUser?.id||members[0]?.id||'' });
-  const PC: Record<string,{color:string;label:string}> = { baja:{color:'#3498DB',label:'Baja'}, media:{color:'#F1C40F',label:'Media'}, alta:{color:'#E74C3C',label:'Alta'} };
-  return (
-    <div className="flex flex-col gap-4">
-      <InputBase1 label="Título" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/>
-      <div className="flex flex-col gap-1.5"><label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Descripción</label>
-        <textarea className="bg-[#0A0C0F] border border-white/10 rounded-lg text-white p-3 text-sm outline-none min-h-[80px]" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/>
-      </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-        <label style={{ fontSize:11, fontWeight:700, color:'#5A6270', textTransform:'uppercase', letterSpacing:'0.1em' }}>Prioridad</label>
-        <div style={{ display:'flex', gap:8 }}>
-          {Object.entries(PC).map(([key, { color, label }]) => {
-            const sel = form.priority === key;
-            return (
-              <button key={key} type="button" onClick={() => setForm({...form, priority: key})}
-                style={{ flex:1, padding:'9px 4px', borderRadius:9, border: sel ? `1.5px solid ${color}` : '1.5px solid rgba(255,255,255,0.07)',
-                  background: sel ? `${color}18` : 'rgba(255,255,255,0.03)', color: sel ? color : '#5A6270',
-                  fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
-                <span style={{ width:7, height:7, borderRadius:'50%', background:color, display:'inline-block', flexShrink:0 }}/>
-                {label}
-              </button>
-            );
-          })}
+function TaskForm({ members, initialData, currentUser, onSave, onCancel }: { members: Member[]; initialData?: Task; currentUser: Member|null; onSave: (payload: string[] | Partial<Task>)=>void; onCancel:()=>void; }) {
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [assignedTo, setAssignedTo] = useState(initialData?.assignedTo || '');
+  const [list, setList] = useState<string[]>([]);
+  const [input, setInput] = useState('');
+  const [listening, setListening] = useState(false);
+  const recogRef = useRef<any>(null);
+
+  const addToList = (val?: string) => {
+    const t = (val ?? input).trim();
+    if (!t) return;
+    setList(prev => [...prev, t]);
+    setInput('');
+  };
+
+  const removeFromList = (i: number) => setList(prev => prev.filter((_, idx) => idx !== i));
+
+  const toggleMic = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error("Tu navegador no soporta reconocimiento de voz"); return; }
+    if (listening) { recogRef.current?.stop(); return; }
+    const recog = new SR();
+    recog.lang = 'es-ES';
+    recog.interimResults = true;
+    recog.continuous = true;
+    recog.onstart = () => setListening(true);
+    recog.onend = () => { setListening(false); setInput(''); };
+    recog.onerror = () => { setListening(false); setInput(''); };
+    recog.onresult = (e: any) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          const clean = t.trim();
+          if (clean) setList(prev => [...prev, clean]);
+          setInput('');
+        } else {
+          interim += t;
+        }
+      }
+      if (interim) setInput(interim);
+    };
+    recogRef.current = recog;
+    recog.start();
+  };
+
+  if (initialData) {
+    return (
+      <div className="flex flex-col gap-4">
+        <InputBase1 label="Nombre de la tarea" value={title} onChange={e => setTitle(e.target.value)}/>
+        <MemberPicker members={members} value={assignedTo} currentUser={currentUser} onChange={setAssignedTo}/>
+        <div className="flex justify-end gap-3 mt-2">
+          <ButtonBase variant="secondary" onClick={onCancel}>Cancelar</ButtonBase>
+          <ButtonBase onClick={() => onSave({ title, assignedTo })}>Actualizar</ButtonBase>
         </div>
       </div>
-      <MemberPicker members={members} value={form.assignedTo} currentUser={currentUser} onChange={id=>setForm({...form,assignedTo:id})}/>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        <input
+          className="flex-1 bg-[#0A0C0F] border border-white/10 rounded-lg text-white px-3 py-2 text-sm outline-none focus:border-[#E85D2F]/50"
+          placeholder={listening ? 'Escuchando...' : 'Nombre de la tarea...'}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addToList(); } }}
+        />
+        <button
+          type="button"
+          onClick={toggleMic}
+          title={listening ? 'Detener micrófono' : 'Hablar'}
+          className="relative px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center"
+          style={{
+            background: listening ? 'rgba(232,93,47,0.15)' : 'rgba(255,255,255,0.05)',
+            border: listening ? '1px solid rgba(232,93,47,0.5)' : '1px solid rgba(255,255,255,0.1)',
+            color: listening ? '#E85D2F' : '#5A6270',
+          }}
+        >
+          {listening
+            ? <><span className="absolute inset-0 rounded-lg animate-ping opacity-20" style={{ background: '#E85D2F' }}/><MicOff size={16}/></>
+            : <Mic size={16}/>
+          }
+        </button>
+        <button type="button" onClick={() => addToList()}
+          className="px-4 py-2 bg-[#E85D2F] hover:bg-[#FF6B3D] text-white rounded-lg text-sm font-bold transition-all">
+          +
+        </button>
+      </div>
+      {listening && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold text-[#E85D2F] uppercase tracking-wider"
+          style={{ background: 'rgba(232,93,47,0.06)', border: '1px solid rgba(232,93,47,0.2)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E85D2F] animate-pulse"/>
+          Escuchando — cada frase se agrega automáticamente
+        </div>
+      )}
+      {list.length > 0 && (
+        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+          {list.map((t, i) => (
+            <div key={i} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2">
+              <span className="text-white text-sm">{t}</span>
+              <button onClick={() => removeFromList(i)} className="text-gray-500 hover:text-red-400 transition-colors ml-2"><Trash2 size={12}/></button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex justify-end gap-3 mt-2">
         <ButtonBase variant="secondary" onClick={onCancel}>Cancelar</ButtonBase>
-        <ButtonBase onClick={()=>onSave(form)}>{initialData?'Actualizar':'Crear Tarea'}</ButtonBase>
+        <ButtonBase onClick={() => { if (list.length > 0) onSave(list); }} disabled={list.length === 0}>
+          Guardar {list.length > 0 ? `(${list.length})` : ''}
+        </ButtonBase>
       </div>
     </div>
   );
