@@ -333,7 +333,7 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
 // ─── Shape Editor ─────────────────────────────────────────────────────────────
 const EDITOR_COLORS = ['#F4F5F7','#E85D2F','#E74C3C','#F39C12','#2ECC71','#3498DB','#1ABC9C','#5DADE2','#9B59B6','#E67E22','#95A5A6','#000000'];
 
-type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri' | 'curve' | 'polygon' | 'star' | 'roundrect' | 'polyline' | 'editnode';
+type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri' | 'curve' | 'polygon' | 'star' | 'roundrect' | 'polyline' | 'editnode' | 'select';
 export type EStroke = { color: string; sw: number; fill: string } & (
   | { kind: 'path'; pts: {x:number;y:number}[] }
   | { kind: 'poly'; pts: {x:number;y:number}[] }
@@ -520,8 +520,43 @@ function computeStar(cx:number, cy:number, ro:number, ri:number, n:number): {x:n
   return pts;
 }
 
-// Row 1 (6): editnode, pen, polyline, curve, line, arrow  |  Row 2 (6): shapes
+function translateStroke(s: EStroke, dx: number, dy: number): EStroke {
+  const tp = (p: {x:number;y:number}) => ({x: p.x+dx, y: p.y+dy});
+  switch(s.kind) {
+    case 'path':     return {...s, pts: s.pts.map(tp)};
+    case 'poly':     return {...s, pts: s.pts.map(tp)};
+    case 'polyline': return {...s, pts: s.pts.map(tp), arcs: s.arcs?.map(a=>a?{cp:tp(a.cp)}:null)};
+    case 'rect':     return {...s, x:s.x+dx, y:s.y+dy};
+    case 'roundrect':return {...s, x:s.x+dx, y:s.y+dy};
+    case 'ellipse':  return {...s, cx:s.cx+dx, cy:s.cy+dy};
+    case 'line':     return {...s, x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy};
+    case 'arrow':    return {...s, x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy};
+    case 'tri':      return {...s, x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy};
+    case 'curve':    return {...s, x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy,cpX:s.cpX+dx,cpY:s.cpY+dy};
+    default:         return s;
+  }
+}
+
+function scaleStroke(s: EStroke, ox: number, oy: number, sx: number, sy: number): EStroke {
+  const tp = (p: {x:number;y:number}) => ({ x: (p.x-ox)*sx+ox, y: (p.y-oy)*sy+oy });
+  switch(s.kind) {
+    case 'path':     return {...s, pts: s.pts.map(tp)};
+    case 'poly':     return {...s, pts: s.pts.map(tp)};
+    case 'polyline': return {...s, pts: s.pts.map(tp), arcs: s.arcs?.map(a=>a?{cp:tp(a.cp)}:null)};
+    case 'rect':     { const tl=tp({x:s.x,y:s.y}),br=tp({x:s.x+s.rw,y:s.y+s.rh}); return {...s,x:tl.x,y:tl.y,rw:br.x-tl.x,rh:br.y-tl.y}; }
+    case 'roundrect':{ const tl=tp({x:s.x,y:s.y}),br=tp({x:s.x+s.rw,y:s.y+s.rh}); return {...s,x:tl.x,y:tl.y,rw:br.x-tl.x,rh:br.y-tl.y}; }
+    case 'ellipse':  { const c=tp({x:s.cx,y:s.cy}); return {...s,cx:c.x,cy:c.y,rx:Math.abs(s.rx*sx),ry:Math.abs(s.ry*sy)}; }
+    case 'line':     { const p1=tp({x:s.x1,y:s.y1}),p2=tp({x:s.x2,y:s.y2}); return {...s,x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y}; }
+    case 'arrow':    { const p1=tp({x:s.x1,y:s.y1}),p2=tp({x:s.x2,y:s.y2}); return {...s,x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y}; }
+    case 'tri':      { const p1=tp({x:s.x1,y:s.y1}),p2=tp({x:s.x2,y:s.y2}); return {...s,x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y}; }
+    case 'curve':    { const p1=tp({x:s.x1,y:s.y1}),p2=tp({x:s.x2,y:s.y2}),cp=tp({x:s.cpX,y:s.cpY}); return {...s,x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,cpX:cp.x,cpY:cp.y}; }
+    default:         return s;
+  }
+}
+
+// Row 1 (7): select, editnode, pen, polyline, curve, line, arrow  |  Row 2 (6): shapes
 const TOOL_DEFS: {id: DrawTool; label: string; icon: React.ReactElement}[] = [
+  { id:'select',   label:'Selección',        icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="currentColor" stroke="none"><path d="M3 2 L3 12.5 L6 9.5 L8.5 14.5 L10.2 13.7 L7.8 8.8 L12 8.8 Z"/></svg> },
   { id:'editnode', label:'Editar nodos',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q5 7 9 7 Q13 7 13 4"/><circle cx="3" cy="13" r="2" fill="#0A0C0F" strokeWidth="1.7"/><circle cx="13" cy="4" r="2" fill="#0A0C0F" strokeWidth="1.7"/><rect x="7.5" y="5.5" width="3" height="3" transform="rotate(45 9 7)" fill="#0A0C0F" strokeWidth="1.4"/></svg> },
   { id:'pen',      label:'Lápiz libre',     icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 14 L5 11 L13 3 L13 6 L2 14Z"/><path d="M11 5l2 2"/></svg> },
   { id:'polyline', label:'Polilínea',        icon:<svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,13 6,5 10,9 14,3"/><circle cx="2" cy="13" r="1.5" fill="currentColor"/><circle cx="6" cy="5" r="1.5" fill="currentColor"/><circle cx="10" cy="9" r="1.5" fill="currentColor"/><circle cx="14" cy="3" r="1.5" fill="currentColor"/></svg> },
@@ -551,6 +586,11 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const [polylineLive, setPolylineLive] = useState<{x:number;y:number}|null>(null);
   const [editingIdx, setEditingIdx] = useState<number>(-1);
   const [handleDrag, setHandleDrag] = useState<{kind:'arc'|'vertex'; segIdx:number}|null>(null);
+  const [selectIdx, setSelectIdx] = useState<number>(-1);
+  const [selDrag, setSelDrag] = useState<{sx:number;sy:number}|null>(null);
+  const [selDelta, setSelDelta] = useState<{x:number;y:number}>({x:0,y:0});
+  const [clipStroke, setClipStroke] = useState<EStroke|null>(null);
+  const [resizeDrag, setResizeDrag] = useState<{corner:string; origStroke:EStroke; origBB:{minX:number;minY:number;maxX:number;maxY:number}}|null>(null);
   const [dragStart, setDragStart] = useState<{x:number;y:number}|null>(null);
   const [dragCur, setDragCur] = useState<{x:number;y:number}|null>(null);
   const [remastered, setRemastered] = useState(false);
@@ -570,31 +610,106 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
     setDragStart(null); setDragCur(null);
     setPolylinePts([]); setPolylineLive(null);
     setEditingIdx(-1); setHandleDrag(null);
+    setSelectIdx(-1); setSelDrag(null); setSelDelta({x:0,y:0}); setResizeDrag(null);
   }, [tool]);
 
-  // Enter → commit polyline or exit edit mode; Escape → cancel
+  // Window drag for selection move
+  useEffect(() => {
+    if (!selDrag || selectIdx < 0) return;
+    const onWinMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const r = svgRef.current.getBoundingClientRect();
+      setSelDelta({ x: e.clientX - r.left - selDrag.sx, y: e.clientY - r.top - selDrag.sy });
+    };
+    const onWinUp = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const r = svgRef.current.getBoundingClientRect();
+      const dx = e.clientX - r.left - selDrag.sx;
+      const dy = e.clientY - r.top - selDrag.sy;
+      if (Math.hypot(dx, dy) > 3) {
+        setStrokes(prev => prev.map((s, i) => i === selectIdx ? translateStroke(s, dx, dy) : s));
+      }
+      setSelDrag(null); setSelDelta({x:0,y:0});
+    };
+    window.addEventListener('mousemove', onWinMove);
+    window.addEventListener('mouseup', onWinUp);
+    return () => { window.removeEventListener('mousemove', onWinMove); window.removeEventListener('mouseup', onWinUp); };
+  }, [selDrag, selectIdx]);
+
+  // Window drag for resize handles
+  useEffect(() => {
+    if (!resizeDrag || selectIdx < 0) return;
+    const { corner, origStroke, origBB } = resizeDrag;
+    const { minX, minY, maxX, maxY } = origBB;
+    const origW = maxX - minX || 1, origH = maxY - minY || 1;
+    const onWinMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const r = svgRef.current.getBoundingClientRect();
+      const cx = e.clientX - r.left, cy = e.clientY - r.top;
+      let ox: number, oy: number, nw: number, nh: number;
+      if (corner==='se'){ox=minX;oy=minY;nw=cx-minX;nh=cy-minY;}
+      else if(corner==='sw'){ox=maxX;oy=minY;nw=maxX-cx;nh=cy-minY;}
+      else if(corner==='ne'){ox=minX;oy=maxY;nw=cx-minX;nh=maxY-cy;}
+      else{ox=maxX;oy=maxY;nw=maxX-cx;nh=maxY-cy;}
+      const sx=nw/origW, sy=nh/origH;
+      if(Math.abs(sx)>0.05&&Math.abs(sy)>0.05)
+        setStrokes(prev=>prev.map((s,i)=>i===selectIdx?scaleStroke(origStroke,ox,oy,sx,sy):s));
+    };
+    const onWinUp = () => setResizeDrag(null);
+    window.addEventListener('mousemove', onWinMove);
+    window.addEventListener('mouseup', onWinUp);
+    return () => { window.removeEventListener('mousemove', onWinMove); window.removeEventListener('mouseup', onWinUp); };
+  }, [resizeDrag, selectIdx]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Polyline commit / exit edit
       if (e.key === 'Enter') {
         if (tool === 'polyline' && polylinePts.length >= 2) {
           e.preventDefault();
           const pts = [...polylinePts];
-          setStrokes(prev => {
-            setEditingIdx(prev.length);
-            return [...prev, {kind:'polyline',color,sw,fill:'none',pts}];
-          });
+          setStrokes(prev => { setEditingIdx(prev.length); return [...prev, {kind:'polyline',color,sw,fill:'none',pts}]; });
           setPolylinePts([]); setPolylineLive(null);
-        } else if (editingIdx >= 0) {
-          setEditingIdx(-1);
-        }
+        } else if (editingIdx >= 0) { setEditingIdx(-1); }
+        return;
       }
       if (e.key === 'Escape') {
-        setPolylinePts([]); setPolylineLive(null); setEditingIdx(-1); setHandleDrag(null);
+        setPolylinePts([]); setPolylineLive(null); setEditingIdx(-1); setHandleDrag(null); setSelectIdx(-1);
+        return;
+      }
+      // Select tool shortcuts
+      if (tool === 'select' && selectIdx >= 0) {
+        // Arrow keys — 1px (Shift = 10px)
+        const step = e.shiftKey ? 10 : 1;
+        if (e.key === 'ArrowLeft')  { e.preventDefault(); setStrokes(prev=>prev.map((s,i)=>i===selectIdx?translateStroke(s,-step,0):s)); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); setStrokes(prev=>prev.map((s,i)=>i===selectIdx?translateStroke(s, step,0):s)); return; }
+        if (e.key === 'ArrowUp')    { e.preventDefault(); setStrokes(prev=>prev.map((s,i)=>i===selectIdx?translateStroke(s,0,-step):s)); return; }
+        if (e.key === 'ArrowDown')  { e.preventDefault(); setStrokes(prev=>prev.map((s,i)=>i===selectIdx?translateStroke(s,0, step):s)); return; }
+        // Delete
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          setStrokes(prev=>prev.filter((_,i)=>i!==selectIdx)); setSelectIdx(-1); return;
+        }
+        // Copy
+        if ((e.ctrlKey||e.metaKey) && e.key==='c') {
+          e.preventDefault(); setClipStroke(strokes[selectIdx]); return;
+        }
+      }
+      // Paste (any time there's a clip)
+      if ((e.ctrlKey||e.metaKey) && e.key==='v' && clipStroke) {
+        e.preventDefault();
+        setStrokes(prev => {
+          const copy = translateStroke(clipStroke, 16, 16);
+          setClipStroke(copy); // offset for next paste
+          setSelectIdx(prev.length);
+          return [...prev, copy];
+        });
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [tool, polylinePts, color, sw, editingIdx]);
+  }, [tool, polylinePts, color, sw, editingIdx, selectIdx, clipStroke, strokes]);
 
   // Global drag for edit handles (works even when cursor leaves SVG)
   useEffect(() => {
@@ -668,6 +783,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const onDown = (e: React.MouseEvent) => {
     e.preventDefault();
     const p = getpt(e);
+    if (tool==='select')   { setSelectIdx(-1); return; }  // background click deselects
     if (tool==='editnode') { setEditingIdx(-1); return; } // background click deselects; hits stop propagation
     if (tool==='pen') { setCurPts([p]); return; }
     if (tool==='polyline') return; // handled by onClick/onDoubleClick
@@ -766,13 +882,17 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           <div>
             <p style={{margin:0,fontWeight:800,fontSize:15,color:'#F4F5F7'}}>Editor de Formas</p>
             <p style={{margin:0,fontSize:11,color:'#5A6270',marginTop:2}}>
-              {editingIdx >= 0
-                ? 'Arrastra ◆ para arquear · ○ para mover vértice · Esc o clic vacío para salir'
-                : tool==='editnode'
-                  ? 'Haz clic en una polilínea para editar sus nodos'
-                  : tool==='polyline'
-                    ? 'Clic para puntos · Enter o doble clic para finalizar'
-                    : 'Dibuja con herramientas — se guarda en el panel'}
+              {tool==='select' && selectIdx >= 0
+                ? 'Arrastra para mover · Supr para eliminar · Ctrl+D para duplicar · Esc para deseleccionar'
+                : tool==='select'
+                  ? 'Haz clic en cualquier elemento para seleccionarlo'
+                  : editingIdx >= 0
+                    ? 'Arrastra ◆ para arquear · ○ para mover vértice · Esc o clic vacío para salir'
+                    : tool==='editnode'
+                      ? 'Haz clic en una polilínea para editar sus nodos'
+                      : tool==='polyline'
+                        ? 'Clic para puntos · Enter o doble clic para finalizar'
+                        : 'Dibuja con herramientas — se guarda en el panel'}
             </p>
           </div>
           <button onClick={onCancel} style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -782,7 +902,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
         {/* Tool selector — 2 rows: drawing (5) + shapes (6) */}
         <div style={{display:'flex',flexDirection:'column',gap:4}}>
-          {[TOOL_DEFS.slice(0,6), TOOL_DEFS.slice(6)].map((row,ri)=>(
+          {[TOOL_DEFS.slice(0,7), TOOL_DEFS.slice(7)].map((row,ri)=>(
             <div key={ri} style={{display:'flex',gap:4}}>
               {row.map(t=>(
                 <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
@@ -913,7 +1033,52 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
             </pattern>
           </defs>
           <rect width={SIZE} height={SIZE} fill="url(#eg)"/>
-          {strokes.map((s,i)=>renderEStroke(s,i))}
+          {strokes.map((s,i) => {
+            if (i===selectIdx && selDrag && (selDelta.x!==0||selDelta.y!==0)) {
+              return <g key={`drag${i}`} transform={`translate(${selDelta.x},${selDelta.y})`} opacity={0.75}>{renderEStroke(s,i)}</g>;
+            }
+            return renderEStroke(s,i);
+          })}
+          {/* Select tool — bbox hit areas */}
+          {tool==='select' && strokes.map((s,i) => {
+            const bb=calcBBox([s]);
+            if(!isFinite(bb.minX)) return null;
+            const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
+            const isSel=selectIdx===i;
+            return <rect key={`sh${i}`} x={x} y={y} width={w} height={h}
+              fill="rgba(0,0,0,0)" stroke={isSel?'rgba(232,93,47,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
+              strokeDasharray={isSel?'5,3':undefined} rx={3}
+              style={{cursor:isSel?'grab':'pointer'}}
+              onMouseDown={e=>{
+                e.preventDefault(); e.stopPropagation();
+                setSelectIdx(i);
+                if(!svgRef.current) return;
+                const r=svgRef.current.getBoundingClientRect();
+                setSelDrag({sx:e.clientX-r.left, sy:e.clientY-r.top});
+              }}/>;
+          })}
+          {/* Select tool — resize corner handles */}
+          {tool==='select' && selectIdx>=0 && (()=>{
+            const s=strokes[selectIdx]; if(!s) return null;
+            const bb=calcBBox([s]); if(!isFinite(bb.minX)) return null;
+            const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
+            const corners: {id:string;cx:number;cy:number;cur:string}[] = [
+              {id:'nw',cx:x,   cy:y,   cur:'nw-resize'},
+              {id:'ne',cx:x+w, cy:y,   cur:'ne-resize'},
+              {id:'sw',cx:x,   cy:y+h, cur:'sw-resize'},
+              {id:'se',cx:x+w, cy:y+h, cur:'se-resize'},
+            ];
+            return <>{corners.map(({id,cx,cy,cur})=>(
+              <rect key={id} x={cx-5} y={cy-5} width={10} height={10} rx={2}
+                fill="#0A0C0F" stroke="#E85D2F" strokeWidth={1.8}
+                style={{cursor:cur}}
+                onMouseDown={e=>{
+                  e.preventDefault(); e.stopPropagation();
+                  const rawBB = calcBBox([s]);
+                  setResizeDrag({corner:id, origStroke:s, origBB:rawBB});
+                }}/>
+            ))}</>;
+          })()}
           {/* Clickable hit areas for polylines when in editnode tool */}
           {tool==='editnode' && strokes.map((s,i) => {
             if (s.kind !== 'polyline') return null;
