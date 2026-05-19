@@ -84,10 +84,12 @@ export default function EquipoDevClient() {
     historyRef.current = [snap, ...cur].slice(0, 30);
   };
 
-  // Auto-hide toolkit when entering Pizarra
+  // Auto-hide toolkit when entering Pizarra, show when leaving
   useEffect(() => {
     if (activeTab === 'pizarra') {
       setIsToolkitVisible(false);
+    } else {
+      setIsToolkitVisible(true);
     }
   }, [activeTab]);
   const undo = () => {
