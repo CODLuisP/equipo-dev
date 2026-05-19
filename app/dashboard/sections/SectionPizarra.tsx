@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Users, Code, Plus, Trash2, ZoomIn, ZoomOut, Maximize,
-  ChevronRight, FileText, RefreshCw
+  ChevronRight, FileText, RefreshCw, Sparkles, Upload, Image as ImageIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
@@ -595,6 +595,242 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const [dragCur, setDragCur] = useState<{x:number;y:number}|null>(null);
   const [remastered, setRemastered] = useState(false);
 
+  // --- Boceto desde Imagen (Vectorizador) ---
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [edgeThreshold, setEdgeThreshold] = useState(0.20);
+  const [minPathLen, setMinPathLen] = useState(8);
+  const [vectStrokeW, setVectStrokeW] = useState(2.0);
+  const [vectorizing, setVectorizing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [vectFillMode, setVectFillMode] = useState<'none' | 'solid'>('solid');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+
+  const handleVectorize = (imgElement: HTMLImageElement, threshold: number, minLen: number, strokeW: number, fillMode: 'none' | 'solid') => {
+    setVectorizing(true);
+    setTimeout(() => {
+      try {
+        const PS = 512;
+        const canvas = document.createElement("canvas");
+        canvas.width = PS; canvas.height = PS;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { toast.error("Error al procesar la imagen"); setVectorizing(false); return; }
+
+        const natW = imgElement.naturalWidth || imgElement.width;
+        const natH = imgElement.naturalHeight || imgElement.height;
+        const aspect = natW / (natH || 1);
+        let dw = PS, dh = PS, dx = 0, dy = 0;
+        if (aspect > 1) { dh = Math.round(PS / aspect); dy = Math.round((PS - dh) / 2); }
+        else { dw = Math.round(PS * aspect); dx = Math.round((PS - dw) / 2); }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, PS, PS);
+        ctx.drawImage(imgElement, dx, dy, dw, dh);
+
+        const id = ctx.getImageData(0, 0, PS, PS);
+        const px = id.data;
+        const W = PS, H = PS;
+
+        // ── 1. K-means color quantization ────────────────────────────────
+        const K = 14;
+        type RGB = [number, number, number];
+        const sampleStep = 4;
+        const samples: RGB[] = [];
+        for (let y = 0; y < H; y += sampleStep)
+          for (let x = 0; x < W; x += sampleStep) {
+            const i = (y * W + x) * 4;
+            samples.push([px[i], px[i + 1], px[i + 2]]);
+          }
+
+        let cents: RGB[] = Array.from({ length: K }, (_, k) =>
+          [...samples[Math.floor(k * samples.length / K)]] as RGB
+        );
+
+        for (let iter = 0; iter < 20; iter++) {
+          const sums: [number, number, number][] = Array.from({ length: K }, () => [0, 0, 0]);
+          const cnts = new Array<number>(K).fill(0);
+          for (const [r, g, b] of samples) {
+            let bd = Infinity, bk = 0;
+            for (let k = 0; k < K; k++) {
+              const dr = r - cents[k][0], dg = g - cents[k][1], db = b - cents[k][2];
+              const d = dr * dr + dg * dg + db * db;
+              if (d < bd) { bd = d; bk = k; }
+            }
+            sums[bk][0] += r; sums[bk][1] += g; sums[bk][2] += b; cnts[bk]++;
+          }
+          for (let k = 0; k < K; k++)
+            if (cnts[k] > 0)
+              cents[k] = [sums[k][0] / cnts[k], sums[k][1] / cnts[k], sums[k][2] / cnts[k]];
+        }
+
+        // Assign each pixel to nearest centroid
+        const labels = new Uint8Array(W * H);
+        for (let i = 0; i < W * H; i++) {
+          const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+          let bd = Infinity, bk = 0;
+          for (let k = 0; k < K; k++) {
+            const dr = r - cents[k][0], dg = g - cents[k][1], db = b - cents[k][2];
+            const d = dr * dr + dg * dg + db * db;
+            if (d < bd) { bd = d; bk = k; }
+          }
+          labels[i] = bk;
+        }
+
+        // ── 2. Connected-component BFS ────────────────────────────────────
+        const visited = new Uint8Array(W * H);
+        const minSize = Math.max(80, Math.round(W * H * (0.0003 + threshold * 0.004)));
+
+        type Comp = { minIdx: number; colorLabel: number; size: number; mask: Uint8Array };
+        const comps: Comp[] = [];
+
+        for (let si = 0; si < W * H; si++) {
+          if (visited[si]) continue;
+          const cl = labels[si];
+          const mask = new Uint8Array(W * H);
+          const queue: number[] = [si];
+          visited[si] = 1;
+          let minIdx = si, size = 0;
+
+          while (queue.length) {
+            const idx = queue.pop()!;
+            mask[idx] = 1;
+            if (idx < minIdx) minIdx = idx;
+            size++;
+            const qx = idx % W, qy = Math.floor(idx / W);
+            if (qx + 1 < W) { const n = idx + 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qx - 1 >= 0) { const n = idx - 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qy + 1 < H) { const n = idx + W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qy - 1 >= 0) { const n = idx - W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+          }
+
+          if (size >= minSize) comps.push({ minIdx, colorLabel: cl, size, mask });
+        }
+
+        comps.sort((a, b) => b.size - a.size); // largest first → renders as background
+
+        // ── 3. Moore-neighbor contour tracing ────────────────────────────
+        // Directions: E SE S SW W NW N NE (clockwise)
+        const CDX = [1, 1, 0, -1, -1, -1, 0, 1];
+        const CDY = [0, 1, 1, 1, 0, -1, -1, -1];
+
+        const traceContour = (compMask: Uint8Array, sx: number, sy: number): { x: number; y: number }[] => {
+          const pts: { x: number; y: number }[] = [];
+          let cx = sx, cy = sy;
+          // Entered scanning left→right so backtrack = West (dir 4); start looking from dir 5 (NW)
+          let look = 5;
+          const maxS = 60000;
+          let steps = 0;
+          while (steps++ < maxS) {
+            pts.push({ x: cx, y: cy });
+            let found = false;
+            for (let i = 0; i < 8; i++) {
+              const d = (look + i) % 8;
+              const nx = cx + CDX[d], ny = cy + CDY[d];
+              if (nx >= 0 && nx < W && ny >= 0 && ny < H && compMask[ny * W + nx]) {
+                look = ((d + 4) % 8 + 1) % 8;
+                cx = nx; cy = ny;
+                found = true;
+                break;
+              }
+            }
+            if (!found || (steps > 4 && cx === sx && cy === sy)) break;
+          }
+          return pts;
+        };
+
+        // ── 4. Build SVG strokes ─────────────────────────────────────────
+        const toHex = (n: number) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0');
+        const toSvg = (v: number) => v * SIZE / PS;
+        const smooth1 = (pts: { x: number; y: number }[]) => {
+          if (pts.length < 3) return pts;
+          const r = [pts[0]];
+          for (let i = 1; i < pts.length - 1; i++)
+            r.push({ x: (pts[i - 1].x + pts[i].x + pts[i + 1].x) / 3, y: (pts[i - 1].y + pts[i].y + pts[i + 1].y) / 3 });
+          r.push(pts[pts.length - 1]);
+          return r;
+        };
+
+        const newStrokes: EStroke[] = [];
+
+        for (const { minIdx, colorLabel, mask: compMask } of comps) {
+          const [cr, cg, cb] = cents[colorLabel];
+          const lum = 0.299 * cr + 0.587 * cg + 0.114 * cb;
+          if (lum > 235) continue; // skip near-white background
+
+          const colorHex = lum < 25 ? '#ffffff' : `#${toHex(cr)}${toHex(cg)}${toHex(cb)}`;
+          const sx = minIdx % W, sy = Math.floor(minIdx / W);
+
+          const raw = traceContour(compMask, sx, sy);
+          if (raw.length < 4) continue;
+
+          // Deduplicate consecutive identical points
+          const dedup: { x: number; y: number }[] = [raw[0]];
+          for (let i = 1; i < raw.length; i++) {
+            const c = raw[i], prev = dedup[dedup.length - 1];
+            if (c.x !== prev.x || c.y !== prev.y) dedup.push(c);
+          }
+
+          // Downsample long contours to at most ~700 pts before smoothing
+          const ds = dedup.filter((_, i) => i % Math.max(1, Math.floor(dedup.length / 700)) === 0);
+          if (ds.length < 4) continue;
+
+          // 2-pass smoothing
+          const smoothed = smooth1(smooth1(ds));
+
+          // Scale and simplify
+          const scaled = smoothed.map(p => ({ x: toSvg(p.x), y: toSvg(p.y) }));
+          const simplified = dougPeucker(scaled, Math.max(0.4, SIZE * 0.0035));
+          if (simplified.length < 3) continue;
+
+          if (fillMode === 'solid') {
+            newStrokes.push({ kind: 'poly', color: colorHex, sw: 0.4, fill: colorHex, pts: simplified });
+          } else {
+            newStrokes.push({ kind: 'poly', color: colorHex, sw: strokeW, fill: 'none', pts: simplified });
+          }
+        }
+
+        setStrokes(newStrokes);
+        toast.success(`Vectorización completa: ${newStrokes.length} regiones`);
+      } catch (err) {
+        console.error(err);
+        toast.error("Ocurrió un error al digitalizar el boceto");
+      } finally {
+        setVectorizing(false);
+      }
+    }, 50);
+  };
+
+  const loadImage = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor selecciona un archivo de imagen válido.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setImageSrc(dataUrl);
+      const img = new Image();
+      img.onload = () => {
+        imageRef.current = img;
+        handleVectorize(img, edgeThreshold, minPathLen, vectStrokeW, vectFillMode);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) loadImage(file);
+  };
+
+  useEffect(() => {
+    if (imageRef.current) {
+      handleVectorize(imageRef.current, edgeThreshold, minPathLen, vectStrokeW, vectFillMode);
+    }
+  }, [edgeThreshold, minPathLen, vectStrokeW, vectFillMode]);
+
   // Estados para curva interactiva de 3 puntos
   const [curvePhase, setCurvePhase] = useState<0 | 1 | 2>(0);
   const [curveStart, setCurveStart] = useState<{x:number;y:number}|null>(null);
@@ -875,7 +1111,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
       onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
-      <div style={{background:'rgba(12,15,22,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:20,display:'flex',flexDirection:'column',gap:12,boxShadow:'0 32px 80px rgba(0,0,0,0.85)',width:SIZE+60}}>
+      <div style={{background:'rgba(12,15,22,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:20,display:'flex',flexDirection:'column',gap:16,boxShadow:'0 32px 80px rgba(0,0,0,0.85)',width:660,maxWidth:'95vw'}}>
 
         {/* Header */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -892,7 +1128,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                       ? 'Haz clic en una polilínea para editar sus nodos'
                       : tool==='polyline'
                         ? 'Clic para puntos · Enter o doble clic para finalizar'
-                        : 'Dibuja con herramientas — se guarda en el panel'}
+                        : 'Dibuja con herramientas o digitaliza una imagen'}
             </p>
           </div>
           <button onClick={onCancel} style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -900,259 +1136,456 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           </button>
         </div>
 
-        {/* Tool selector — 2 rows: drawing (5) + shapes (6) */}
-        <div style={{display:'flex',flexDirection:'column',gap:4}}>
-          {[TOOL_DEFS.slice(0,7), TOOL_DEFS.slice(7)].map((row,ri)=>(
-            <div key={ri} style={{display:'flex',gap:4}}>
-              {row.map(t=>(
-                <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
-                  style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
-                  {t.icon}
-                </button>
+        {/* Dos columnas: Editor manual y Digitalizador */}
+        <div style={{display:'flex',gap:20,alignItems:'stretch'}}>
+
+          {/* Columna Izquierda: Dibujo Manual */}
+          <div style={{width:340,display:'flex',flexDirection:'column',gap:12}}>
+            {/* Tool selector — 2 rows: drawing (5) + shapes (6) */}
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              {[TOOL_DEFS.slice(0,7), TOOL_DEFS.slice(7)].map((row,ri)=>(
+                <div key={ri} style={{display:'flex',gap:4}}>
+                  {row.map(t=>(
+                    <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
+                      style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
+                      {t.icon}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
-          ))}
-        </div>
 
-        {/* Stroke color + width + undo/clear */}
-        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-          <div style={{display:'flex',gap:3,flexWrap:'wrap',flex:1,alignItems:'center'}}>
-            <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginRight:2}}>Trazo</span>
-            {EDITOR_COLORS.map(c=>(
-              <button key={c} onClick={()=>setColor(c)}
-                style={{width:16,height:16,borderRadius:'50%',background:c,border:color===c?'2px solid #fff':'2px solid transparent',cursor:'pointer',flexShrink:0,transition:'transform 0.1s',boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':'none'}}
-                onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.3)';}}
-                onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';}}/>
-            ))}
-          </div>
-          <div style={{display:'flex',gap:3}}>
-            {[1.5,2.5,4,7].map(w=>(
-              <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
-                style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
-              </button>
-            ))}
-            <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
-              style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>↩</button>
-            <button onClick={()=>{setStrokes([]); setPolylinePts([]); setPolylineLive(null);}} title="Limpiar todo" disabled={strokes.length===0}
-              style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>✕</button>
-          </div>
-        </div>
+            {/* Stroke color + width + undo/clear */}
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <div style={{display:'flex',gap:3,flexWrap:'wrap',flex:1,alignItems:'center'}}>
+                <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginRight:2}}>Trazo</span>
+                {EDITOR_COLORS.map(c=>(
+                  <button key={c} onClick={()=>setColor(c)}
+                    style={{width:16,height:16,borderRadius:'50%',background:c,border:color===c?'2px solid #fff':'2px solid transparent',cursor:'pointer',flexShrink:0,transition:'transform 0.1s',boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':'none'}}
+                    onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.3)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';}}/>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:3}}>
+                {[1.5,2.5,4,7].map(w=>(
+                  <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
+                    style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
+                  </button>
+                ))}
+                <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
+                  style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>↩</button>
+                <button onClick={()=>{setStrokes([]); setPolylinePts([]); setPolylineLive(null); setImageSrc(null); imageRef.current = null;}} title="Limpiar todo" disabled={strokes.length===0}
+                  style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>✕</button>
+              </div>
+            </div>
 
-        {/* Fill color — only for closed shapes */}
-        {isClosed && (
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>Relleno</span>
-            {FILL_COLORS.map(c=>(
-              <button key={c} onClick={()=>setFillColor(c)} title={c==='none'?'Sin relleno':c}
-                style={{width:16,height:16,borderRadius:'50%',flexShrink:0,cursor:'pointer',transition:'transform 0.1s',
-                  background:c==='none'?'transparent':c,
-                  border:fillColor===c?'2px solid #fff':'2px solid rgba(255,255,255,0.2)',
-                  boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':undefined,
-                  position:'relative',
-                }}>
-                {c==='none' && <svg viewBox="0 0 12 12" width={8} height={8} style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}} stroke="rgba(255,255,255,0.5)" strokeWidth="2"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>}
-              </button>
-            ))}
-            {fillColor!=='none' && (
-              <div style={{width:18,height:18,borderRadius:5,border:`1px solid ${fillColor}`,background:fillColor,flexShrink:0}}/>
+            {/* Fill color — only for closed shapes */}
+            {isClosed && (
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:9,color:'#5A6270',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>Relleno</span>
+                {FILL_COLORS.map(c=>(
+                  <button key={c} onClick={()=>setFillColor(c)} title={c==='none'?'Sin relleno':c}
+                    style={{width:16,height:16,borderRadius:'50%',flexShrink:0,cursor:'pointer',transition:'transform 0.1s',
+                      background:c==='none'?'transparent':c,
+                      border:fillColor===c?'2px solid #fff':'2px solid rgba(255,255,255,0.2)',
+                      boxShadow:c==='#000000'?'0 0 0 1px rgba(255,255,255,0.2)':undefined,
+                      position:'relative',
+                    }}>
+                    {c==='none' && <svg viewBox="0 0 12 12" width={8} height={8} style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}} stroke="rgba(255,255,255,0.5)" strokeWidth="2"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>}
+                  </button>
+                ))}
+                {fillColor!=='none' && (
+                  <div style={{width:18,height:18,borderRadius:5,border:`1px solid ${fillColor}`,background:fillColor,flexShrink:0}}/>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        {/* Polygon/star config */}
-        {(tool==='polygon'||tool==='star') && (
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            {tool==='polygon' && <>
-              <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Lados:</span>
-              {[3,4,5,6,8,10,12].map(n=>(
-                <button key={n} onClick={()=>setSides(n)}
-                  style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
-                    background:sides===n?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',
-                    border:`1px solid ${sides===n?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,
-                    color:sides===n?'#E85D2F':'#8A9099'}}>
-                  {n}
-                </button>
-              ))}
-            </>}
-            {tool==='star' && <>
-              <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Puntas:</span>
-              {[3,4,5,6,7,8].map(n=>(
-                <button key={n} onClick={()=>setStarPts(n)}
-                  style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
-                    background:starPts===n?'rgba(241,196,15,0.25)':'rgba(255,255,255,0.05)',
-                    border:`1px solid ${starPts===n?'rgba(241,196,15,0.7)':'rgba(255,255,255,0.08)'}`,
-                    color:starPts===n?'#F1C40F':'#8A9099'}}>
-                  {n}
-                </button>
-              ))}
-            </>}
-          </div>
-        )}
-
-        {/* Rounded rect corner radius */}
-        {tool==='roundrect' && (
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Radio esquina:</span>
-            {[4,8,14,20,32].map(r=>(
-              <button key={r} onClick={()=>setCornerR(r)}
-                style={{width:30,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
-                  background:cornerR===r?'rgba(52,152,219,0.25)':'rgba(255,255,255,0.05)',
-                  border:`1px solid ${cornerR===r?'rgba(52,152,219,0.7)':'rgba(255,255,255,0.08)'}`,
-                  color:cornerR===r?'#3498DB':'#8A9099'}}>
-                {r}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Remaster button */}
-        {hasPenStrokes && (
-          <button onClick={handleRemaster}
-            style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'6px 0',borderRadius:10,
-              background:remastered?'rgba(46,204,113,0.18)':'rgba(52,152,219,0.14)',
-              border:`1px solid ${remastered?'rgba(46,204,113,0.5)':'rgba(52,152,219,0.45)'}`,
-              color:remastered?'#2ECC71':'#5DADE2',fontSize:11,fontWeight:700,cursor:'pointer',transition:'all 0.25s',width:'100%'}}>
-            {remastered
-              ? <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="2,9 6,13 14,4"/></svg> ¡Remasterizado!</>
-              : <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q1 8 5 5 Q8 2 11 5 Q14 8 12 12"/><path d="M10 14l2-2-2-2"/></svg> Remasterizar trazos del lápiz</>
-            }
-          </button>
-        )}
-
-        {/* Canvas SVG */}
-        <svg ref={svgRef} width={SIZE} height={SIZE}
-          style={{borderRadius:14,
-            cursor: tool==='polyline' ? 'crosshair' : tool==='pen' ? 'crosshair' : 'crosshair',
-            background:'#0D0F14',border:'1px solid rgba(255,255,255,0.07)',touchAction:'none',userSelect:'none',display:'block'}}
-          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
-          onClick={handlePolylineClick} onDoubleClick={handlePolylineDblClick}>
-          <defs>
-            <pattern id="eg" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.7" fill="rgba(255,255,255,0.07)"/>
-            </pattern>
-          </defs>
-          <rect width={SIZE} height={SIZE} fill="url(#eg)"/>
-          {strokes.map((s,i) => {
-            if (i===selectIdx && selDrag && (selDelta.x!==0||selDelta.y!==0)) {
-              return <g key={`drag${i}`} transform={`translate(${selDelta.x},${selDelta.y})`} opacity={0.75}>{renderEStroke(s,i)}</g>;
-            }
-            return renderEStroke(s,i);
-          })}
-          {/* Select tool — bbox hit areas */}
-          {tool==='select' && strokes.map((s,i) => {
-            const bb=calcBBox([s]);
-            if(!isFinite(bb.minX)) return null;
-            const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
-            const isSel=selectIdx===i;
-            return <rect key={`sh${i}`} x={x} y={y} width={w} height={h}
-              fill="rgba(0,0,0,0)" stroke={isSel?'rgba(232,93,47,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
-              strokeDasharray={isSel?'5,3':undefined} rx={3}
-              style={{cursor:isSel?'grab':'pointer'}}
-              onMouseDown={e=>{
-                e.preventDefault(); e.stopPropagation();
-                setSelectIdx(i);
-                if(!svgRef.current) return;
-                const r=svgRef.current.getBoundingClientRect();
-                setSelDrag({sx:e.clientX-r.left, sy:e.clientY-r.top});
-              }}/>;
-          })}
-          {/* Select tool — resize corner handles */}
-          {tool==='select' && selectIdx>=0 && (()=>{
-            const s=strokes[selectIdx]; if(!s) return null;
-            const bb=calcBBox([s]); if(!isFinite(bb.minX)) return null;
-            const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
-            const corners: {id:string;cx:number;cy:number;cur:string}[] = [
-              {id:'nw',cx:x,   cy:y,   cur:'nw-resize'},
-              {id:'ne',cx:x+w, cy:y,   cur:'ne-resize'},
-              {id:'sw',cx:x,   cy:y+h, cur:'sw-resize'},
-              {id:'se',cx:x+w, cy:y+h, cur:'se-resize'},
-            ];
-            return <>{corners.map(({id,cx,cy,cur})=>(
-              <rect key={id} x={cx-5} y={cy-5} width={10} height={10} rx={2}
-                fill="#0A0C0F" stroke="#E85D2F" strokeWidth={1.8}
-                style={{cursor:cur}}
-                onMouseDown={e=>{
-                  e.preventDefault(); e.stopPropagation();
-                  const rawBB = calcBBox([s]);
-                  setResizeDrag({corner:id, origStroke:s, origBB:rawBB});
-                }}/>
-            ))}</>;
-          })()}
-          {/* Clickable hit areas for polylines when in editnode tool */}
-          {tool==='editnode' && strokes.map((s,i) => {
-            if (s.kind !== 'polyline') return null;
-            let d=`M${s.pts[0].x.toFixed(1)},${s.pts[0].y.toFixed(1)}`;
-            for(let j=0;j<s.pts.length-1;j++){
-              const arc=s.arcs?.[j];
-              if(arc) d+=` Q${arc.cp.x.toFixed(1)},${arc.cp.y.toFixed(1)} ${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
-              else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
-            }
-            const isSelected = editingIdx === i;
-            return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(232,93,47,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
-              onMouseDown={e=>{e.preventDefault();e.stopPropagation();setEditingIdx(i);}}/>;
-          })}
-          {tool==='pen' && curPts && curPts.length>1 && (
-            <path d={ptPath(curPts)} stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          )}
-          {/* Polyline in-progress */}
-          {tool==='polyline' && polylinePts.length>0 && (<>
-            {polylinePts.length>1 && (
-              <path d={polylinePts.map((p,j)=>`${j===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
-                stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            {/* Polygon/star config */}
+            {(tool==='polygon'||tool==='star') && (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                {tool==='polygon' && <>
+                  <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Lados:</span>
+                  {[3,4,5,6,8,10,12].map(n=>(
+                    <button key={n} onClick={()=>setSides(n)}
+                      style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                        background:sides===n?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',
+                        border:`1px solid ${sides===n?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,
+                        color:sides===n?'#E85D2F':'#8A9099'}}>
+                      {n}
+                    </button>
+                  ))}
+                </>}
+                {tool==='star' && <>
+                  <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Puntas:</span>
+                  {[3,4,5,6,7,8].map(n=>(
+                    <button key={n} onClick={()=>setStarPts(n)}
+                      style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                        background:starPts===n?'rgba(241,196,15,0.25)':'rgba(255,255,255,0.05)',
+                        border:`1px solid ${starPts===n?'rgba(241,196,15,0.7)':'rgba(255,255,255,0.08)'}`,
+                        color:starPts===n?'#F1C40F':'#8A9099'}}>
+                      {n}
+                    </button>
+                  ))}
+                </>}
+              </div>
             )}
-            {polylineLive && (
-              <line x1={polylinePts[polylinePts.length-1].x} y1={polylinePts[polylinePts.length-1].y}
-                x2={polylineLive.x} y2={polylineLive.y}
-                stroke={color} strokeWidth={sw} strokeOpacity={0.45} strokeDasharray="5,4"/>
+
+            {/* Rounded rect corner radius */}
+            {tool==='roundrect' && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:11,color:'#5A6270',flexShrink:0}}>Radio esquina:</span>
+                {[4,8,14,20,32].map(r=>(
+                  <button key={r} onClick={()=>setCornerR(r)}
+                    style={{width:30,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                      background:cornerR===r?'rgba(52,152,219,0.25)':'rgba(255,255,255,0.05)',
+                      border:`1px solid ${cornerR===r?'rgba(52,152,219,0.7)':'rgba(255,255,255,0.08)'}`,
+                      color:cornerR===r?'#3498DB':'#8A9099'}}>
+                    {r}
+                  </button>
+                ))}
+              </div>
             )}
-            {polylinePts.map((p,j)=>(
-              <circle key={j} cx={p.x} cy={p.y} r={3.5} fill={color} opacity={0.85}/>
-            ))}
-          </>)}
-          {preview && renderEStroke(preview, -1)}
-          {/* Curve phase hints */}
-          {tool==='curve' && curvePhase===2 && curveStart && curveEnd && (
-            <><circle cx={curveStart.x} cy={curveStart.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/>
-            <circle cx={curveEnd.x} cy={curveEnd.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/></>
-          )}
-          {/* Edit handles for selected polyline */}
-          {editingIdx >= 0 && (() => {
-            const es = strokes[editingIdx];
-            if (!es || es.kind !== 'polyline') return null;
-            const pts = es.pts;
-            return <>
-              {/* Segment arc handles */}
-              {pts.slice(0, -1).map((_, si) => {
-                const a = pts[si], b = pts[si+1];
-                const arc = es.arcs?.[si];
-                if (arc) {
-                  return <g key={`arc${si}`}>
-                    <line x1={a.x} y1={a.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
-                    <line x1={b.x} y1={b.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
-                    <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#E85D2F" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
-                      onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
-                  </g>;
+
+            {/* Remaster button */}
+            {hasPenStrokes && (
+              <button onClick={handleRemaster}
+                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'6px 0',borderRadius:10,
+                  background:remastered?'rgba(46,204,113,0.18)':'rgba(52,152,219,0.14)',
+                  border:`1px solid ${remastered?'rgba(46,204,113,0.5)':'rgba(52,152,219,0.45)'}`,
+                  color:remastered?'#2ECC71':'#5DADE2',fontSize:11,fontWeight:700,cursor:'pointer',transition:'all 0.25s',width:'100%'}}>
+                {remastered
+                  ? <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="2,9 6,13 14,4"/></svg> ¡Remasterizado!</>
+                  : <><svg viewBox="0 0 16 16" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13 Q1 8 5 5 Q8 2 11 5 Q14 8 12 12"/><path d="M10 14l2-2-2-2"/></svg> Remasterizar trazos del lápiz</>
                 }
-                const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
-                return <g key={`mid${si}`} transform={`translate(${mx},${my}) rotate(45)`}>
-                  <rect x={-5} y={-5} width={10} height={10} fill="#0D0F14" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} style={{cursor:'crosshair'}}
-                    onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
-                </g>;
+              </button>
+            )}
+
+            {/* Canvas SVG */}
+            <svg ref={svgRef} width={SIZE} height={SIZE}
+              style={{borderRadius:14,
+                cursor: tool==='polyline' ? 'crosshair' : tool==='pen' ? 'crosshair' : 'crosshair',
+                background:'#0D0F14',border:'1px solid rgba(255,255,255,0.07)',touchAction:'none',userSelect:'none',display:'block'}}
+              onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+              onClick={handlePolylineClick} onDoubleClick={handlePolylineDblClick}>
+              <defs>
+                <pattern id="eg" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="0.7" fill="rgba(255,255,255,0.07)"/>
+                </pattern>
+              </defs>
+              <rect width={SIZE} height={SIZE} fill="url(#eg)"/>
+              {strokes.map((s,i) => {
+                if (i===selectIdx && selDrag && (selDelta.x!==0||selDelta.y!==0)) {
+                  return <g key={`drag${i}`} transform={`translate(${selDelta.x},${selDelta.y})`} opacity={0.75}>{renderEStroke(s,i)}</g>;
+                }
+                return renderEStroke(s,i);
               })}
-              {/* Vertex handles */}
-              {pts.map((p, pi) => (
-                <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#E85D2F" strokeWidth={2} style={{cursor:'grab'}}
-                  onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'vertex',segIdx:pi});}}/>
-              ))}
-            </>;
-          })()}
-          {strokes.length===0 && !curPts && !preview && polylinePts.length===0 && (
-            <text x={SIZE/2} y={SIZE/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.1)" fontSize={12} fontFamily="'DM Sans',sans-serif">
-              Selecciona una herramienta y dibuja
-            </text>
-          )}
-        </svg>
+              {/* Select tool — bbox hit areas */}
+              {tool==='select' && strokes.map((s,i) => {
+                const bb=calcBBox([s]);
+                if(!isFinite(bb.minX)) return null;
+                const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
+                const isSel=selectIdx===i;
+                return <rect key={`sh${i}`} x={x} y={y} width={w} height={h}
+                  fill="rgba(0,0,0,0)" stroke={isSel?'rgba(232,93,47,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
+                  strokeDasharray={isSel?'5,3':undefined} rx={3}
+                  style={{cursor:isSel?'grab':'pointer'}}
+                  onMouseDown={e=>{
+                    e.preventDefault(); e.stopPropagation();
+                    setSelectIdx(i);
+                    if(!svgRef.current) return;
+                    const r=svgRef.current.getBoundingClientRect();
+                    setSelDrag({sx:e.clientX-r.left, sy:e.clientY-r.top});
+                  }}/>;
+              })}
+              {/* Select tool — resize corner handles */}
+              {tool==='select' && selectIdx>=0 && (()=>{
+                const s=strokes[selectIdx]; if(!s) return null;
+                const bb=calcBBox([s]); if(!isFinite(bb.minX)) return null;
+                const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
+                const corners: {id:string;cx:number;cy:number;cur:string}[] = [
+                  {id:'nw',cx:x,   cy:y,   cur:'nw-resize'},
+                  {id:'ne',cx:x+w, cy:y,   cur:'ne-resize'},
+                  {id:'sw',cx:x,   cy:y+h, cur:'sw-resize'},
+                  {id:'se',cx:x+w, cy:y+h, cur:'se-resize'},
+                ];
+                return <>{corners.map(({id,cx,cy,cur})=>(
+                  <rect key={id} x={cx-5} y={cy-5} width={10} height={10} rx={2}
+                    fill="#0A0C0F" stroke="#E85D2F" strokeWidth={1.8}
+                    style={{cursor:cur}}
+                    onMouseDown={e=>{
+                      e.preventDefault(); e.stopPropagation();
+                      const rawBB = calcBBox([s]);
+                      setResizeDrag({corner:id, origStroke:s, origBB:rawBB});
+                    }}/>
+                ))}</>;
+              })()}
+              {/* Clickable hit areas for polylines when in editnode tool */}
+              {tool==='editnode' && strokes.map((s,i) => {
+                if (s.kind !== 'polyline') return null;
+                let d=`M${s.pts[0].x.toFixed(1)},${s.pts[0].y.toFixed(1)}`;
+                for(let j=0;j<s.pts.length-1;j++){
+                  const arc=s.arcs?.[j];
+                  if(arc) d+=` Q${arc.cp.x.toFixed(1)},${arc.cp.y.toFixed(1)} ${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+                  else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
+                }
+                const isSelected = editingIdx === i;
+                return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(232,93,47,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
+                  onMouseDown={e=>{e.preventDefault();e.stopPropagation();setEditingIdx(i);}}/>;
+              })}
+              {tool==='pen' && curPts && curPts.length>1 && (
+                <path d={ptPath(curPts)} stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              )}
+              {/* Polyline in-progress */}
+              {tool==='polyline' && polylinePts.length>0 && (<>
+                {polylinePts.length>1 && (
+                  <path d={polylinePts.map((p,j)=>`${j===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
+                    stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                )}
+                {polylineLive && (
+                  <line x1={polylinePts[polylinePts.length-1].x} y1={polylinePts[polylinePts.length-1].y}
+                    x2={polylineLive.x} y2={polylineLive.y}
+                    stroke={color} strokeWidth={sw} strokeOpacity={0.45} strokeDasharray="5,4"/>
+                )}
+                {polylinePts.map((p,j)=>(
+                  <circle key={j} cx={p.x} cy={p.y} r={3.5} fill={color} opacity={0.85}/>
+                ))}
+              </>)}
+              {preview && renderEStroke(preview, -1)}
+              {/* Curve phase hints */}
+              {tool==='curve' && curvePhase===2 && curveStart && curveEnd && (
+                <><circle cx={curveStart.x} cy={curveStart.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/>
+                <circle cx={curveEnd.x} cy={curveEnd.y} r={4} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,2" opacity={0.6}/></>
+              )}
+              {/* Edit handles for selected polyline */}
+              {editingIdx >= 0 && (() => {
+                const es = strokes[editingIdx];
+                if (!es || es.kind !== 'polyline') return null;
+                const pts = es.pts;
+                return <>
+                  {/* Segment arc handles */}
+                  {pts.slice(0, -1).map((_, si) => {
+                    const a = pts[si], b = pts[si+1];
+                    const arc = es.arcs?.[si];
+                    if (arc) {
+                      return <g key={`arc${si}`}>
+                        <line x1={a.x} y1={a.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
+                        <line x1={b.x} y1={b.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
+                        <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#E85D2F" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
+                          onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
+                      </g>;
+                    }
+                    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+                    return <g key={`mid${si}`} transform={`translate(${mx},${my}) rotate(45)`}>
+                      <rect x={-5} y={-5} width={10} height={10} fill="#0D0F14" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} style={{cursor:'crosshair'}}
+                        onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
+                    </g>;
+                  })}
+                  {/* Vertex handles */}
+                  {pts.map((p, pi) => (
+                    <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#E85D2F" strokeWidth={2} style={{cursor:'grab'}}
+                      onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'vertex',segIdx:pi});}}/>
+                  ))}
+                </>;
+              })()}
+              {strokes.length===0 && !curPts && !preview && polylinePts.length===0 && (
+                <text x={SIZE/2} y={SIZE/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.1)" fontSize={12} fontFamily="'DM Sans',sans-serif">
+                  Selecciona una herramienta y dibuja
+                </text>
+              )}
+            </svg>
+          </div>
+
+          {/* Divisor vertical */}
+          <div style={{width:1,background:'rgba(255,255,255,0.08)'}}/>
+
+          {/* Columna Derecha: Digitalizador de Bocetos (Boceto desde Imagen) */}
+          <div style={{flex:1,minWidth:260,display:'flex',flexDirection:'column',gap:14,fontFamily:"'DM Sans',sans-serif"}}>
+            <div>
+              <p style={{margin:0,fontWeight:800,fontSize:13,color:'#2ECC71',display:'flex',alignItems:'center',gap:6}}>
+                <Sparkles size={14}/> Boceto desde Imagen
+              </p>
+              <p style={{margin:'4px 0 0',fontSize:11,color:'#5A6270',lineHeight:1.3}}>
+                Sube una imagen y conviértela en líneas vectoriales con sus colores originales.
+              </p>
+            </div>
+
+            {/* Drag & Drop zone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={e => {
+                e.preventDefault();
+                setIsDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) loadImage(file);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              onMouseEnter={e => {
+                setIsHovered(true);
+                e.currentTarget.style.borderColor = '#2ECC71';
+                e.currentTarget.style.background = 'rgba(46,204,113,0.05)';
+              }}
+              onMouseLeave={e => {
+                setIsHovered(false);
+                e.currentTarget.style.borderColor = isDragOver ? '#2ECC71' : 'rgba(255,255,255,0.15)';
+                e.currentTarget.style.background = isDragOver ? 'rgba(46,204,113,0.1)' : 'rgba(255,255,255,0.02)';
+              }}
+              style={{
+                height: 100,
+                borderRadius: 12,
+                border: isDragOver ? '2px dashed #2ECC71' : '1.5px dashed rgba(255,255,255,0.15)',
+                background: isDragOver ? 'rgba(46,204,113,0.1)' : 'rgba(255,255,255,0.02)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <input type="file" ref={fileInputRef} onChange={onFileChange} accept="image/*" style={{ display: 'none' }} />
+              {imageSrc ? (
+                <>
+                  <img src={imageSrc} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.8 }} />
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: isHovered ? 1 : 0, transition: 'opacity 0.2s', color: '#fff', fontSize: 11, fontWeight: 700,
+                    pointerEvents: 'none'
+                  }}
+                  >
+                    <Upload size={14} style={{ marginRight: 5 }} /> Cambiar imagen
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Upload size={20} color="rgba(255,255,255,0.3)" />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textAlign: 'center', padding: '0 10px' }}>
+                    Arrastra una imagen o haz clic aquí
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Sliders (Only if image is loaded) */}
+            {imageSrc && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Threshold Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
+                    <span>UMBRAL DE DETALLE</span>
+                    <span style={{ color: '#2ECC71' }}>{edgeThreshold.toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range" min="0.05" max="0.60" step="0.01"
+                    value={edgeThreshold}
+                    onChange={e => setEdgeThreshold(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#5A6270' }}>
+                    <span>Más líneas</span>
+                    <span>Menos líneas</span>
+                  </div>
+                </div>
+
+                {/* Noise Filter Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
+                    <span>FILTRO DE RUIDO (px)</span>
+                    <span style={{ color: '#2ECC71' }}>{minPathLen}px</span>
+                  </div>
+                  <input
+                    type="range" min="3" max="25" step="1"
+                    value={minPathLen}
+                    onChange={e => setMinPathLen(parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#5A6270' }}>
+                    <span>Detalle fino</span>
+                    <span>Trazos limpios</span>
+                  </div>
+                </div>
+
+                {/* Stroke Width Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
+                    <span>GROSOR DE LÍNEA</span>
+                    <span style={{ color: '#2ECC71' }}>{vectStrokeW.toFixed(1)}px</span>
+                  </div>
+                  <input
+                    type="range" min="1.0" max="5.0" step="0.1"
+                    value={vectStrokeW}
+                    onChange={e => setVectStrokeW(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+                  />
+                </div>
+
+                {/* Estilo de Boceto Selector (Contorno vs Relleno) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#8A9099' }}>ESTILO DE BOCETO</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => setVectFillMode('none')}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        background: vectFillMode === 'none' ? 'rgba(46,204,113,0.15)' : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${vectFillMode === 'none' ? '#2ECC71' : 'rgba(255,255,255,0.08)'}`,
+                        color: vectFillMode === 'none' ? '#2ECC71' : '#8A9099',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      Solo Contorno
+                    </button>
+                    <button
+                      onClick={() => setVectFillMode('solid')}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        background: vectFillMode === 'solid' ? 'rgba(46,204,113,0.15)' : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${vectFillMode === 'solid' ? '#2ECC71' : 'rgba(255,255,255,0.08)'}`,
+                        color: vectFillMode === 'solid' ? '#2ECC71' : '#8A9099',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      Forma Rellena
+                    </button>
+                  </div>
+                </div>
+
+                {/* Processing status */}
+                {vectorizing && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px', borderRadius: 8, background: 'rgba(46,204,113,0.06)', border: '1px solid rgba(46,204,113,0.15)' }}>
+                    <div className="animate-spin" style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#2ECC71', borderRadius: '50%' }} />
+                    <span style={{ fontSize: 10, color: '#2ECC71', fontWeight: 700 }}>Procesando boceto...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!imageSrc && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, textAlign: 'center', background: 'rgba(0,0,0,0.15)' }}>
+                <ImageIcon size={24} color="rgba(255,255,255,0.1)" />
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: '8px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                  Sube una imagen para ver la magia del boceto vectorial en la pizarra.
+                </p>
+              </div>
+            )}
+          </div>
+
+        </div>
 
         {/* Footer */}
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
