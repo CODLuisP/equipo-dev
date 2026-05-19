@@ -2523,6 +2523,8 @@ function TaskForm({ members, initialData, currentUser, onSave, onCancel }: { mem
   const [list, setList] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [listening, setListening] = useState(false);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editingVal, setEditingVal] = useState('');
   const recogRef = useRef<any>(null);
 
   const addToList = (val?: string) => {
@@ -2617,9 +2619,24 @@ function TaskForm({ members, initialData, currentUser, onSave, onCancel }: { mem
       {list.length > 0 && (
         <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar">
           {list.map((t, i) => (
-            <div key={i} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2">
-              <span className="text-white text-sm">{t}</span>
-              <button onClick={() => removeFromList(i)} className="text-gray-500 hover:text-red-400 transition-colors ml-2"><Trash2 size={12}/></button>
+            <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2"
+              style={{ borderColor: editingIdx === i ? 'rgba(232,93,47,0.4)' : undefined }}>
+              {editingIdx === i ? (
+                <input
+                  autoFocus
+                  className="flex-1 bg-transparent text-white text-sm outline-none"
+                  value={editingVal}
+                  onChange={e => setEditingVal(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { setList(prev => prev.map((x, idx) => idx === i ? editingVal.trim() || x : x)); setEditingIdx(null); }
+                    if (e.key === 'Escape') setEditingIdx(null);
+                  }}
+                  onBlur={() => { setList(prev => prev.map((x, idx) => idx === i ? editingVal.trim() || x : x)); setEditingIdx(null); }}
+                />
+              ) : (
+                <span className="flex-1 text-white text-sm cursor-text" onClick={() => { setEditingIdx(i); setEditingVal(t); }}>{t}</span>
+              )}
+              <button onClick={() => removeFromList(i)} className="text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"><Trash2 size={12}/></button>
             </div>
           ))}
         </div>
