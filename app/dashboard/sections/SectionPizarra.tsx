@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
-  Users, Code, Plus, Trash2, ZoomIn, ZoomOut, Maximize,
-  ChevronRight, FileText, RefreshCw, Sparkles, Upload, Image as ImageIcon
+  MousePointer2, Hand, Pencil, Type, Eraser, Trash2,
+  Plus, ZoomIn, ZoomOut, Maximize, RefreshCw, Sparkles, Upload, Image as ImageIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
@@ -33,15 +33,11 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSe
   },[isDragging,resizeDir,pos,image.id,onDrag,zoom,image.width,image.height]);
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
-  const shadow = isSelected
-    ? `0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)`
-    : isInMultiSelect
-    ? `0 0 0 2px rgba(232,93,47,0.55),0 0 24px rgba(232,93,47,0.25)`
-    : `0 10px 30px rgba(0,0,0,0.3)`;
+  const shadow = isSelected ? `0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)` : `0 10px 30px rgba(0,0,0,0.3)`;
   return (
     <div style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto' }}
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
-      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : isInMultiSelect ? 'rounded-xl border-dashed border-orange-400/60' : 'rounded-xl border-white/10'}`} draggable="false"/>
+      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
@@ -133,10 +129,8 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       left:pos.x + ndx,
       top:pos.y + ndy,
       background: isText ? 'transparent' : "#1C1F26",
-      border: isText
-        ? '1px solid transparent'
-        : (isInMultiSelect ? `1px dashed rgba(232,93,47,0.7)` : `1px solid ${note.color}40`),
-      boxShadow: isInMultiSelect && !isSelected ? '0 0 0 1.5px rgba(232,93,47,0.4), 0 0 18px rgba(232,93,47,0.15)' : undefined,
+      border: isText ? '1px solid transparent' : `1px solid ${note.color}40`,
+      boxShadow: undefined,
       width: isText ? 'auto' : 220,
       transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
       pointerEvents:'auto'
@@ -144,14 +138,14 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       className={`${isText ? 'rounded-none p-0' : 'rounded-xl p-4'} select-none group`}>
 
-      {isText && (isSelected || isInMultiSelect) && (
+      {isText && isSelected && (
         <div style={{
           position: 'absolute',
           top: tbSnap.t,
           bottom: tbSnap.b,
           left: 0,
           right: 0,
-          border: isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px dashed rgba(232,93,47,0.6)',
+          border: '1px dashed rgba(255,255,255,0.4)',
           pointerEvents: 'none',
           borderRadius: 2,
         }}>
@@ -305,11 +299,7 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
 
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
-  const border = isSelected
-    ? '1px dashed rgba(255,255,255,0.4)'
-    : isInMultiSelect
-    ? '1px dashed rgba(232,93,47,0.6)'
-    : '1px solid transparent';
+  const border = isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px solid transparent';
 
   return (
     <div style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: isDragging?49:9, userSelect:'none', pointerEvents:'auto' }}
@@ -1874,6 +1864,31 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, onDeleteNote, onDeleteImage]);
 
+  // Al cambiar de herramienta: cerrar editor de texto + resetear todo estado de interacción
+  const editingTextRef = useRef(editingText);
+  useEffect(() => { editingTextRef.current = editingText; }, [editingText]);
+  useEffect(() => {
+    // Guardar texto pendiente si existía
+    if (tool !== 'text' && editingTextRef.current) {
+      const et = editingTextRef.current;
+      if (et.content.trim()) {
+        pushToHistory();
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) onSaveNotes([...notesRef.current, { id: crypto.randomUUID(), content: et.content, authorId: members[0]?.id||'', createdAt: Date.now(), x:(et.x-rect.left-offset.x)/zoom, y:(et.y-rect.top-offset.y)/zoom, color:currentColor, type:'text' }]);
+      }
+      setEditingText(null);
+    }
+    // Resetear estado de interacción para que el primer click siempre funcione
+    setIsMarqueeing(false);
+    setMarqueeStart(null);
+    setMarqueeEnd(null);
+    setIsDrawing(false);
+    setIsPanning(false);
+    setMultiDragActive(false);
+    setMultiDragDelta({ x: 0, y: 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool]);
+
   // Keep refs fresh so resize effect has no stale closures
   useEffect(() => { notesRef.current = notes; }, [notes]);
   useEffect(() => { imagesRef.current = images; }, [images]);
@@ -2110,10 +2125,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
       onSaveDrawings([...drawings, { points:[{x,y}], color:tool==='eraser'?'#0A0C0F':currentColor, width:(tool==='eraser'?30:3)/zoom }]);
     }
-    if (tool==='text') {
-      if (editingText) return;
-      setEditingText({ x: e.clientX, y: e.clientY, content: '' });
-    }
   };
   const onMultiDragStart = () => { setMultiDragActive(true); setMultiDragDelta({x:0, y:0}); };
 
@@ -2237,7 +2248,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsDrawing(false);
     setIsPanning(false);
   };
-  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
 
   return (
     <div className="h-full relative overflow-hidden">
@@ -2265,21 +2276,21 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       {/* Floating Toolbar (Bottom Center) */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-            <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<ChevronRight size={18} className="-rotate-45"/>} title="Seleccionar"/>
-            <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Users size={18}/>} title="Mano"/>
+            <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<MousePointer2 size={18}/>} title="Seleccionar"/>
+            <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Hand size={18}/>} title="Mover vista"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={false} onClick={zoomIn}    icon={<ZoomIn size={18}/>}  title="Zoom +"/>
             <ToolBtn active={false} onClick={zoomOut}   icon={<ZoomOut size={18}/>} title="Zoom -"/>
-            <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={18}/>} title="Reset view"/>
+            <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={18}/>} title="Restablecer vista"/>
             <span className="text-[11px] text-gray-400 font-bold px-2 min-w-[45px] text-center">{Math.round(zoom*100)}%</span>
             <div className="w-px h-6 bg-white/10 mx-1"/>
-            <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Code size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>}   title="Lápiz"/>
-            <ToolBtn active={tool==='text'} onClick={()=>setTool('text')} icon={<FileText size={18}/>} title="Texto (Teclado)"/>
-            <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Trash2 size={18}/>} title="Borrador"/>
+            <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Pencil size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>} title="Lápiz"/>
+            <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={18}/>} title="Texto"/>
+            <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Eraser size={18}/>} title="Borrador"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
-            <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><RefreshCw size={17}/></button>
+            <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
           </div>
           <button onClick={onAddNote} className="bg-[#E85D2F] hover:bg-[#FF6B3D] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
             <Plus size={22}/>
@@ -2288,7 +2299,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
       <div ref={containerRef}
         style={{ width: '100%', height: '100%', background:"#0A0C0F", backgroundImage:`radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)`, backgroundSize:`${24*zoom}px ${24*zoom}px`, backgroundPosition:`${offset.x}px ${offset.y}px`, cursor:getCursor(), position:'relative', overflow:'hidden' }}
-        onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
+        onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
+        onClick={(e) => { if (tool==='text') { if (editingText) saveText(); setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
 
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
           {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
@@ -2296,31 +2308,21 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
 
-        {/* Text Editor (Fixed for reliability) */}
+        {/* Text Editor */}
         {editingText && (
-          <div
-            className="fixed inset-0 z-[2000] cursor-default"
-            onMouseDown={(e) => {
-               // Si clica fuera del textarea, guardar y cerrar
-               if (e.target === e.currentTarget) {
-                 saveText();
-               }
-            }}>
-            <textarea
-              autoFocus
-              className="absolute bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
-              style={{ left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, outline: 'none' }}
-              value={editingText.content}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  saveText();
-                }
-                if (e.key === 'Escape') setEditingText(null);
-              }}
-              onChange={(e) => setEditingText({ ...editingText, content: e.target.value })}
-            />
-          </div>
+          <textarea
+            autoFocus
+            className="bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
+            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
+            value={editingText.content}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveText(); }
+              if (e.key === 'Escape') setEditingText(null);
+            }}
+            onChange={(e) => setEditingText({ ...editingText, content: e.target.value })}
+          />
         )}
 
         {isMarqueeing && marqueeStart && marqueeEnd && (
