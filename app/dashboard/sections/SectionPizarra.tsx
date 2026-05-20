@@ -1740,6 +1740,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef  = useRef<HTMLTextAreaElement>(null);
 
   const saveText = () => {
     if (!editingText) return;
@@ -1888,6 +1889,14 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setMultiDragDelta({ x: 0, y: 0 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool]);
+
+  // Auto-resize textarea when editingText content changes
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }, [editingText?.content]);
 
   // Keep refs fresh so resize effect has no stale closures
   useEffect(() => { notesRef.current = notes; }, [notes]);
@@ -2311,15 +2320,27 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         {/* Text Editor */}
         {editingText && (
           <textarea
+            ref={textareaRef}
             autoFocus
             className="bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
-            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
+            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
             value={editingText.content}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveText(); }
-              if (e.key === 'Escape') setEditingText(null);
+              if (e.key === 'Escape') {
+                if (editingText?.content.trim()) {
+                  const newId = crypto.randomUUID();
+                  pushToHistory();
+                  const rect = containerRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    onSaveNotes([...notes, { id: newId, content: editingText.content, authorId: members[0]?.id||'', createdAt: Date.now(), x:(editingText.x-rect.left-offset.x)/zoom, y:(editingText.y-rect.top-offset.y)/zoom, color:currentColor, type:'text' }]);
+                    setSelectedId(newId);
+                    setTool('select');
+                  }
+                }
+                setEditingText(null);
+              }
             }}
             onChange={(e) => setEditingText({ ...editingText, content: e.target.value })}
           />
