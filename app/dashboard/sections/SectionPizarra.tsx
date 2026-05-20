@@ -679,9 +679,10 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
         // ── 2. Connected-component BFS ────────────────────────────────────
         const visited = new Uint8Array(W * H);
-        const minSize = Math.max(80, Math.round(W * H * (0.0003 + threshold * 0.004)));
+        // Scale minSize relative to canvas area; threshold controls coarseness
+        const minSize = Math.max(10, Math.round(W * H * (0.00002 + threshold * 0.0003)));
 
-        type Comp = { minIdx: number; colorLabel: number; size: number; mask: Uint8Array };
+        type Comp = { minIdx: number; colorLabel: number; size: number; mask: Uint8Array; isBg: boolean };
         const comps: Comp[] = [];
 
         for (let si = 0; si < W * H; si++) {
@@ -690,7 +691,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           const mask = new Uint8Array(W * H);
           const queue: number[] = [si];
           visited[si] = 1;
-          let minIdx = si, size = 0;
+          let minIdx = si, size = 0, touchesBorder = false;
 
           while (queue.length) {
             const idx = queue.pop()!;
@@ -698,13 +699,17 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
             if (idx < minIdx) minIdx = idx;
             size++;
             const qx = idx % W, qy = Math.floor(idx / W);
+            if (qx === 0 || qx === W - 1 || qy === 0 || qy === H - 1) touchesBorder = true;
             if (qx + 1 < W) { const n = idx + 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
             if (qx - 1 >= 0) { const n = idx - 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
             if (qy + 1 < H) { const n = idx + W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
             if (qy - 1 >= 0) { const n = idx - W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
           }
 
-          if (size >= minSize) comps.push({ minIdx, colorLabel: cl, size, mask });
+          // Mark as background if it touches the canvas border AND is near-white (canvas fill)
+          const cl_lum = 0.299 * cents[cl][0] + 0.587 * cents[cl][1] + 0.114 * cents[cl][2];
+          const isBg = touchesBorder && cl_lum > 215;
+          if (size >= minSize) comps.push({ minIdx, colorLabel: cl, size, mask, isBg });
         }
 
         comps.sort((a, b) => b.size - a.size); // largest first → renders as background
@@ -753,12 +758,17 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
         const newStrokes: EStroke[] = [];
 
-        for (const { minIdx, colorLabel, mask: compMask } of comps) {
+        for (const { minIdx, colorLabel, mask: compMask, isBg } of comps) {
+          if (isBg) continue; // skip canvas background region
+
           const [cr, cg, cb] = cents[colorLabel];
           const lum = 0.299 * cr + 0.587 * cg + 0.114 * cb;
-          if (lum > 235) continue; // skip near-white background
-
-          const colorHex = lum < 25 ? '#ffffff' : `#${toHex(cr)}${toHex(cg)}${toHex(cb)}`;
+          // Brighten very-dark colors so they're visible on the dark pizarra (#0D0F14)
+          const brighten = lum < 60 ? Math.min(1, (80 - lum) / 80) : 0;
+          const fr = Math.round(cr + (255 - cr) * brighten * 0.85);
+          const fg = Math.round(cg + (255 - cg) * brighten * 0.85);
+          const fb = Math.round(cb + (255 - cb) * brighten * 0.85);
+          const colorHex = `#${toHex(fr)}${toHex(fg)}${toHex(fb)}`;
           const sx = minIdx % W, sy = Math.floor(minIdx / W);
 
           const raw = traceContour(compMask, sx, sy);
