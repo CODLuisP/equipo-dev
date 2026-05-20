@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
   Users, Code, Plus, Trash2, ZoomIn, ZoomOut, Maximize,
   ChevronRight, FileText, RefreshCw, Sparkles, Upload, Image as ImageIcon
@@ -1733,6 +1733,17 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [selectedPathIndices, setSelectedPathIndices] = useState<Set<number>>(new Set());
   const [multiDragActive, setMultiDragActive]     = useState(false);
   const [multiDragDelta, setMultiDragDelta]       = useState({x:0, y:0});
+  const [multiResizeDir, setMultiResizeDir]       = useState<string|null>(null);
+  const [multiResizeBBox, setMultiResizeBBox]     = useState<{x:number,y:number,w:number,h:number}|null>(null);
+  const multiResizeOriginRef = useRef<{bbox:{x:number,y:number,w:number,h:number};noteMap:Map<string,any>;imageMap:Map<string,any>;shapeMap:Map<string,any>;pathMap:Map<number,any>}|null>(null);
+  const multiResizeBBoxRef   = useRef<{x:number,y:number,w:number,h:number}|null>(null);
+  const notesRef             = useRef(notes);
+  const imagesRef            = useRef(images);
+  const shapesRef            = useRef(shapes);
+  const drawingsRef          = useRef(drawings);
+  const selectedIdsRef       = useRef(selectedIds);
+  const selectedPathIdxRef   = useRef(selectedPathIndices);
+  const zoomRef              = useRef(zoom);
   const [showShapesPanel, setShowShapesPanel]     = useState(false);
   const [panelDrag, setPanelDrag] = useState<{ type: string; startX: number; startY: number; clientX: number; clientY: number } | null>(null);
 
@@ -1847,6 +1858,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         } else {
           const n = notes.find(n => n.id===selectedId); if (n) onDeleteNote(n);
           const i = images.find(i => i.id===selectedId); if (i) onDeleteImage(i);
+          const sh = shapes.find(s => s.id===selectedId); if (sh) onSaveShapes(shapes.filter(s => s.id !== selectedId));
           setSelectedId(null);
         }
       }
@@ -1860,7 +1872,65 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, selectedIds, selectedPathIndices, notes, images, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveDrawings, onDeleteNote, onDeleteImage]);
+  }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, onDeleteNote, onDeleteImage]);
+
+  // Keep refs fresh so resize effect has no stale closures
+  useEffect(() => { notesRef.current = notes; }, [notes]);
+  useEffect(() => { imagesRef.current = images; }, [images]);
+  useEffect(() => { shapesRef.current = shapes; }, [shapes]);
+  useEffect(() => { drawingsRef.current = drawings; }, [drawings]);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+  useEffect(() => { selectedPathIdxRef.current = selectedPathIndices; }, [selectedPathIndices]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Multi-select resize effect
+  useEffect(() => {
+    if (!multiResizeDir) return;
+    const onMM = (e: MouseEvent) => {
+      const dx = e.movementX / zoomRef.current;
+      const dy = e.movementY / zoomRef.current;
+      const prev = multiResizeBBoxRef.current;
+      const origin = multiResizeOriginRef.current;
+      if (!prev || !origin) return;
+      let { x, y, w, h } = prev;
+      if (multiResizeDir.includes('e')) w += dx;
+      if (multiResizeDir.includes('w')) { x += dx; w -= dx; }
+      if (multiResizeDir.includes('s')) h += dy;
+      if (multiResizeDir.includes('n')) { y += dy; h -= dy; }
+      const nb = { x, y, w: Math.max(20, w), h: Math.max(20, h) };
+      multiResizeBBoxRef.current = nb;
+      setMultiResizeBBox({ ...nb });
+      // Aplicar scale en tiempo real usando posiciones originales
+      const ob = origin.bbox;
+      const sx = ob.w > 1 ? nb.w / ob.w : 1;
+      const sy = ob.h > 1 ? nb.h / ob.h : 1;
+      const scx = (v: number) => nb.x + (v - ob.x) * sx;
+      const scy = (v: number) => nb.y + (v - ob.y) * sy;
+      onSaveNotes(notesRef.current.map((n: any) => {
+        const orig = origin.noteMap.get(n.id); return orig ? { ...n, x: scx(orig.x), y: scy(orig.y) } : n;
+      }));
+      onSaveImages(imagesRef.current.map((img: any) => {
+        const orig = origin.imageMap.get(img.id); return orig ? { ...img, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) } : img;
+      }));
+      onSaveShapes(shapesRef.current.map((s: any) => {
+        const orig = origin.shapeMap.get(s.id); return orig ? { ...s, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) } : s;
+      }));
+      if (origin.pathMap.size > 0) {
+        onSaveDrawings(drawingsRef.current.map((p: any, idx: number) => {
+          const orig = origin.pathMap.get(idx); return orig ? { ...p, points: orig.points.map((pt: any) => ({ x: scx(pt.x), y: scy(pt.y) })) } : p;
+        }));
+      }
+    };
+    const onMU = () => {
+      setMultiResizeDir(null);
+      setMultiResizeBBox(null);
+      multiResizeOriginRef.current = null;
+      multiResizeBBoxRef.current = null;
+    };
+    window.addEventListener('mousemove', onMM);
+    window.addEventListener('mouseup', onMU);
+    return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); };
+  }, [multiResizeDir, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -1903,9 +1973,16 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         ctx.beginPath(); ctx.strokeStyle=p.color; ctx.lineWidth=p.width; ctx.lineJoin='round'; ctx.lineCap='round';
         ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
         for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
-        if (isSel) { ctx.shadowColor='#E85D2F'; ctx.shadowBlur=14/zoom; }
         ctx.stroke();
-        ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+        if (isSel) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5/zoom;
+          ctx.setLineDash([7/zoom,4/zoom]); ctx.lineJoin='round'; ctx.lineCap='round';
+          ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
+          for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
+          ctx.stroke(); ctx.restore();
+        }
       });
       ctx.restore();
     };
@@ -1995,10 +2072,20 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           }
 
           // Hit test: clic cerca de un trazo de lápiz → seleccionarlo directamente
+          const distToSeg = (px:number,py:number,ax:number,ay:number,bx:number,by:number) => {
+            const dx=bx-ax, dy=by-ay, lenSq=dx*dx+dy*dy;
+            if (lenSq===0) return Math.hypot(px-ax,py-ay);
+            const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq));
+            return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+          };
           for (let idx = drawings.length - 1; idx >= 0; idx--) {
             const p = drawings[idx];
-            const hitDist = Math.max(p.width / 2 + 5, 8 / zoom);
-            const isHit = p.points.some(pt => Math.hypot(pt.x - wx, pt.y - wy) <= hitDist);
+            const hitDist = Math.max(p.width / 2 + 10, 14 / zoom);
+            const isHit = p.points.some((pt, i) => {
+              if (i === 0) return Math.hypot(pt.x - wx, pt.y - wy) <= hitDist;
+              const prev = p.points[i - 1];
+              return distToSeg(wx, wy, prev.x, prev.y, pt.x, pt.y) <= hitDist;
+            });
             if (isHit) {
               setSelectedPathIndices(new Set([idx]));
               setSelectedIds(new Set());
@@ -2030,7 +2117,48 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   };
   const onMultiDragStart = () => { setMultiDragActive(true); setMultiDragDelta({x:0, y:0}); };
 
+  const getMultiSelectBBox = useCallback(() => {
+    if (selectedIds.size === 0 && selectedPathIndices.size === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    drawings.forEach((p: any, idx: number) => {
+      if (!selectedPathIndices.has(idx)) return;
+      p.points.forEach((pt: any) => { minX=Math.min(minX,pt.x); minY=Math.min(minY,pt.y); maxX=Math.max(maxX,pt.x); maxY=Math.max(maxY,pt.y); });
+    });
+    notes.forEach((n: any) => {
+      if (!selectedIds.has(n.id)) return;
+      const nw = n.type==='text'?200:220, nh = n.type==='text'?50:120;
+      minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+nw); maxY=Math.max(maxY,n.y+nh);
+    });
+    images.forEach((img: any) => {
+      if (!selectedIds.has(img.id)) return;
+      minX=Math.min(minX,img.x); minY=Math.min(minY,img.y); maxX=Math.max(maxX,img.x+img.width); maxY=Math.max(maxY,img.y+img.height);
+    });
+    shapes.forEach((s: any) => {
+      if (!selectedIds.has(s.id)) return;
+      minX=Math.min(minX,s.x); minY=Math.min(minY,s.y); maxX=Math.max(maxX,s.x+s.width); maxY=Math.max(maxY,s.y+s.height);
+    });
+    if (minX === Infinity) return null;
+    return { x: minX, y: minY, w: maxX-minX, h: maxY-minY };
+  }, [selectedIds, selectedPathIndices, notes, images, shapes, drawings]);
+
+  const onMultiResizeStart = useCallback((dir: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const bbox = getMultiSelectBBox();
+    if (!bbox) return;
+    pushToHistory();
+    const noteMap  = new Map(notes.filter((n: any) => selectedIds.has(n.id)).map((n: any) => [n.id, { ...n }]));
+    const imageMap = new Map(images.filter((i: any) => selectedIds.has(i.id)).map((i: any) => [i.id, { ...i }]));
+    const shapeMap = new Map(shapes.filter((s: any) => selectedIds.has(s.id)).map((s: any) => [s.id, { ...s }]));
+    const pathMap  = new Map<number, any>();
+    drawings.forEach((p: any, idx: number) => { if (selectedPathIndices.has(idx)) pathMap.set(idx, { ...p, points: p.points.map((pt: any) => ({ ...pt })) }); });
+    multiResizeOriginRef.current = { bbox, noteMap, imageMap, shapeMap, pathMap };
+    multiResizeBBoxRef.current = { ...bbox };
+    setMultiResizeDir(dir);
+    setMultiResizeBBox({ ...bbox });
+  }, [getMultiSelectBBox, notes, images, shapes, drawings, selectedIds, selectedPathIndices, pushToHistory]);
+
   const onMM=(e:React.MouseEvent)=>{
+    if (multiResizeDir) return;
     if (isPanning) { setOffset(p=>({x:p.x+e.movementX,y:p.y+e.movementY})); return; }
     if (multiDragActive) {
       setMultiDragDelta(d => ({x: d.x + e.movementX/zoom, y: d.y + e.movementY/zoom}));
@@ -2091,8 +2219,16 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         drawings.forEach((p, idx) => {
           if (p.points.some(pt => pt.x >= mx && pt.x <= mx+mw && pt.y >= my && pt.y <= my+mh)) newPaths.add(idx);
         });
-        setSelectedIds(newIds);
-        setSelectedPathIndices(newPaths);
+        // Si solo se seleccionó 1 elemento, convertir a selección directa (handles de resize blancos)
+        if (newIds.size === 1 && newPaths.size === 0) {
+          setSelectedId([...newIds][0]);
+          setSelectedIds(new Set());
+          setSelectedPathIndices(new Set());
+        } else {
+          setSelectedIds(newIds);
+          setSelectedPathIndices(newPaths);
+          setSelectedId(null);
+        }
       }
       setIsMarqueeing(false);
       setMarqueeStart(null);
@@ -2201,6 +2337,37 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             zIndex: 30,
           }}/>
         )}
+
+        {/* Multi-select bounding box con handles de resize */}
+        {(selectedIds.size > 0 || selectedPathIndices.size > 0) && tool === 'select' && !isMarqueeing && !multiDragActive && (() => {
+          const bbox = multiResizeBBox ?? getMultiSelectBBox();
+          if (!bbox) return null;
+          const pad = 6;
+          const left   = (bbox.x - pad) * zoom + offset.x;
+          const top    = (bbox.y - pad) * zoom + offset.y;
+          const width  = (bbox.w + pad * 2) * zoom;
+          const height = (bbox.h + pad * 2) * zoom;
+          const handleStyle = (extra: React.CSSProperties): React.CSSProperties => ({
+            position: 'absolute', width: 9, height: 9,
+            background: '#0A0C0F', border: '1.5px solid rgba(232,93,47,0.95)',
+            borderRadius: 2, pointerEvents: 'auto', zIndex: 35, ...extra,
+          });
+          return (
+            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(232,93,47,0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
+              {/* Esquinas */}
+              <div style={handleStyle({ top:-4, left:-4, cursor:'nw-resize' })} onMouseDown={e=>onMultiResizeStart('nw',e)}/>
+              <div style={handleStyle({ top:-4, right:-4, cursor:'ne-resize' })} onMouseDown={e=>onMultiResizeStart('ne',e)}/>
+              <div style={handleStyle({ bottom:-4, left:-4, cursor:'sw-resize' })} onMouseDown={e=>onMultiResizeStart('sw',e)}/>
+              <div style={handleStyle({ bottom:-4, right:-4, cursor:'se-resize' })} onMouseDown={e=>onMultiResizeStart('se',e)}/>
+              {/* Lados */}
+              <div style={handleStyle({ top:-4, left:'50%', transform:'translateX(-50%)', cursor:'n-resize' })} onMouseDown={e=>onMultiResizeStart('n',e)}/>
+              <div style={handleStyle({ bottom:-4, left:'50%', transform:'translateX(-50%)', cursor:'s-resize' })} onMouseDown={e=>onMultiResizeStart('s',e)}/>
+              <div style={handleStyle({ top:'50%', right:-4, transform:'translateY(-50%)', cursor:'e-resize' })} onMouseDown={e=>onMultiResizeStart('e',e)}/>
+              <div style={handleStyle({ top:'50%', left:-4, transform:'translateY(-50%)', cursor:'w-resize' })} onMouseDown={e=>onMultiResizeStart('w',e)}/>
+            </div>
+          );
+        })()}
+
         <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 20 }}/>
       </div>
     </div>
