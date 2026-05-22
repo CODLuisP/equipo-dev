@@ -7,7 +7,7 @@ export interface Task {
   assignedTo: string; createdAt: number;
 }
 export interface Snippet { id: string; title: string; content: string; label: 'env' | 'código' | 'config' | 'otro'; authorId: string; createdAt: number; }
-export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; }
+export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; width?: number; }
 export interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; }
 export interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; }
 export interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; }

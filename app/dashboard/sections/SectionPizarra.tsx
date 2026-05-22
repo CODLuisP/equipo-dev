@@ -42,21 +42,31 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSe
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
       ))}
+      {isSelected&&!disabled&&(['n','s','e','w'] as const).map(dir=>(
+        <div key={`edge-${dir}`} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
+          className={`absolute bg-transparent z-50 rounded-sm
+            ${dir==='n'?'top-0 -translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
+            ${dir==='s'?'bottom-0 translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
+            ${dir==='e'?'right-0 translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
+            ${dir==='w'?'left-0 -translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
+          `}/>
+      ))}
     </div>
   );
 }
 
 function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
-  const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18 });
+  const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18, w: note.width || 0 });
   const [tbSnap, setTbSnap] = useState({ t: 0, b: 0 });
   const author = members.find((m: any) => m.id === note.authorId);
   const isText = note.type === 'text';
 
   useEffect(() => {
-    if (!isDragging && !resizeDir) setPos({ x: note.x, y: note.y, fs: note.fontSize || 18 });
-  }, [note.x, note.y, note.fontSize]);
+    if (!isDragging && !resizeDir) setPos({ x: note.x, y: note.y, fs: note.fontSize || 18, w: note.width || 0 });
+  }, [note.x, note.y, note.fontSize, note.width]);
 
   useEffect(() => {
     const onMM = (e: MouseEvent) => {
@@ -65,18 +75,29 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       } else if (resizeDir) {
         const dx = e.movementX / zoom;
         const dy = e.movementY / zoom;
-        const factor = (resizeDir.includes('e') ? dx : -dx) + (resizeDir.includes('s') ? dy : -dy);
-        setPos(p => ({
-          ...p,
-          x: resizeDir.includes('w') ? p.x + dx : p.x,
-          y: resizeDir.includes('n') ? p.y + dy : p.y,
-          fs: Math.max(8, Math.min(1000, p.fs + factor * 0.5))
-        }));
+        if (resizeDir === 'e') {
+          setPos(p => ({ ...p, w: Math.max(50, p.w + dx) }));
+        } else if (resizeDir === 'w') {
+          setPos(p => ({ ...p, x: p.x + dx, w: Math.max(50, p.w - dx) }));
+        } else {
+          const factor = (resizeDir.includes('e') ? dx : -dx) + (resizeDir.includes('s') ? dy : -dy);
+          setPos(p => {
+            const newFs = Math.max(8, Math.min(1000, p.fs + factor * 0.5));
+            const scale = p.fs > 0 ? newFs / p.fs : 1;
+            return {
+              ...p,
+              x: resizeDir.includes('w') ? p.x + dx : p.x,
+              y: resizeDir.includes('n') ? p.y + dy : p.y,
+              fs: newFs,
+              w: p.w > 0 ? Math.max(50, p.w * scale) : 0
+            };
+          });
+        }
       }
     };
     const onMU = () => {
       if (isDragging || resizeDir) {
-        onDrag(note.id, pos.x, pos.y, { fontSize: pos.fs });
+        onDrag(note.id, pos.x, pos.y, { fontSize: pos.fs, width: pos.w > 0 ? pos.w : undefined });
         setIsDragging(false);
         setResizeDir(null);
       }
@@ -124,14 +145,15 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
   const ndy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
 
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       position:'absolute',
       left:pos.x + ndx,
       top:pos.y + ndy,
       background: isText ? 'transparent' : "#1C1F26",
       border: isText ? '1px solid transparent' : `1px solid ${note.color}40`,
       boxShadow: undefined,
-      width: isText ? 'auto' : 220,
+      width: isText ? (pos.w > 0 ? pos.w : 'max-content') : 220,
+      zIndex: (isDragging||resizeDir) ? 49 : 9,
       transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
       pointerEvents:'auto'
     }}
@@ -161,6 +183,26 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
               `}
             />
           ))}
+          {isSelected && !disabled && (['n','s','e','w'] as const).map(dir => (
+            <div key={`edge-${dir}`}
+              onMouseDown={e => {
+                e.stopPropagation();
+                onSelect();
+                if (dir === 'e' || dir === 'w') {
+                  const currentW = containerRef.current?.getBoundingClientRect().width ?? 200;
+                  setPos(p => ({ ...p, w: p.w > 0 ? p.w : currentW / zoom }));
+                }
+                setResizeDir(dir);
+              }}
+              style={{ pointerEvents: 'all' }}
+              className={`absolute bg-transparent z-10 rounded-sm
+                ${dir === 'n' ? 'top-0 -translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize' : ''}
+                ${dir === 's' ? 'bottom-0 translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize' : ''}
+                ${dir === 'e' ? 'right-0 translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize' : ''}
+                ${dir === 'w' ? 'left-0 -translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize' : ''}
+              `}
+            />
+          ))}
         </div>
       )}
 
@@ -174,8 +216,17 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
         </div>
       )}
 
-      <p className={`whitespace-pre-wrap ${isText ? 'font-bold' : 'text-xs text-gray-200 leading-relaxed'}`}
-         style={{ color: isText ? note.color : undefined, fontSize: isText ? pos.fs : undefined, lineHeight: isText ? 1 : undefined, margin: 0, padding: 0 }}>
+      <p className={isText ? 'font-bold' : 'text-xs text-gray-200 leading-relaxed'}
+         style={{ 
+           color: isText ? note.color : undefined, 
+           fontSize: isText ? pos.fs : undefined, 
+           lineHeight: isText ? 1 : undefined, 
+           margin: 0, 
+           padding: 0,
+           whiteSpace: isText ? 'pre-wrap' : 'pre-wrap',
+           wordBreak: isText ? 'break-word' : undefined,
+           overflowWrap: isText ? 'anywhere' : undefined
+         }}>
         {note.content}
       </p>
     </div>
@@ -311,6 +362,15 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
           <div key={dir} onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
             className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 rounded-sm
               ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
+        ))}
+        {isSelected && !disabled && (['n','s','e','w'] as const).map(dir => (
+          <div key={`edge-${dir}`} onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
+            className={`absolute bg-transparent z-50 rounded-sm
+              ${dir==='n'?'top-0 -translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
+              ${dir==='s'?'bottom-0 translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
+              ${dir==='e'?'right-0 translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
+              ${dir==='w'?'left-0 -translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
+            `}/>
         ))}
       </div>
       <span style={{ fontSize: 9, color: shape.color, fontWeight: 700, marginTop: 4, fontFamily: "'DM Sans', sans-serif", opacity: 0.85, pointerEvents:'none', letterSpacing:'0.02em' }}>
