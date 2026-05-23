@@ -18,14 +18,14 @@ function ToolBtn({ active, onClick, icon, title }: any) {
 function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React.MouseEvent) => void; extraOffset?: number }) {
   // top = extraOffset - 46 so the bottom of the 30px line lands exactly at y=extraOffset
   return (
-    <div style={{ position:'absolute', top: extraOffset - 46, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', pointerEvents:'auto', zIndex:51, cursor:'grab' }}
+    <div style={{ position:'absolute', top: extraOffset - 30, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', pointerEvents:'auto', zIndex:51, cursor:'grab' }}
       onMouseDown={onMouseDown}>
       <div style={{ width:16, height:16, borderRadius:'50%', background:'#0A0C0F', border:'1.5px solid rgba(255,255,255,0.65)', display:'flex', alignItems:'center', justifyContent:'center' }}>
         <svg viewBox="0 0 12 12" width={10} height={10} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9.5 1.5A5 5 0 1 1 2 7"/><polyline points="9.5,1.5 9.5,4.5 6.5,4.5"/>
         </svg>
       </div>
-      <div style={{ width:1, height:30, background:'rgba(255,255,255,0.35)' }}/>
+      <div style={{ width:1, height:14, background:'rgba(255,255,255,0.35)' }}/>
     </div>
   );
 }
@@ -76,7 +76,7 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
 
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
-  const shadow = isSelected ? `0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)` : `0 10px 30px rgba(0,0,0,0.3)`;
+  const shadow = `0 10px 30px rgba(0,0,0,${isSelected ? 0.5 : 0.3})`;
   return (
     <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
@@ -104,6 +104,8 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
   const [pos, setPos] = useState({ x: note.x, y: note.y, fs: note.fontSize || 18, w: note.width || 0 });
+  const posRef = useRef(pos);
+  posRef.current = pos;
   const [tbSnap, setTbSnap] = useState({ t: 0, b: 0 });
   const author = members.find((m: any) => m.id === note.authorId);
   const isText = note.type === 'text';
@@ -123,29 +125,20 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       } else if (resizeDir) {
         const dx = e.movementX / zoom;
         const dy = e.movementY / zoom;
-        if (resizeDir === 'e') {
-          setPos(p => ({ ...p, w: Math.max(50, p.w + dx) }));
-        } else if (resizeDir === 'w') {
-          setPos(p => ({ ...p, x: p.x + dx, w: Math.max(50, p.w - dx) }));
-        } else {
-          const factor = (resizeDir.includes('e') ? dx : -dx) + (resizeDir.includes('s') ? dy : -dy);
-          setPos(p => {
-            const newFs = Math.max(8, Math.min(1000, p.fs + factor * 0.5));
-            const scale = p.fs > 0 ? newFs / p.fs : 1;
-            return {
-              ...p,
-              x: resizeDir.includes('w') ? p.x + dx : p.x,
-              y: resizeDir.includes('n') ? p.y + dy : p.y,
-              fs: newFs,
-              w: p.w > 0 ? Math.max(50, p.w * scale) : 0
-            };
-          });
-        }
+        setPos(p => {
+          let { x, y, fs, w } = p;
+          if (resizeDir.includes('e') && w > 0) w = Math.max(50, w + dx);
+          if (resizeDir.includes('w') && w > 0) { x += dx; w = Math.max(50, w - dx); }
+          if (resizeDir.includes('s')) fs = Math.max(8, fs + dy);
+          if (resizeDir.includes('n')) { fs = Math.max(8, fs - dy); y += dy; }
+          return { x, y, fs, w };
+        });
       }
     };
     const onMU = () => {
       if (isDragging || resizeDir) {
-        onDrag(note.id, pos.x, pos.y, { fontSize: pos.fs, width: pos.w > 0 ? pos.w : undefined });
+        const p = posRef.current;
+        onDrag(note.id, p.x, p.y, { fontSize: p.fs, width: p.w > 0 ? p.w : undefined });
         setIsDragging(false);
         setResizeDir(null);
       }
@@ -158,7 +151,7 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       window.removeEventListener('mousemove', onMM);
       window.removeEventListener('mouseup', onMU);
     };
-  }, [isDragging, resizeDir, pos, note.id, onDrag, zoom]);
+  }, [isDragging, resizeDir, note.id, onDrag, zoom]);
 
   useEffect(() => {
     if (!isRotatingRef.current) { const r = note.rotation !== undefined ? note.rotation : defaultRot; setLocalRotation(r); rotationRef.current = r; }
@@ -245,7 +238,12 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
         }}>
           {isSelected && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
             <div key={dir}
-              onMouseDown={e => { e.stopPropagation(); onSelect(); setResizeDir(dir); }}
+              onMouseDown={e => {
+                e.stopPropagation(); onSelect();
+                const currentW = containerRef.current?.getBoundingClientRect().width ?? 200;
+                setPos(p => ({ ...p, w: p.w > 0 ? p.w : currentW / zoom }));
+                setResizeDir(dir);
+              }}
               style={{ pointerEvents: 'all' }}
               className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-10 rounded-sm
                 ${dir === 'nw' ? '-top-1 -left-1 cursor-nw-resize' : ''}
@@ -1859,6 +1857,17 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
   );
 }
 
+function getNoteDims(n: any) {
+  if (n.type === 'text') {
+    const fs = n.fontSize || 18;
+    const w = n.width > 0 ? n.width : Math.max(60, (n.content?.length || 4) * fs * 0.55);
+    const charsPerLine = Math.max(1, w / (fs * 0.55));
+    const lines = Math.max(1, Math.ceil((n.content?.length || 1) / charsPerLine));
+    return { w, h: lines * fs };
+  }
+  return { w: 220, h: 120 };
+}
+
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
 
 export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
@@ -1896,6 +1905,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const zoomRef              = useRef(zoom);
   const [showShapesPanel, setShowShapesPanel]     = useState(false);
   const [panelDrag, setPanelDrag] = useState<{ type: string; startX: number; startY: number; clientX: number; clientY: number } | null>(null);
+  const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
+  const pathLiveRotRef = useRef<{angle:number;cx:number;cy:number}|null>(null);
 
   const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -2091,7 +2102,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       const scx = (v: number) => nb.x + (v - ob.x) * sx;
       const scy = (v: number) => nb.y + (v - ob.y) * sy;
       onSaveNotes(notesRef.current.map((n: any) => {
-        const orig = origin.noteMap.get(n.id); return orig ? { ...n, x: scx(orig.x), y: scy(orig.y) } : n;
+        const orig = origin.noteMap.get(n.id);
+        if (!orig) return n;
+        const updated: any = { ...n, x: scx(orig.x), y: scy(orig.y) };
+        if (n.type === 'text') {
+          const scale = Math.min(sx, sy);
+          updated.fontSize = Math.max(8, (orig.fontSize || 18) * scale);
+          if ((orig.width || 0) > 0) updated.width = Math.max(50, orig.width * sx);
+        }
+        return updated;
       }));
       onSaveImages(imagesRef.current.map((img: any) => {
         const orig = origin.imageMap.get(img.id); return orig ? { ...img, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) } : img;
@@ -2154,26 +2173,29 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         const isSel = selectedPathIndices.has(idx);
         const pdx = isSel && multiDragActive ? multiDragDelta.x : 0;
         const pdy = isSel && multiDragActive ? multiDragDelta.y : 0;
+        const rot = isSel && pathLiveRotRef.current ? pathLiveRotRef.current : null;
+        ctx.save();
+        if (rot) { ctx.translate(rot.cx,rot.cy); ctx.rotate(rot.angle*Math.PI/180); ctx.translate(-rot.cx,-rot.cy); }
         ctx.beginPath(); ctx.strokeStyle=p.color; ctx.lineWidth=p.width; ctx.lineJoin='round'; ctx.lineCap='round';
         ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
         for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
         ctx.stroke();
         if (isSel) {
-          ctx.save();
           ctx.beginPath();
           ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5/zoom;
           ctx.setLineDash([7/zoom,4/zoom]); ctx.lineJoin='round'; ctx.lineCap='round';
           ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
           for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
-          ctx.stroke(); ctx.restore();
+          ctx.stroke(); ctx.setLineDash([]);
         }
+        ctx.restore();
       });
       ctx.restore();
     };
     const resize = () => { if (containerRef.current) { canvas.width=containerRef.current.clientWidth; canvas.height=containerRef.current.clientHeight; redraw(); } };
     window.addEventListener('resize', resize); resize();
     return () => window.removeEventListener('resize', resize);
-  }, [drawings, offset, zoom, selectedPathIndices, multiDragActive, multiDragDelta]);
+  }, [drawings, offset, zoom, selectedPathIndices, multiDragActive, multiDragDelta, pathLiveRot]);
 
   // Infinite Scroll & Zoom listener
   useEffect(() => {
@@ -2234,8 +2256,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             });
             notes.forEach(n => {
               if (!selectedIds.has(n.id)) return;
-              const nw = n.type === 'text' ? 200 : 220;
-              const nh = n.type === 'text' ? 50 : 120;
+              const { w: nw, h: nh } = getNoteDims(n);
               minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
               maxX = Math.max(maxX, n.x + nw); maxY = Math.max(maxY, n.y + nh);
             });
@@ -2306,7 +2327,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     });
     notes.forEach((n: any) => {
       if (!selectedIds.has(n.id)) return;
-      const nw = n.type==='text'?200:220, nh = n.type==='text'?50:120;
+      const { w: nw, h: nh } = getNoteDims(n);
       minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+nw); maxY=Math.max(maxY,n.y+nh);
     });
     images.forEach((img: any) => {
@@ -2385,8 +2406,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if (mw > 5 || mh > 5) {
         const newIds = new Set<string>();
         notes.forEach(n => {
-          const nw = n.type==='text' ? 200 : 220;
-          const nh = n.type==='text' ? 50 : 120;
+          const { w: nw, h: nh } = getNoteDims(n);
           if (n.x < mx+mw && n.x+nw > mx && n.y < my+mh && n.y+nh > my) newIds.add(n.id);
         });
         images.forEach(img => {
@@ -2418,6 +2438,35 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsPanning(false);
   };
   const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+
+  const handlePathRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation(); e.preventDefault();
+    const idx = [...selectedPathIndices][0]; if (idx === undefined) return;
+    const p = drawings[idx]; if (!p || p.points.length < 2) return;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    p.points.forEach(pt=>{ minX=Math.min(minX,pt.x); minY=Math.min(minY,pt.y); maxX=Math.max(maxX,pt.x); maxY=Math.max(maxY,pt.y); });
+    const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+    const rect=containerRef.current?.getBoundingClientRect(); if(!rect) return;
+    const screenCX=cx*zoom+offset.x+rect.left, screenCY=cy*zoom+offset.y+rect.top;
+    const startAngle=Math.atan2(e.clientY-screenCY, e.clientX-screenCX);
+    let currentAngleDeg=0;
+    const init={angle:0,cx,cy}; setPathLiveRot(init); pathLiveRotRef.current=init;
+    const onMove=(me:MouseEvent)=>{
+      const a=Math.atan2(me.clientY-screenCY,me.clientX-screenCX);
+      currentAngleDeg=(a-startAngle)*180/Math.PI;
+      const r={angle:currentAngleDeg,cx,cy}; setPathLiveRot(r); pathLiveRotRef.current=r;
+    };
+    const onUp=()=>{
+      window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp);
+      setPathLiveRot(null); pathLiveRotRef.current=null;
+      const rad=currentAngleDeg*Math.PI/180;
+      const cos=Math.cos(rad),sin=Math.sin(rad);
+      const rotPt=(pt:{x:number;y:number})=>({x:cos*(pt.x-cx)-sin*(pt.y-cy)+cx, y:sin*(pt.x-cx)+cos*(pt.y-cy)+cy});
+      pushToHistory();
+      onSaveDrawings(drawings.map((d,i)=>i===idx?{...d,points:d.points.map(rotPt)}:d));
+    };
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  };
 
   return (
     <div className="h-full relative overflow-hidden">
@@ -2521,8 +2570,47 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           }}/>
         )}
 
+        {/* Bounding box + handles + rotación para un solo trazo seleccionado */}
+        {selectedPathIndices.size === 1 && selectedIds.size === 0 && tool === 'select' && !isMarqueeing && !multiDragActive && !pathLiveRot && (() => {
+          const idx = [...selectedPathIndices][0];
+          const p = drawings[idx]; if (!p || p.points.length < 2) return null;
+          const bbox = multiResizeBBox ?? getMultiSelectBBox(); if (!bbox) return null;
+          const pad = 6;
+          const left   = (bbox.x - pad) * zoom + offset.x;
+          const top    = (bbox.y - pad) * zoom + offset.y;
+          const width  = (bbox.w + pad * 2) * zoom;
+          const height = (bbox.h + pad * 2) * zoom;
+          const corner = (extra: React.CSSProperties): React.CSSProperties => ({
+            position:'absolute', width:8, height:8, background:'#0A0C0F',
+            border:'1.5px solid rgba(255,255,255,0.75)', borderRadius:3,
+            pointerEvents:'auto', zIndex:35, ...extra,
+          });
+          const edge = (extra: React.CSSProperties): React.CSSProperties => ({
+            position:'absolute', background:'transparent',
+            pointerEvents:'auto', zIndex:35, ...extra,
+          });
+          return (
+            <div style={{ position:'absolute', left, top, width, height, border:'1px dashed rgba(255,255,255,0.4)', borderRadius:3, pointerEvents:'none', zIndex:30 }}>
+              {/* Esquinas redondeadas */}
+              <div style={corner({ top:-4, left:-4, cursor:'nw-resize' })} onMouseDown={e=>onMultiResizeStart('nw',e)}/>
+              <div style={corner({ top:-4, right:-4, cursor:'ne-resize' })} onMouseDown={e=>onMultiResizeStart('ne',e)}/>
+              <div style={corner({ bottom:-4, left:-4, cursor:'sw-resize' })} onMouseDown={e=>onMultiResizeStart('sw',e)}/>
+              <div style={corner({ bottom:-4, right:-4, cursor:'se-resize' })} onMouseDown={e=>onMultiResizeStart('se',e)}/>
+              {/* Tiras transparentes de ancho completo para los lados */}
+              <div style={edge({ top:0, left:8, right:8, height:8, transform:'translateY(-50%)', cursor:'n-resize' })} onMouseDown={e=>onMultiResizeStart('n',e)}/>
+              <div style={edge({ bottom:0, left:8, right:8, height:8, transform:'translateY(50%)', cursor:'s-resize' })} onMouseDown={e=>onMultiResizeStart('s',e)}/>
+              <div style={edge({ right:0, top:8, bottom:8, width:8, transform:'translateX(50%)', cursor:'e-resize' })} onMouseDown={e=>onMultiResizeStart('e',e)}/>
+              <div style={edge({ left:0, top:8, bottom:8, width:8, transform:'translateX(-50%)', cursor:'w-resize' })} onMouseDown={e=>onMultiResizeStart('w',e)}/>
+              {/* Handle de rotación */}
+              <div style={{ position:'absolute', left:'50%', top:0, transform:'translateX(-50%)', pointerEvents:'auto' }}>
+                <RotateHandle onMouseDown={handlePathRotateStart}/>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Multi-select bounding box con handles de resize */}
-        {(selectedIds.size > 0 || selectedPathIndices.size > 0) && tool === 'select' && !isMarqueeing && !multiDragActive && (() => {
+        {(selectedIds.size > 0 || selectedPathIndices.size > 1 || (selectedPathIndices.size > 0 && selectedIds.size > 0)) && tool === 'select' && !isMarqueeing && !multiDragActive && (() => {
           const bbox = multiResizeBBox ?? getMultiSelectBBox();
           if (!bbox) return null;
           const pad = 6;
