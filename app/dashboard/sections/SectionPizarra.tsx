@@ -15,13 +15,36 @@ function ToolBtn({ active, onClick, icon, title }: any) {
   return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[#E85D2F] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
 }
 
-function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React.MouseEvent) => void; extraOffset?: number }) {
+  // top = extraOffset - 46 so the bottom of the 30px line lands exactly at y=extraOffset
+  return (
+    <div style={{ position:'absolute', top: extraOffset - 46, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', pointerEvents:'auto', zIndex:51, cursor:'grab' }}
+      onMouseDown={onMouseDown}>
+      <div style={{ width:16, height:16, borderRadius:'50%', background:'#0A0C0F', border:'1.5px solid rgba(255,255,255,0.65)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <svg viewBox="0 0 12 12" width={10} height={10} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.5 1.5A5 5 0 1 1 2 7"/><polyline points="9.5,1.5 9.5,4.5 6.5,4.5"/>
+        </svg>
+      </div>
+      <div style={{ width:1, height:30, background:'rgba(255,255,255,0.35)' }}/>
+    </div>
+  );
+}
+
+function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const [pos, setPos] = useState({ x:image.x, y:image.y, w:image.width, h:image.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir]   = useState<string|null>(null);
+  const [localRotation, setLocalRotation] = useState<number>(image.rotation ?? 0);
+  const rotationRef  = useRef<number>(image.rotation ?? 0);
+  const isRotatingRef = useRef(false);
+  const elemDivRef   = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x:image.x, y:image.y, w:image.width, h:image.height });
   }, [image.x, image.y, image.width, image.height]);
+  useEffect(() => {
+    if (!isRotatingRef.current) { const r = image.rotation ?? 0; setLocalRotation(r); rotationRef.current = r; }
+  }, [image.rotation]);
   useEffect(() => {
     const onMM=(e:MouseEvent)=>{
       if (isDragging) setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom}));
@@ -31,11 +54,31 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSe
     if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
     return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
   },[isDragging,resizeDir,pos,image.id,onDrag,zoom,image.width,image.height]);
+
+  const handleRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation(); e.preventDefault();
+    const rect = elemDivRef.current?.getBoundingClientRect(); if (!rect) return;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+    const startRot = rotationRef.current;
+    isRotatingRef.current = true;
+    const onMove = (me: MouseEvent) => {
+      const a = Math.atan2(me.clientY - cy, me.clientX - cx);
+      const r = startRot + (a - startAngle) * 180 / Math.PI;
+      setLocalRotation(r); rotationRef.current = r;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      isRotatingRef.current = false; onRotate?.(image.id, rotationRef.current);
+    };
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+  };
+
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
   const shadow = isSelected ? `0 0 0 2px #E85D2F,0 10px 30px rgba(0,0,0,0.5)` : `0 10px 30px rgba(0,0,0,0.3)`;
   return (
-    <div style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto' }}
+    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
       <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
@@ -51,11 +94,12 @@ function DraggableImage({ image, onDrag, disabled, zoom, isSelected, isInMultiSe
             ${dir==='w'?'left-0 -translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
           `}/>
       ))}
+      {isSelected&&!disabled&&<RotateHandle onMouseDown={handleRotateStart}/>}
     </div>
   );
 }
 
-function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -63,6 +107,10 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
   const [tbSnap, setTbSnap] = useState({ t: 0, b: 0 });
   const author = members.find((m: any) => m.id === note.authorId);
   const isText = note.type === 'text';
+  const defaultRot = isText ? 0 : ((note.createdAt % 10) - 5) / 2;
+  const [localRotation, setLocalRotation] = useState<number>(note.rotation !== undefined ? note.rotation : defaultRot);
+  const rotationRef  = useRef<number>(note.rotation !== undefined ? note.rotation : defaultRot);
+  const isRotatingRef = useRef(false);
 
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x: note.x, y: note.y, fs: note.fontSize || 18, w: note.width || 0 });
@@ -112,6 +160,30 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
     };
   }, [isDragging, resizeDir, pos, note.id, onDrag, zoom]);
 
+  useEffect(() => {
+    if (!isRotatingRef.current) { const r = note.rotation !== undefined ? note.rotation : defaultRot; setLocalRotation(r); rotationRef.current = r; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.rotation]);
+
+  const handleNoteRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation(); e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect(); if (!rect) return;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+    const startRot = rotationRef.current;
+    isRotatingRef.current = true;
+    const onMove = (me: MouseEvent) => {
+      const a = Math.atan2(me.clientY - cy, me.clientX - cx);
+      const r = startRot + (a - startAngle) * 180 / Math.PI;
+      setLocalRotation(r); rotationRef.current = r;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      isRotatingRef.current = false; onRotate?.(note.id, rotationRef.current);
+    };
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+  };
+
   useLayoutEffect(() => {
     if (!isText) return;
     // Measure where the CSS alphabetic baseline actually sits within a line-height:1 box
@@ -154,7 +226,7 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       boxShadow: undefined,
       width: isText ? (pos.w > 0 ? pos.w : 'max-content') : 220,
       zIndex: (isDragging||resizeDir) ? 49 : 9,
-      transform: isText ? 'none' : `rotate(${((note.createdAt%10)-5)/2}deg)`,
+      transform: `rotate(${localRotation}deg)`,
       pointerEvents:'auto'
     }}
       onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
@@ -217,11 +289,11 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
       )}
 
       <p className={isText ? 'font-bold' : 'text-xs text-gray-200 leading-relaxed'}
-         style={{ 
-           color: isText ? note.color : undefined, 
-           fontSize: isText ? pos.fs : undefined, 
-           lineHeight: isText ? 1 : undefined, 
-           margin: 0, 
+         style={{
+           color: isText ? note.color : undefined,
+           fontSize: isText ? pos.fs : undefined,
+           lineHeight: isText ? 1 : undefined,
+           margin: 0,
            padding: 0,
            whiteSpace: isText ? 'pre-wrap' : 'pre-wrap',
            wordBreak: isText ? 'break-word' : undefined,
@@ -229,6 +301,7 @@ function DraggableNote({ note, members, onDrag, disabled, zoom, isSelected, isIn
          }}>
         {note.content}
       </p>
+      {isSelected && !disabled && <RotateHandle onMouseDown={handleNoteRotateStart} extraOffset={isText ? tbSnap.t : 0}/>}
     </div>
   );
 }
@@ -322,15 +395,22 @@ function ShapeSvg({ type, color, width, height, customTemplates }: { type: strin
   );
 }
 
-function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
   const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
+  const [localRotation, setLocalRotation] = useState<number>(shape.rotation ?? 0);
+  const rotationRef   = useRef<number>(shape.rotation ?? 0);
+  const isRotatingRef = useRef(false);
+  const elemDivRef    = useRef<HTMLDivElement>(null);
   const info = DEV_SHAPES.find(s => s.type === shape.type);
 
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
   }, [shape.x, shape.y, shape.width, shape.height]);
+  useEffect(() => {
+    if (!isRotatingRef.current) { const r = shape.rotation ?? 0; setLocalRotation(r); rotationRef.current = r; }
+  }, [shape.rotation]);
 
   useEffect(() => {
     const onMM = (e: MouseEvent) => {
@@ -348,14 +428,34 @@ function DraggableShape({ shape, customTemplates, onSave, disabled, zoom, isSele
     return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); };
   }, [isDragging, resizeDir, pos, shape.id, onSave, zoom]);
 
+  const handleRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation(); e.preventDefault();
+    const rect = elemDivRef.current?.getBoundingClientRect(); if (!rect) return;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+    const startRot = rotationRef.current;
+    isRotatingRef.current = true;
+    const onMove = (me: MouseEvent) => {
+      const a = Math.atan2(me.clientY - cy, me.clientX - cx);
+      const r = startRot + (a - startAngle) * 180 / Math.PI;
+      setLocalRotation(r); rotationRef.current = r;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      isRotatingRef.current = false; onRotate?.(shape.id, rotationRef.current);
+    };
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+  };
+
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
   const border = isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px solid transparent';
 
   return (
-    <div style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: isDragging?49:9, userSelect:'none', pointerEvents:'auto' }}
+    <div ref={elemDivRef} style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: isDragging?49:9, userSelect:'none', pointerEvents:'auto', transform:`rotate(${localRotation}deg)` }}
       onMouseDown={e => { if (disabled) return; e.stopPropagation(); if (isInMultiSelect) { onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       className="group select-none">
+      {isSelected && !disabled && <RotateHandle onMouseDown={handleRotateStart}/>}
       <div style={{ position:'relative', width: pos.w, height: pos.h, border, borderRadius: 3 }}>
         <ShapeSvg type={shape.type} color={shape.color} width={pos.w} height={pos.h} customTemplates={customTemplates} />
         {isSelected && !disabled && (['nw','ne','sw','se'] as const).map(dir => (
@@ -2372,9 +2472,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         onClick={(e) => { if (tool==='text') { if (editingText) saveText(); setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
 
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
-          {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-          {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
 
         {/* Text Editor */}
