@@ -9,41 +9,25 @@ type ButtonProps = {
   className?: string;
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  base: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    padding: "8px 16px",
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 600,
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-    cursor: "pointer",
-    border: "none",
-    transition: "background 0.15s",
-    outline: "none",
-    whiteSpace: "nowrap" as const,
+const variants = {
+  primary: {
+    bg: "#FF5733",
+    color: "#fff",
+    border: "1px solid #FF5733",
+    hoverBg: "#E84C2A",
   },
-  primary: { background: "#E85D2F", color: "#fff" },
   secondary: {
-    background: "rgba(255,255,255,0.06)",
-    color: "#ADB5BD",
-    border: "1px solid rgba(255,255,255,0.1)",
+    bg: "transparent",
+    color: "#9CA3AF",
+    border: "1px solid rgba(255,255,255,0.09)",
+    hoverBg: "rgba(255,255,255,0.05)",
   },
   danger: {
-    background: "rgba(232,93,47,0.12)",
-    color: "#E85D2F",
-    border: "1px solid rgba(232,93,47,0.28)",
+    bg: "transparent",
+    color: "#FF5733",
+    border: "1px solid rgba(255,87,51,0.2)",
+    hoverBg: "rgba(255,87,51,0.08)",
   },
-  disabled: { opacity: 0.45, cursor: "not-allowed" },
-};
-
-const hoverMap: Record<string, string> = {
-  primary: "#cf4e24",
-  secondary: "rgba(255,255,255,0.1)",
-  danger: "rgba(232,93,47,0.2)",
 };
 
 export default function ButtonBase({
@@ -54,6 +38,7 @@ export default function ButtonBase({
   disabled = false,
   className,
 }: ButtonProps) {
+  const v = variants[variant];
   return (
     <button
       type={type}
@@ -61,17 +46,30 @@ export default function ButtonBase({
       disabled={disabled}
       className={className}
       style={{
-        ...styles.base,
-        ...styles[variant],
-        ...(disabled ? styles.disabled : {}),
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        padding: "7px 14px",
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 600,
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        cursor: disabled ? "not-allowed" : "pointer",
+        border: v.border,
+        background: v.bg,
+        color: v.color,
+        transition: "background 0.12s, opacity 0.12s",
+        outline: "none",
+        whiteSpace: "nowrap",
+        opacity: disabled ? 0.4 : 1,
+        letterSpacing: "0.01em",
       }}
       onMouseEnter={e => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = hoverMap[variant];
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
       }}
       onMouseLeave={e => {
-        if (!disabled)
-          (e.currentTarget as HTMLButtonElement).style.background =
-            (styles[variant] as React.CSSProperties).background as string;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.bg;
       }}
     >
       {children}

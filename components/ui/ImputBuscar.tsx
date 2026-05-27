@@ -18,7 +18,7 @@ export default function ImputBuscar({ placeholder = "Buscar...", value, onChange
           left: 11,
           top: "50%",
           transform: "translateY(-50%)",
-          color: "#8A9099",
+          color: "#4B5563",
           pointerEvents: "none",
         }}
       />
@@ -33,17 +33,17 @@ export default function ImputBuscar({ placeholder = "Buscar...", value, onChange
           fontSize: 13,
           paddingLeft: 34,
           paddingRight: 12,
-          paddingTop: 8,
-          paddingBottom: 8,
-          background: "#1C1F26",
-          border: "1px solid rgba(255,255,255,0.08)",
+          paddingTop: 9,
+          paddingBottom: 9,
+          background: "#0E1118",
+          border: "1px solid rgba(255,255,255,0.07)",
           borderRadius: 8,
-          color: "#F4F5F7",
+          color: "#EDF0F4",
           outline: "none",
           transition: "border-color 0.15s",
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = "rgba(232,93,47,0.5)"; }}
-        onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+        onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,87,51,0.4)"; }}
+        onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
       />
     </div>
   );

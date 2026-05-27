@@ -24,14 +24,14 @@ export default function InputBase1({
   const isPassword = type === "password";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       {label && (
         <label style={{
           fontSize: 11,
           fontWeight: 700,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
-          color: "#8A9099",
+          color: "#4B5563",
         }}>
           {label}
         </label>
@@ -46,20 +46,20 @@ export default function InputBase1({
           style={{
             display: "block",
             width: "100%",
-            fontSize: 13,
+            fontSize: 14,
             paddingLeft: 12,
             paddingRight: isPassword ? 36 : 12,
-            paddingTop: 8,
-            paddingBottom: 8,
-            borderRadius: 7,
-            background: "#0A0C0F",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "#F4F5F7",
+            paddingTop: 9,
+            paddingBottom: 9,
+            borderRadius: 8,
+            background: "#080A0D",
+            border: "1px solid rgba(255,255,255,0.07)",
+            color: "#EDF0F4",
             outline: "none",
             transition: "border-color 0.15s",
           }}
-          onFocus={e => { e.currentTarget.style.borderColor = "rgba(232,93,47,0.5)"; }}
-          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+          onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,87,51,0.4)"; }}
+          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
         />
         {isPassword && (
           <button
@@ -73,10 +73,13 @@ export default function InputBase1({
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: "#8A9099",
+              color: "#4B5563",
               display: "flex",
               padding: 0,
+              transition: "color 0.15s",
             }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#FF5733"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#4B5563"; }}
           >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { X } from "lucide-react";
+
 type ModalBaseProps = {
   open: boolean;
   title: string;
@@ -11,63 +13,75 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
   if (!open) return null;
 
   return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 50,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "rgba(0,0,0,0.7)",
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(4,6,10,0.88)",
+        backdropFilter: "blur(6px)",
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div style={{
-        background: "#1C1F26",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 14,
-        padding: 28,
+        background: "#0E1118",
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 16,
+        padding: "24px 28px 28px",
         margin: "0 16px",
         width: "100%",
         maxWidth: 520,
+        boxShadow: "0 25px 60px rgba(0,0,0,0.65), 0 8px 20px rgba(0,0,0,0.3)",
       }}>
         <div style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 24,
+          marginBottom: 20,
           paddingBottom: 16,
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
         }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#F4F5F7", margin: 0 }}>
-            <span style={{ color: "#E85D2F" }}>|</span> {title}
+          <h2 style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "#EDF0F4",
+            margin: 0,
+            letterSpacing: "-0.2px",
+          }}>
+            {title}
           </h2>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.07)",
               borderRadius: 7,
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#8A9099",
-              fontSize: 16,
-              fontWeight: 700,
-              transition: "background 0.15s, color 0.15s",
+              color: "#6B7280",
+              transition: "all 0.15s",
+              flexShrink: 0,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(232,93,47,0.12)";
-              e.currentTarget.style.color = "#E85D2F";
+              e.currentTarget.style.background = "rgba(255,87,51,0.08)";
+              e.currentTarget.style.color = "#FF5733";
+              e.currentTarget.style.borderColor = "rgba(255,87,51,0.2)";
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-              e.currentTarget.style.color = "#8A9099";
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#6B7280";
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
             }}
           >
-            ✕
+            <X size={14} />
           </button>
         </div>
         {children}

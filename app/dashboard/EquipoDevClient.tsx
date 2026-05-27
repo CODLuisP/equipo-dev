@@ -184,16 +184,16 @@ export default function EquipoDevClient() {
   const showTaskAlert = (title: string) => {
     toast.custom(() => (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px',
-        background: '#1C1F26', border: '1px solid rgba(232,93,47,0.4)', borderRadius: 14,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: 290, maxWidth: 340,
+        background: '#0E1118', border: '1px solid rgba(255,87,51,0.2)', borderRadius: 12,
+        boxShadow: '0 12px 32px rgba(0,0,0,0.5)', minWidth: 290, maxWidth: 340,
         fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(232,93,47,0.15)',
-          border: '1px solid rgba(232,93,47,0.35)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>🎯</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,87,51,0.08)',
+          border: '1px solid rgba(255,87,51,0.15)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>🎯</div>
         <div>
-          <p style={{ fontWeight: 700, color: '#F4F5F7', fontSize: 13, margin: 0, lineHeight: 1.3 }}>Se te asignó una nueva tarea</p>
-          <p style={{ color: '#E85D2F', fontSize: 12, margin: '3px 0 4px', fontWeight: 600 }}>{title}</p>
-          <p style={{ color: '#5A6270', fontSize: 11, margin: 0 }}>Mira los detalles en <span style={{ color: '#8A9099', fontWeight: 600 }}>Tareas</span></p>
+          <p style={{ fontWeight: 700, color: '#EDF0F4', fontSize: 13, margin: 0, lineHeight: 1.3 }}>Nueva tarea asignada</p>
+          <p style={{ color: '#FF5733', fontSize: 12, margin: '3px 0 4px', fontWeight: 600 }}>{title}</p>
+          <p style={{ color: '#4B5563', fontSize: 11, margin: 0 }}>Ver detalles en <span style={{ color: '#6B7280', fontWeight: 600 }}>Tareas</span></p>
         </div>
       </div>
     ), { duration: 6000, position: 'bottom-left' });
@@ -258,7 +258,7 @@ export default function EquipoDevClient() {
   const toasterProps = {
     position: "bottom-right" as const,
     theme: "dark" as const,
-    toastOptions: { style: { background: '#1C1F26', color: '#F4F5F7', border: '1px solid rgba(255,255,255,0.08)', fontFamily: "'DM Sans', system-ui, sans-serif" } }
+    toastOptions: { style: { background: '#0E1118', color: '#EDF0F4', border: '1px solid rgba(255,255,255,0.07)', fontFamily: "'DM Sans', system-ui, sans-serif", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" } }
   };
 
   if (isLoading) return null;
@@ -287,47 +287,73 @@ export default function EquipoDevClient() {
   const isPizarra = activeTab === 'pizarra';
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: "#0A0C0F", padding: isPizarra ? "0" : "20px 24px", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: "#080A0D", padding: isPizarra ? "0" : "20px 24px", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <Toaster {...toasterProps} />
 
       {/* Header - Floating if Pizarra */}
-      <header className={`${isPizarra ? 'fixed top-6 left-1/2 -translate-x-1/2 z-[1000] w-auto' : 'mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0'}`}>
-        <div className={`${isPizarra ? 'bg-[#1C1F26]/60 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl flex items-center gap-4' : 'flex flex-col md:flex-row md:items-center justify-between gap-4 w-full'}`}>
+      <header className={`${isPizarra ? 'fixed top-5 left-1/2 -translate-x-1/2 z-[1000] w-auto' : 'mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0'}`}>
+        <div className={`${isPizarra ? 'p-1.5 rounded-2xl shadow-2xl flex items-center gap-3' : 'flex flex-col md:flex-row md:items-center justify-between gap-4 w-full'}`}
+          style={isPizarra ? { background: "rgba(14,17,24,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.08)" } : {}}>
           {!isPizarra && (
             <div>
-              <h1 className="text-xl font-bold text-white">Equipo de <span className="text-[#E85D2F]">Programadores</span></h1>
-              <p className="text-xs text-gray-500 mt-0.5">Gestión de tareas, snippets y colaboración</p>
+              <h1 style={{ fontSize: 18, fontWeight: 800, color: "#EDF0F4", margin: 0, letterSpacing: "-0.4px" }}>
+                Equipo de <span style={{ color: "#FF5733" }}>Programadores</span>
+              </h1>
+              <p style={{ fontSize: 12, color: "#4B5563", marginTop: 3, margin: 0 }}>
+                Gestión de tareas, snippets y colaboración
+              </p>
             </div>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {currentUser && (
               <button onClick={() => setShowWhoAreYou(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: isPizarra ? '4px 8px 4px 4px' : '5px 12px 5px 5px', background: `${currentUser.color}12`, border: `1px solid ${currentUser.color}30`, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = `${currentUser.color}20`; }}
-                onMouseLeave={e => { e.currentTarget.style.background = `${currentUser.color}12`; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: isPizarra ? '4px 8px 4px 4px' : '5px 10px 5px 5px', background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.11)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
                 title="Cambiar perfil">
-                <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={isPizarra ? 22 : 26} borderRadius={7} />
-                <span style={{ fontSize: isPizarra ? 11 : 12, fontWeight: 600, color: currentUser.color }}>{currentUser.name}</span>
+                <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={isPizarra ? 22 : 24} borderRadius={6} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#C9CDD5" }}>{currentUser.name}</span>
               </button>
             )}
-            <div className={`flex p-1 rounded-xl border border-white/5 flex-wrap gap-0.5 ${isPizarra ? 'bg-transparent border-none' : 'bg-[#1C1F26]'}`}>
-              <TabBtn active={activeTab==='equipo'}   onClick={() => setActiveTab('equipo')}   icon={<Users size={14}/>}       label="Equipo"/>
-              <TabBtn active={activeTab==='tareas'}   onClick={() => setActiveTab('tareas')}   icon={<CheckSquare size={14}/>} label="Tareas"/>
-              <TabBtn active={activeTab==='snippets'} onClick={() => setActiveTab('snippets')} icon={<Code size={14}/>}        label="Snippets"/>
-              <TabBtn active={activeTab==='pizarra'}  onClick={() => setActiveTab('pizarra')}  icon={<StickyNote size={14}/>}  label="Pizarra"/>
-              <TabBtn active={activeTab==='archivos'} onClick={() => setActiveTab('archivos')} icon={<FolderOpen size={14}/>}  label="Archivos"/>
-              <TabBtn active={activeTab==='boveda'}   onClick={() => setActiveTab('boveda')} icon={<Shield size={14}/>} label="Bóveda"/>
-              <TabBtn active={activeTab==='ajustes'}  onClick={() => setActiveTab('ajustes')}  icon={<Settings size={14}/>}   label="Ajustes"/>
+            <div style={{ display: "flex", alignItems: "center", padding: 4, borderRadius: 11, background: isPizarra ? "transparent" : "#0E1118", border: isPizarra ? "none" : "1px solid rgba(255,255,255,0.05)", flexWrap: "wrap", gap: 2 }}>
+              <TabBtn active={activeTab==='equipo'}   onClick={() => setActiveTab('equipo')}   icon={<Users size={13}/>}       label="Equipo"/>
+              <TabBtn active={activeTab==='tareas'}   onClick={() => setActiveTab('tareas')}   icon={<CheckSquare size={13}/>} label="Tareas"/>
+              <TabBtn active={activeTab==='snippets'} onClick={() => setActiveTab('snippets')} icon={<Code size={13}/>}        label="Snippets"/>
+              <TabBtn active={activeTab==='pizarra'}  onClick={() => setActiveTab('pizarra')}  icon={<StickyNote size={13}/>}  label="Pizarra"/>
+              <TabBtn active={activeTab==='archivos'} onClick={() => setActiveTab('archivos')} icon={<FolderOpen size={13}/>}  label="Archivos"/>
+              <TabBtn active={activeTab==='boveda'}   onClick={() => setActiveTab('boveda')}   icon={<Shield size={13}/>}      label="Bóveda"/>
+              <TabBtn active={activeTab==='ajustes'}  onClick={() => setActiveTab('ajustes')}  icon={<Settings size={13}/>}    label="Ajustes"/>
             </div>
             {!isPizarra && (
-              <button onClick={() => setIsToolkitVisible(!isToolkitVisible)} title={isToolkitVisible ? "Ocultar herramientas" : "Mostrar herramientas"} className={`p-2 rounded-xl border transition-all flex items-center justify-center ${isToolkitVisible ? 'bg-[#E85D2F]/10 border-[#E85D2F]/30 text-[#E85D2F]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                <Sparkles size={16} className={isToolkitVisible ? 'animate-pulse' : ''} />
+              <button
+                onClick={() => setIsToolkitVisible(!isToolkitVisible)}
+                title={isToolkitVisible ? "Ocultar herramientas" : "Mostrar herramientas"}
+                style={{
+                  padding: "7px 9px",
+                  background: isToolkitVisible ? "rgba(255,87,51,0.08)" : "rgba(255,255,255,0.04)",
+                  border: isToolkitVisible ? "1px solid rgba(255,87,51,0.2)" : "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 9,
+                  color: isToolkitVisible ? "#FF5733" : "#4B5563",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#C9CDD5"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.11)"; } }}
+                onMouseLeave={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#4B5563"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; } }}
+              >
+                <Sparkles size={15} />
               </button>
             )}
-            <button onClick={handleLogout} title="Cerrar sesión" style={{ padding:"8px 10px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, color:"#5A6270", cursor:"pointer", display:"flex", alignItems:"center", transition:"all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.color="#E85D2F"; e.currentTarget.style.borderColor="rgba(232,93,47,0.3)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color="#5A6270"; e.currentTarget.style.borderColor="rgba(255,255,255,0.07)"; }}>
-              <LogOut size={15}/>
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              style={{ padding: "7px 9px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 9, color: "#4B5563", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#FF5733"; e.currentTarget.style.borderColor = "rgba(255,87,51,0.2)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#4B5563"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+            >
+              <LogOut size={14} />
             </button>
           </div>
         </div>
