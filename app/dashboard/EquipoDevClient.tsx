@@ -74,14 +74,36 @@ export default function EquipoDevClient() {
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [editingVaultProject, setEditingVaultProject] = useState<VaultProject | null>(null);
 
-  const historyRef = useRef<{ notes: Note[]; images: BoardImage[]; drawings: DrawingPath[] }[]>([]);
+  type BoardSnapshot = {
+    notes: Note[];
+    images: BoardImage[];
+    drawings: DrawingPath[];
+    shapes: BoardShape[];
+  };
+  const historyRef = useRef<BoardSnapshot[]>([]);
+  const redoRef = useRef<BoardSnapshot[]>([]);
   const [clipboard, setClipboard] = useState<any>(null);
 
+  const getBoardSnapshot = (): BoardSnapshot => ({
+    notes: [...notes],
+    images: [...boardImages],
+    drawings: [...drawings],
+    shapes: [...boardShapes],
+  });
+
+  const restoreBoardSnapshot = (snap: BoardSnapshot) => {
+    saveNotes(snap.notes);
+    saveImages(snap.images);
+    saveDrawings(snap.drawings);
+    saveShapes(snap.shapes);
+  };
+
   const pushToHistory = () => {
-    const snap = { notes: [...notes], images: [...boardImages], drawings: [...drawings] };
+    const snap = getBoardSnapshot();
     const cur = historyRef.current;
     if (cur.length > 0 && JSON.stringify(cur[0]) === JSON.stringify(snap)) return;
     historyRef.current = [snap, ...cur].slice(0, 30);
+    redoRef.current = [];
   };
 
   // Auto-hide toolkit when entering Pizarra, show when leaving
@@ -95,8 +117,16 @@ export default function EquipoDevClient() {
   const undo = () => {
     const cur = historyRef.current; if (!cur.length) return;
     const [last, ...rest] = cur; historyRef.current = rest;
-    saveNotes(last.notes); saveImages(last.images); saveDrawings(last.drawings);
+    redoRef.current = [getBoardSnapshot(), ...redoRef.current].slice(0, 30);
+    restoreBoardSnapshot(last);
     toast.success("↩️ Deshecho");
+  };
+  const redo = () => {
+    const cur = redoRef.current; if (!cur.length) return;
+    const [next, ...rest] = cur; redoRef.current = rest;
+    historyRef.current = [getBoardSnapshot(), ...historyRef.current].slice(0, 30);
+    restoreBoardSnapshot(next);
+    toast.success("Rehecho");
   };
 
   const [taskFilterMember, setTaskFilterMember] = useState('all');
@@ -374,7 +404,7 @@ export default function EquipoDevClient() {
               onClearCompleted={handleClearCompleted}/>
           )}
           {activeTab==='snippets' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionSnippets snippets={filteredSnippets} search={snippetSearch} setSearch={setSnippetSearch} members={members} onAddSnippet={() => { setEditingSnippet(null); setOpenSnippetModal(true); }} onEditSnippet={s => { setEditingSnippet(s); setOpenSnippetModal(true); }} onCopy={handleCopySnippet} onDeleteSnippet={s => { setDeleteConfig({type:'snippet',id:s.id,name:s.title}); setOpenDeleteModal(true); }}/></div>}
-          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} shapes={boardShapes} customShapes={customShapes} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onSaveShapes={saveShapes} onSaveCustomShapes={saveCustomShapes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]); toast.success("Pizarra limpiada"); }}/>}
+          {activeTab==='pizarra' && <SectionPizarra notes={notes} drawings={drawings} images={boardImages} shapes={boardShapes} customShapes={customShapes} members={members} onAddNote={() => setOpenNoteModal(true)} onDeleteNote={n => { setDeleteConfig({type:'note',id:n.id,name:'esta nota'}); setOpenDeleteModal(true); }} onDeleteImage={img => { saveImages(boardImages.filter(i => i.id!==img.id)); toast.success("Imagen eliminada"); }} onSaveDrawings={saveDrawings} onSaveImages={saveImages} onSaveNotes={saveNotes} onSaveShapes={saveShapes} onSaveCustomShapes={saveCustomShapes} onDragNote={handleDragNote} onDragImage={handleDragImage} pushToHistory={pushToHistory} undo={undo} redo={redo} clipboard={clipboard} setClipboard={setClipboard} onClearAll={() => { pushToHistory(); saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]); toast.success("Pizarra limpiada"); }}/>}
           {activeTab==='archivos' && <SectionArchivos archivos={archivos} members={members} currentUser={currentUser} onSave={saveArchivos}/>}
           {activeTab==='boveda' && <SectionBoveda projects={vaultProjects} isUnlocked={isVaultUnlocked} onUnlock={setIsVaultUnlocked} onSaveVault={saveVault} onAddProject={() => { setEditingVaultProject(null); setOpenVaultModal(true); }} onEditProject={p => { setEditingVaultProject(p); setOpenVaultModal(true); }} onDeleteProject={p => { setDeleteConfig({type:'vault',id:p.id,name:p.name}); setOpenDeleteModal(true); }} />}
           {activeTab==='ajustes' && <div className="h-full overflow-y-auto custom-scrollbar pr-1"><SectionAjustes members={members} onAddMember={() => setOpenMemberModal(true)} onDeleteMember={m => { setDeleteConfig({type:'member',id:m.id,name:m.name}); setOpenDeleteModal(true); }} onChangeAvatar={handleChangeAvatar}/></div>}

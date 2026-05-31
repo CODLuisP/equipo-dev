@@ -3,7 +3,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
   MousePointer2, Hand, Pencil, Type, Eraser, Trash2,
-  Plus, ZoomIn, ZoomOut, Maximize, RefreshCw, Sparkles, Upload, Image as ImageIcon
+  Plus, ZoomIn, ZoomOut, Maximize, RefreshCw, Sparkles, Upload, Image as ImageIcon,
+  Undo2, Redo2, Download, Layers, BringToFront, SendToBack, ArrowUp, ArrowDown
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
@@ -99,7 +100,7 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   );
 }
 
-function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onEditText }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -223,6 +224,7 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       pointerEvents:'auto'
     }}
       onMouseDown={e=>{ if(disabled||(e.target as HTMLElement).closest('button'))return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
+      onDoubleClick={e=>{ if (disabled || !isText) return; e.stopPropagation(); onEditText?.(note); }}
       className={`${isText ? 'rounded-none p-0' : 'rounded-xl p-4'} select-none group`}>
 
       {isText && isSelected && (
@@ -1870,12 +1872,12 @@ function getNoteDims(n: any) {
 
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
 
-export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, clipboard, setClipboard }: {
+export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, redo, clipboard, setClipboard }: {
   notes: Note[]; drawings: DrawingPath[]; images: BoardImage[]; shapes: BoardShape[]; customShapes: CustomShape[]; members: Member[];
   onAddNote: () => void; onDeleteNote: (n: Note) => void; onDeleteImage: (img: BoardImage) => void;
   onSaveDrawings: (d: DrawingPath[]) => void; onSaveImages: (i: BoardImage[]) => void; onSaveNotes: (n: Note[]) => void; onSaveShapes: (s: BoardShape[]) => void; onSaveCustomShapes: (s: CustomShape[]) => void;
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
-  onClearAll: () => void; pushToHistory: () => void; undo: () => void; clipboard: any; setClipboard: (v: any) => void;
+  onClearAll: () => void; pushToHistory: () => void; undo: () => void; redo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
   const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'laser'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
@@ -1892,7 +1894,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [zoom, setZoom]         = useState(1);
   const [selectedId, setSelectedId] = useState<string|null>(null);
   const [currentColor, setCurrentColor] = useState('#F4F5F7');
-  const [editingText, setEditingText] = useState<{ x: number, y: number, content: string } | null>(null);
+  const [editingText, setEditingText] = useState<{ x: number, y: number, content: string, id?: string } | null>(null);
   const [isMarqueeing, setIsMarqueeing]           = useState(false);
   const [marqueeStart, setMarqueeStart]           = useState<{x:number,y:number}|null>(null);
   const [marqueeEnd, setMarqueeEnd]               = useState<{x:number,y:number}|null>(null);
@@ -1920,26 +1922,39 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const saveText = () => {
     if (!editingText) return;
-    if (editingText.content.trim()) {
+    const content = editingText.content.trim();
+    if (content) {
       pushToHistory();
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
         const worldX = (editingText.x - rect.left - offset.x) / zoom;
         const worldY = (editingText.y - rect.top - offset.y) / zoom;
-        onSaveNotes([...notes, {
-          id: crypto.randomUUID(),
-          content: editingText.content,
-          authorId: members[0]?.id || '',
-          createdAt: Date.now(),
-          x: worldX,
-          y: worldY,
-          color: currentColor,
-          type: 'text'
-        }]);
+        if (editingText.id) {
+          onSaveNotes(notes.map(n => n.id === editingText.id ? { ...n, content: editingText.content, x: worldX, y: worldY, color: currentColor, type: 'text' } : n));
+          setSelectedId(editingText.id);
+        } else {
+          const id = crypto.randomUUID();
+          onSaveNotes([...notes, {
+            id,
+            content: editingText.content,
+            authorId: members[0]?.id || '',
+            createdAt: Date.now(),
+            x: worldX,
+            y: worldY,
+            color: currentColor,
+            type: 'text'
+          }]);
+          setSelectedId(id);
+        }
+        setTool('select');
       }
+    } else if (editingText.id) {
+      pushToHistory();
+      onSaveNotes(notes.filter(n => n.id !== editingText.id));
     }
     setEditingText(null);
   };
@@ -1947,6 +1962,126 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const zoomIn  = () => setZoom(p => Math.min(p+0.1, 3));
   const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.3));
   const resetZoom = () => { setZoom(1); setOffset({x:0,y:0}); };
+
+  const getViewportCenter = () => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    return rect
+      ? { x: (rect.width / 2 - offset.x) / zoom, y: (rect.height / 2 - offset.y) / zoom }
+      : { x: 160, y: 120 };
+  };
+
+  const openTextEditorForNote = (note: Note) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setCurrentColor(note.color || currentColor);
+    setEditingText({
+      id: note.id,
+      content: note.content,
+      x: note.x * zoom + offset.x + rect.left,
+      y: note.y * zoom + offset.y + rect.top,
+    });
+    setSelectedId(note.id);
+  };
+
+  const importImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const src = ev.target?.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        const center = getViewportCenter();
+        const width = Math.min(img.width, 420);
+        const height = img.width ? (img.height * width) / img.width : 240;
+        pushToHistory();
+        onSaveImages([...images, {
+          id: crypto.randomUUID(),
+          src,
+          x: center.x - width / 2,
+          y: center.y - height / 2,
+          width,
+          height,
+        }]);
+        toast.success("Imagen importada");
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) importImageFile(file);
+    e.target.value = '';
+  };
+
+  const reorderSelectedImage = (mode: 'front' | 'back' | 'up' | 'down') => {
+    if (!selectedId) return;
+    const index = images.findIndex(img => img.id === selectedId);
+    if (index < 0) return;
+    const next = [...images];
+    const [item] = next.splice(index, 1);
+    if (mode === 'front') next.push(item);
+    if (mode === 'back') next.unshift(item);
+    if (mode === 'up') next.splice(Math.min(index + 1, next.length), 0, item);
+    if (mode === 'down') next.splice(Math.max(index - 1, 0), 0, item);
+    pushToHistory();
+    onSaveImages(next);
+  };
+
+  const exportBoardPng = async () => {
+    const allX: number[] = [], allY: number[] = [];
+    drawings.forEach(d => d.points.forEach(p => { allX.push(p.x); allY.push(p.y); }));
+    images.forEach(img => { allX.push(img.x, img.x + img.width); allY.push(img.y, img.y + img.height); });
+    notes.forEach(n => { const dim = getNoteDims(n); allX.push(n.x, n.x + dim.w); allY.push(n.y, n.y + dim.h); });
+    shapes.forEach(s => { allX.push(s.x, s.x + s.width); allY.push(s.y, s.y + s.height); });
+    if (!allX.length) { toast.error("No hay contenido para exportar"); return; }
+    const pad = 80;
+    const minX = Math.min(...allX) - pad, minY = Math.min(...allY) - pad;
+    const maxX = Math.max(...allX) + pad, maxY = Math.max(...allY) + pad;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(Math.max(maxX - minX, 640), 4096);
+    canvas.height = Math.min(Math.max(maxY - minY, 420), 4096);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#0A0C0F';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(-minX, -minY);
+    for (const d of drawings) {
+      if (d.points.length < 2) continue;
+      ctx.beginPath(); ctx.strokeStyle = d.color; ctx.lineWidth = d.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.moveTo(d.points[0].x, d.points[0].y);
+      d.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    }
+    for (const s of shapes) {
+      ctx.save();
+      ctx.strokeStyle = s.color; ctx.fillStyle = `${s.color}22`; ctx.lineWidth = 2;
+      ctx.fillRect(s.x, s.y, s.width, s.height);
+      ctx.strokeRect(s.x, s.y, s.width, s.height);
+      if (s.label) { ctx.fillStyle = '#E8ECF4'; ctx.font = '12px sans-serif'; ctx.fillText(s.label, s.x, s.y + s.height + 16); }
+      ctx.restore();
+    }
+    for (const img of images) {
+      await new Promise<void>(resolve => {
+        const el = new window.Image();
+        el.onload = () => { ctx.drawImage(el, img.x, img.y, img.width, img.height); resolve(); };
+        el.onerror = () => resolve();
+        el.src = img.src;
+      });
+    }
+    notes.forEach(n => {
+      ctx.save();
+      ctx.fillStyle = n.color || '#F4F5F7';
+      ctx.font = `bold ${n.fontSize || (n.type === 'text' ? 18 : 13)}px sans-serif`;
+      n.content.split('\n').forEach((line, idx) => ctx.fillText(line, n.x, n.y + (idx + 1) * (n.fontSize || 18)));
+      ctx.restore();
+    });
+    const link = document.createElement('a');
+    link.download = `pizarra-${new Date().toISOString().slice(0,10)}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast.success("Pizarra exportada");
+  };
 
   const resolveShapeInfo = (type: string) => {
     const builtin = DEV_SHAPES.find(s => s.type === type);
@@ -2132,7 +2267,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       }
       if (e.ctrlKey||e.metaKey) {
         const key = e.key.toLowerCase();
-        if (key==='z') { e.preventDefault(); undo(); }
+        if (key==='z' && e.shiftKey) { e.preventDefault(); redo(); }
+        else if (key==='z') { e.preventDefault(); undo(); }
+        if (key==='y') { e.preventDefault(); redo(); }
         if (key==='c') { e.preventDefault(); copySelection(); }
         if (key==='x') {
           e.preventDefault();
@@ -2149,7 +2286,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, setClipboard]);
+  }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, redo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, setClipboard]);
 
   // Al cambiar de herramienta: cerrar editor de texto + resetear todo estado de interacción
   const editingTextRef = useRef(editingText);
@@ -2297,7 +2434,14 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           reader.onload = ev => {
             const src=ev.target?.result as string;
             const img=new window.Image();
-            img.onload = () => { pushToHistory(); onSaveImages([...images, { id:crypto.randomUUID(), src, x:100-offset.x+Math.random()*50, y:100-offset.y+Math.random()*50, width:Math.min(img.width,300), height:(img.height*Math.min(img.width,300))/img.width }]); toast.success("Imagen pegada"); };
+            img.onload = () => {
+              const width = Math.min(img.width, 300);
+              const height = img.width ? (img.height * width) / img.width : 180;
+              const center = getViewportCenter();
+              pushToHistory();
+              onSaveImages([...images, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height }]);
+              toast.success("Imagen pegada");
+            };
             img.src=src;
           };
           reader.readAsDataURL(file); return;
@@ -2341,7 +2485,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [images, notes, shapes, drawings, clipboard, onSaveImages, onSaveNotes, onSaveShapes, onSaveDrawings, offset, pushToHistory, setClipboard]);
+  }, [images, notes, shapes, drawings, clipboard, onSaveImages, onSaveNotes, onSaveShapes, onSaveDrawings, offset, zoom, pushToHistory, setClipboard, members]);
 
   useEffect(() => {
     const canvas=canvasRef.current; if (!canvas) return;
@@ -2701,6 +2845,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsPanning(false);
   };
   const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+  const selectedImageIndex = selectedId ? images.findIndex(img => img.id === selectedId) : -1;
+  const hasSelectedImage = selectedImageIndex >= 0;
 
   const handlePathRotateStart = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault();
@@ -2736,6 +2882,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       {/* Shapes Panel (Right Center) */}
       <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onOpenEditor={() => { setShowShapesPanel(false); setShowShapeEditor(true); }} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
       {showShapeEditor && <ShapeEditor onSave={shape => { onSaveCustomShapes([...customShapes, shape]); setShowShapeEditor(false); toast.success(`"${shape.label}" guardada en Mis Formas`); }} onCancel={() => setShowShapeEditor(false)} />}
+      <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display:'none' }} />
 
       {/* Ghost mientras arrastra desde el panel */}
       {panelDrag && (
@@ -2762,10 +2909,16 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<MousePointer2 size={18}/>} title="Seleccionar"/>
             <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Hand size={18}/>} title="Mover vista"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={false} onClick={undo} icon={<Undo2 size={18}/>} title="Deshacer"/>
+            <ToolBtn active={false} onClick={redo} icon={<Redo2 size={18}/>} title="Rehacer"/>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={false} onClick={zoomIn}    icon={<ZoomIn size={18}/>}  title="Zoom +"/>
             <ToolBtn active={false} onClick={zoomOut}   icon={<ZoomOut size={18}/>} title="Zoom -"/>
             <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={18}/>} title="Restablecer vista"/>
             <span className="text-[11px] text-gray-400 font-bold px-2 min-w-[45px] text-center">{Math.round(zoom*100)}%</span>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={false} onClick={() => imageInputRef.current?.click()} icon={<Upload size={18}/>} title="Importar imagen"/>
+            <ToolBtn active={false} onClick={exportBoardPng} icon={<Download size={18}/>} title="Exportar PNG"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Pencil size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>} title="Lápiz"/>
             <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={18}/>} title="Texto"/>
@@ -2785,14 +2938,26 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           </button>
         </div>
 
+      {hasSelectedImage && (
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl" onMouseDown={e => e.stopPropagation()}>
+          <div className="flex items-center justify-center gap-2 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <Layers size={13}/> Capa
+          </div>
+          <ToolBtn active={false} onClick={() => reorderSelectedImage('front')} icon={<BringToFront size={17}/>} title="Traer al frente"/>
+          <ToolBtn active={false} onClick={() => reorderSelectedImage('up')} icon={<ArrowUp size={17}/>} title="Subir capa"/>
+          <ToolBtn active={false} onClick={() => reorderSelectedImage('down')} icon={<ArrowDown size={17}/>} title="Bajar capa"/>
+          <ToolBtn active={false} onClick={() => reorderSelectedImage('back')} icon={<SendToBack size={17}/>} title="Enviar al fondo"/>
+        </div>
+      )}
+
       <div ref={containerRef}
-        style={{ width: '100%', height: '100%', background:"#0A0C0F", backgroundImage:`radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)`, backgroundSize:`${24*zoom}px ${24*zoom}px`, backgroundPosition:`${offset.x}px ${offset.y}px`, cursor:getCursor(), position:'relative', overflow:'hidden' }}
+        style={{ width: '100%', height: '100%', background:"#0A0C0F", cursor:getCursor(), position:'relative', overflow:'hidden' }}
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
-        onClick={(e) => { if (tool==='text') { if (editingText) saveText(); setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
+        onClick={(e) => { if (tool==='text') { if (editingText) { saveText(); return; } setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
 
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
           {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
 
         {/* Text Editor */}
@@ -2807,19 +2972,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             onClick={e => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                if (editingText?.content.trim()) {
-                  const newId = crypto.randomUUID();
-                  pushToHistory();
-                  const rect = containerRef.current?.getBoundingClientRect();
-                  if (rect) {
-                    onSaveNotes([...notes, { id: newId, content: editingText.content, authorId: members[0]?.id||'', createdAt: Date.now(), x:(editingText.x-rect.left-offset.x)/zoom, y:(editingText.y-rect.top-offset.y)/zoom, color:currentColor, type:'text' }]);
-                    setSelectedId(newId);
-                    setTool('select');
-                  }
-                }
-                setEditingText(null);
+                e.preventDefault();
+                saveText();
+              }
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                saveText();
               }
             }}
+            onBlur={saveText}
             onChange={(e) => setEditingText({ ...editingText, content: e.target.value })}
           />
         )}
