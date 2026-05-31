@@ -258,7 +258,7 @@ export default function EquipoDevClient() {
   const toasterProps = {
     position: "bottom-right" as const,
     theme: "dark" as const,
-    toastOptions: { style: { background: '#0E1118', color: '#EDF0F4', border: '1px solid rgba(255,255,255,0.07)', fontFamily: "'DM Sans', system-ui, sans-serif", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" } }
+    toastOptions: { style: { background: 'var(--bg-surface, #0B0E1A)', color: 'var(--text, #E8ECF4)', border: '1px solid rgba(255,255,255,0.08)', fontFamily: "var(--font-body, 'Instrument Sans', system-ui)", borderRadius: 11, boxShadow: "0 12px 32px rgba(0,0,0,0.5)" } }
   };
 
   if (isLoading) return null;
@@ -287,7 +287,7 @@ export default function EquipoDevClient() {
   const isPizarra = activeTab === 'pizarra';
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: "#080A0D", padding: isPizarra ? "0" : "20px 24px", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: "var(--bg-base, #05070E)", padding: isPizarra ? "0" : "20px 24px", fontFamily: "var(--font-body, 'Instrument Sans', system-ui, sans-serif)" }}>
       <Toaster {...toasterProps} />
 
       {/* Header - Floating if Pizarra */}
@@ -296,10 +296,10 @@ export default function EquipoDevClient() {
           style={isPizarra ? { background: "rgba(14,17,24,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.08)" } : {}}>
           {!isPizarra && (
             <div>
-              <h1 style={{ fontSize: 18, fontWeight: 800, color: "#EDF0F4", margin: 0, letterSpacing: "-0.4px" }}>
+              <h1 style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", fontSize: 19, fontWeight: 800, color: "#E8ECF4", margin: 0, letterSpacing: "-0.6px" }}>
                 Equipo de <span style={{ color: "#FF5733" }}>Programadores</span>
               </h1>
-              <p style={{ fontSize: 12, color: "#4B5563", marginTop: 3, margin: 0 }}>
+              <p style={{ fontSize: 12, color: "#6B7A8D", marginTop: 3, margin: 0, fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>
                 Gestión de tareas, snippets y colaboración
               </p>
             </div>

@@ -34,7 +34,7 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
       </div>
 
       <div className="z-10 flex-1">
-        <h4 className={`text-white font-bold leading-tight group-hover:text-[#E85D2F] transition-colors ${size === 'lg' ? 'text-lg' : 'text-sm'}`}>
+        <h4 className={`text-white font-bold leading-tight group-hover:text-[#E85D2F] transition-colors ${size === 'lg' ? 'text-lg' : 'text-sm'}`} style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.3px" }}>
           {task.title}
         </h4>
       </div>
@@ -107,8 +107,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
       <div className="flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-[#E85D2F] uppercase tracking-widest">Gestión de Tareas</span>
-              <h2 className="text-white font-bold text-2xl tracking-tight">Centro de <span className="text-gray-500">Control</span></h2>
+              <span className="text-[10px] font-bold text-[#E85D2F] uppercase tracking-widest" style={{ fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", letterSpacing: "0.14em" }}>Gestión de Tareas</span>
+              <h2 className="text-white font-bold text-2xl" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.6px", marginTop: 2 }}>Centro de <span className="text-gray-500">Control</span></h2>
            </div>
            <div className="h-10 w-px bg-white/5 mx-2" />
            <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
@@ -170,8 +170,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           </div>
 
           <div className="flex flex-col mb-4">
-             <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-1">Área de Ejecución</h3>
-             <p className="text-gray-500 text-xs font-medium">Tareas principales actualmente en desarrollo</p>
+             <h3 className="text-xs font-bold text-white uppercase mb-1" style={{ fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", letterSpacing: "0.12em" }}>Área de Ejecución</h3>
+             <p className="text-gray-500 text-xs" style={{ fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>Tareas actualmente en desarrollo</p>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 grid grid-cols-1 md:grid-cols-2 gap-5 content-start">
@@ -210,8 +210,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
                 <RefreshCw size={14} className="text-white/60" />
              </div>
              <div className="flex flex-col relative z-10">
-                <span className="text-4xl font-bold text-white">{pct}%</span>
-                <span className="text-[10px] font-bold text-white/80">Tasa de completado</span>
+                <span className="text-4xl font-bold text-white" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-1.5px" }}>{pct}%</span>
+                <span className="text-[10px] font-bold text-white/80" style={{ fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", letterSpacing: "0.08em" }}>Tasa de completado</span>
              </div>
              <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden relative z-10">
                 <div className="h-full bg-white transition-all duration-1000" style={{ width: `${pct}%` }} />
@@ -226,8 +226,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
              </div>
              <div className="flex items-end justify-between">
                 <div>
-                   <p className="text-2xl font-bold text-white">{done.length}<span className="text-gray-600 text-sm ml-1">/ {metaSemanal}</span></p>
-                   <p className="text-[10px] text-gray-500 font-medium">Tareas logradas esta semana</p>
+                   <p className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.8px" }}>{done.length}<span className="text-gray-600 text-sm ml-1">/ {metaSemanal}</span></p>
+                   <p className="text-[10px] text-gray-500" style={{ fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>Tareas logradas esta semana</p>
                 </div>
                 <div className="text-right">
                    <p className="text-sm font-bold text-[#E85D2F]">{metaProgreso}%</p>

@@ -21,7 +21,7 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
     <div className="max-w-3xl mx-auto">
       <div style={{ background:"#1C1F26", border:"1px solid rgba(255,255,255,0.06)" }} className="rounded-2xl p-8">
         <div className="flex items-center justify-between mb-7">
-          <div><h3 className="text-lg font-bold text-white">Gestión de Equipo</h3><p className="text-xs text-gray-500 mt-0.5">Miembros con acceso al panel</p></div>
+          <div><h3 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.4px" }}>Gestión de Equipo</h3><p className="text-xs text-gray-500 mt-0.5" style={{ fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>Miembros con acceso al panel</p></div>
           <ButtonBase onClick={onAddMember} className="flex items-center gap-2"><UserPlus size={16}/> Agregar</ButtonBase>
         </div>
         <div className="space-y-3">
@@ -38,7 +38,7 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
                       <Pencil size={7} color={m.color}/>
                     </div>
                   </button>
-                  <div><h4 className="text-white font-bold text-sm">{m.name}</h4><p className="text-xs text-gray-500">{m.role}</p></div>
+                  <div><h4 className="text-white font-bold text-sm" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.2px" }}>{m.name}</h4><p className="text-xs text-gray-500" style={{ fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>{m.role}</p></div>
                 </div>
                 <button onClick={() => onDeleteMember(m)} className="p-2 text-gray-600 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
               </div>

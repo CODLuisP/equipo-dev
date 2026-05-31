@@ -13,7 +13,10 @@
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\equipo-dev\" -Force)",
       "Bash(Select-Object Name)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\equipo-dev\" -Directory | Where-Object {$_.Name -notin @\\('node_modules','.next','.git','.claude','.agents'\\)} | Select-Object -ExpandProperty Name)"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\equipo-dev\" -Directory | Where-Object {$_.Name -notin @\\('node_modules','.next','.git','.claude','.agents'\\)} | Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\equipo-dev\\\\.agents\\\\skills\\\\frontend-design\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(Start-Sleep -Seconds 4; \\(Invoke-WebRequest -Uri \"http://localhost:3001\" -UseBasicParsing -TimeoutSec 8\\).StatusCode)"
     ]
   }
 }

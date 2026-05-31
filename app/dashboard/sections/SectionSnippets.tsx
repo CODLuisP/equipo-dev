@@ -27,7 +27,7 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
               <div className="p-4 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div style={{ background:`${lc(s.label)}20`, color:lc(s.label) }} className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{s.label}</div>
-                  <h3 className="text-white font-bold text-sm">{s.title}</h3>
+                  <h3 className="text-white font-bold text-sm" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.2px" }}>{s.title}</h3>
                 </div>
                 <div className="flex gap-1.5">
                   <button onClick={() => onCopy(s.content)} className="p-1.5 hover:bg-white/5 rounded text-gray-400 hover:text-white transition-colors"><Copy size={15}/></button>

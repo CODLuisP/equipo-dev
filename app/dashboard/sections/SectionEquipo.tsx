@@ -7,10 +7,10 @@ import type { Member, Task } from "@/app/dashboard/types";
 function StatCol({ count, label }: { count: number; label: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-      <span style={{ fontSize: 17, fontWeight: 800, color: count > 0 ? "#EDF0F4" : "#374151", lineHeight: 1 }}>
+      <span style={{ fontSize: 18, fontWeight: 800, color: count > 0 ? "#EDF0F4" : "#2D3748", lineHeight: 1, fontFamily: "var(--font-display, 'Syne', system-ui)" }}>
         {count}
       </span>
-      <span style={{ fontSize: 10, fontWeight: 600, color: "#4B5563", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 9, fontWeight: 600, color: "#3D4A5C", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
         {label}
       </span>
     </div>
@@ -74,15 +74,15 @@ export default function SectionEquipo({ members, tasks }: { members: Member[]; t
                   }} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#EDF0F4", margin: 0, letterSpacing: "-0.2px" }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#EDF0F4", margin: 0, letterSpacing: "-0.3px", fontFamily: "var(--font-display, 'Syne', system-ui)" }}>
                     {m.name}
                   </h3>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                    <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 600 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                    <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 500, fontFamily: "var(--font-body, 'Instrument Sans', system-ui)" }}>
                       {m.role}
                     </span>
                     <span style={{ width: 2, height: 2, borderRadius: "50%", background: "#2D3748", flexShrink: 0 }} />
-                    <code style={{ fontSize: 10, color: "#2D3748", fontFamily: "monospace" }}>
+                    <code style={{ fontSize: 10, color: "#2D3748", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
                       @{m.name.toLowerCase().replace(/\s/g, '_')}
                     </code>
                   </div>
@@ -102,10 +102,10 @@ export default function SectionEquipo({ members, tasks }: { members: Member[]; t
             {/* Progress bar */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#4B5563", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                <span style={{ fontSize: 9, fontWeight: 600, color: "#3D4A5C", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
                   Completado
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: prog > 0 ? "#EDF0F4" : "#374151" }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: prog > 0 ? "#EDF0F4" : "#2D3748", fontFamily: "var(--font-display, 'Syne', system-ui)" }}>
                   {prog}%
                 </span>
               </div>

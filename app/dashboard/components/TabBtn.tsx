@@ -17,18 +17,18 @@ export default function TabBtn({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 5,
-        padding: "5px 10px",
-        borderRadius: 7,
+        gap: 6,
+        padding: "6px 11px",
+        borderRadius: 8,
         fontSize: 12,
         fontWeight: active ? 700 : 500,
-        color: active ? "#EDF0F4" : "#6B7280",
-        background: active ? "rgba(255,255,255,0.07)" : "transparent",
-        border: active ? "1px solid rgba(255,255,255,0.09)" : "1px solid transparent",
+        color: active ? "#E8ECF4" : "#6B7A8D",
+        background: active ? "rgba(255,87,51,0.1)" : "transparent",
+        border: active ? "1px solid rgba(255,87,51,0.22)" : "1px solid transparent",
         cursor: "pointer",
-        transition: "all 0.15s",
-        letterSpacing: "0.01em",
-        fontFamily: "'DM Sans', system-ui, sans-serif",
+        transition: "all 0.18s cubic-bezier(0.4,0,0.2,1)",
+        letterSpacing: active ? "-0.1px" : "0",
+        fontFamily: "var(--font-display, 'Syne', system-ui, sans-serif)",
         whiteSpace: "nowrap",
         position: "relative",
       }}
@@ -36,27 +36,26 @@ export default function TabBtn({
         if (!active) {
           e.currentTarget.style.color = "#C9CDD5";
           e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
         }
       }}
       onMouseLeave={e => {
         if (!active) {
-          e.currentTarget.style.color = "#6B7280";
+          e.currentTarget.style.color = "#6B7A8D";
           e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.borderColor = "transparent";
         }
       }}
     >
-      <span style={{ opacity: active ? 1 : 0.6, display: "flex" }}>{icon}</span>
+      <span style={{
+        display: "flex",
+        color: active ? "#FF5733" : "inherit",
+        opacity: active ? 1 : 0.5,
+        transition: "color 0.18s, opacity 0.18s",
+      }}>
+        {icon}
+      </span>
       <span>{label}</span>
-      {active && (
-        <span style={{
-          width: 3,
-          height: 3,
-          borderRadius: "50%",
-          background: "#FF5733",
-          flexShrink: 0,
-          marginLeft: 1,
-        }} />
-      )}
     </button>
   );
 }

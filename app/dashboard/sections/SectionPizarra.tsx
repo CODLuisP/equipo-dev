@@ -30,7 +30,7 @@ function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React
   );
 }
 
-function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x:image.x, y:image.y, w:image.width, h:image.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir]   = useState<string|null>(null);
@@ -78,7 +78,7 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
   const shadow = `0 10px 30px rgba(0,0,0,${isSelected ? 0.5 : 0.3})`;
   return (
-    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:(isDragging||resizeDir)?49:9,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
+    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:stackIndex,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
       <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
@@ -1877,8 +1877,16 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
-  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'>('select');
+  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'laser'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
+  const [shapeStart, setShapeStart]     = useState<{x:number;y:number}|null>(null);
+  const [shapeCurrent, setShapeCurrent] = useState<{x:number;y:number}|null>(null);
+  const [laserPos, setLaserPos]         = useState<{x:number;y:number}|null>(null);
+  const laserCanvasRef    = useRef<HTMLCanvasElement>(null);
+  const laserTrailRef     = useRef<{x:number;y:number;t:number}[]>([]);
+  const laserRafRef       = useRef<number>(0);
+  const laserIsDrawingRef = useRef(false);
+  const offsetRef         = useRef({ x:0, y:0 });
   const [isPanning, setIsPanning] = useState(false);
   const [offset, setOffset]     = useState({ x:0, y:0 });
   const [zoom, setZoom]         = useState(1);
@@ -2007,26 +2015,133 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   }, [panelDrag, offset, zoom, shapes, onSaveShapes, currentColor, customShapes]);
 
   useEffect(() => {
+    const hasInternalClipboard = (v: any) =>
+      v?.kind === 'board-selection' || (v && 'content' in v);
+
+    const getSelection = () => {
+      const ids = new Set(selectedIds);
+      if (selectedId) ids.add(selectedId);
+      const noteItems = notes.filter(n => ids.has(n.id));
+      const imageItems = images.filter(i => ids.has(i.id));
+      const shapeItems = shapes.filter(s => ids.has(s.id));
+      const pathItems = [...selectedPathIndices]
+        .map(idx => ({ idx, path: drawings[idx] }))
+        .filter((item): item is { idx: number; path: DrawingPath } => Boolean(item.path));
+      return { noteItems, imageItems, shapeItems, pathItems };
+    };
+
+    const clearSelection = () => {
+      setSelectedId(null);
+      setSelectedIds(new Set());
+      setSelectedPathIndices(new Set());
+    };
+
+    const deleteSelection = () => {
+      const { noteItems, imageItems, shapeItems, pathItems } = getSelection();
+      const hasSelection = noteItems.length || imageItems.length || shapeItems.length || pathItems.length;
+      if (!hasSelection) return false;
+      pushToHistory();
+      const idsToDelete = new Set([
+        ...noteItems.map(n => n.id),
+        ...imageItems.map(i => i.id),
+        ...shapeItems.map(s => s.id),
+      ]);
+      onSaveNotes(notes.filter(n => !idsToDelete.has(n.id)));
+      onSaveImages(images.filter(i => !idsToDelete.has(i.id)));
+      onSaveShapes(shapes.filter(s => !idsToDelete.has(s.id)));
+      if (pathItems.length > 0) {
+        const pathIdxs = new Set(pathItems.map(p => p.idx));
+        onSaveDrawings(drawings.filter((_: any, idx: number) => !pathIdxs.has(idx)));
+      }
+      clearSelection();
+      return true;
+    };
+
+    const copySelection = () => {
+      const { noteItems, imageItems, shapeItems, pathItems } = getSelection();
+      const hasSelection = noteItems.length || imageItems.length || shapeItems.length || pathItems.length;
+      if (!hasSelection) return false;
+      setClipboard({
+        kind: 'board-selection',
+        notes: noteItems,
+        images: imageItems,
+        shapes: shapeItems,
+        drawings: pathItems.map(item => item.path),
+      });
+      toast.success("Copiado");
+      return true;
+    };
+
+    const pasteInternalClipboard = () => {
+      if (!clipboard) return false;
+      pushToHistory();
+      if (clipboard.kind === 'board-selection') {
+        const newIds: string[] = [];
+        const newNotes = (clipboard.notes || []).map((n: Note) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...n, id, x: n.x + 20, y: n.y + 20, createdAt: Date.now() };
+        });
+        const newImages = (clipboard.images || []).map((img: BoardImage) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...img, id, x: img.x + 20, y: img.y + 20 };
+        });
+        const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...s, id, x: s.x + 20, y: s.y + 20 };
+        });
+        const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
+          ...d,
+          points: d.points.map(pt => ({ x: pt.x + 20, y: pt.y + 20 })),
+        }));
+        const newPathStart = drawings.length;
+        onSaveNotes([...notes, ...newNotes]);
+        onSaveImages([...images, ...newImages]);
+        onSaveShapes([...shapes, ...newShapes]);
+        onSaveDrawings([...drawings, ...newDrawings]);
+        setSelectedId(null);
+        setSelectedIds(new Set(newIds));
+        setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
+        setClipboard({
+          ...clipboard,
+          notes: newNotes,
+          images: newImages,
+          shapes: newShapes,
+          drawings: newDrawings,
+        });
+        toast.success("Pegado");
+        return true;
+      }
+      if ('content' in clipboard) {
+        const newId = crypto.randomUUID();
+        onSaveNotes([...notes, { ...clipboard, id: newId, x: clipboard.x + 20, y: clipboard.y + 20, createdAt: Date.now() }]);
+        setSelectedId(newId);
+        setSelectedIds(new Set());
+        setSelectedPathIndices(new Set());
+        setClipboard({ ...clipboard, id: newId, x: clipboard.x + 20, y: clipboard.y + 20, createdAt: Date.now() });
+        toast.success("Pegado");
+        return true;
+      }
+      return false;
+    };
+
     const onKey = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
       if ((e.key==='Delete'||e.key==='Backspace') && (selectedId || selectedIds.size > 0 || selectedPathIndices.size > 0)) {
-        pushToHistory();
-        if (selectedIds.size > 0 || selectedPathIndices.size > 0) {
-          onSaveNotes(notes.filter(n => !selectedIds.has(n.id)));
-          onSaveImages(images.filter(i => !selectedIds.has(i.id)));
-          onSaveShapes(shapes.filter(s => !selectedIds.has(s.id)));
-          if (selectedPathIndices.size > 0) onSaveDrawings(drawings.filter((_: any, idx: number) => !selectedPathIndices.has(idx)));
-          setSelectedIds(new Set()); setSelectedPathIndices(new Set());
-        } else {
-          const n = notes.find(n => n.id===selectedId); if (n) onDeleteNote(n);
-          const i = images.find(i => i.id===selectedId); if (i) onDeleteImage(i);
-          const sh = shapes.find(s => s.id===selectedId); if (sh) onSaveShapes(shapes.filter(s => s.id !== selectedId));
-          setSelectedId(null);
-        }
+        e.preventDefault();
+        deleteSelection();
       }
       if (e.ctrlKey||e.metaKey) {
-        if (e.key==='z') { e.preventDefault(); undo(); }
-        if (e.key==='c') { e.preventDefault(); const el=notes.find(n => n.id===selectedId); if (el) { setClipboard(el); toast.success("Copiado"); } }
+        const key = e.key.toLowerCase();
+        if (key==='z') { e.preventDefault(); undo(); }
+        if (key==='c') { e.preventDefault(); copySelection(); }
+        if (key==='x') {
+          e.preventDefault();
+          if (copySelection()) deleteSelection();
+        }
+        if (key==='v' && hasInternalClipboard(clipboard)) {
+          e.preventDefault();
+          pasteInternalClipboard();
+        }
         if (e.key==='='||e.key==='+') { e.preventDefault(); zoomIn(); }
         else if (e.key==='-') { e.preventDefault(); zoomOut(); }
         else if (e.key==='0') { e.preventDefault(); resetZoom(); }
@@ -2034,7 +2149,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, onDeleteNote, onDeleteImage]);
+  }, [selectedId, selectedIds, selectedPathIndices, notes, images, shapes, drawings, clipboard, pushToHistory, undo, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings, setClipboard]);
 
   // Al cambiar de herramienta: cerrar editor de texto + resetear todo estado de interacción
   const editingTextRef = useRef(editingText);
@@ -2077,6 +2192,42 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
   useEffect(() => { selectedPathIdxRef.current = selectedPathIndices; }, [selectedPathIndices]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
+
+  const runLaserAnim = useCallback(() => {
+    const canvas = laserCanvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    const now = Date.now();
+    const LIFE = 1400;
+    laserTrailRef.current = laserTrailRef.current.filter(p => now - p.t < LIFE);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const pts = laserTrailRef.current;
+    if (pts.length > 1) {
+      const ox=offsetRef.current.x, oy=offsetRef.current.y, z=zoomRef.current;
+      for (let i=1; i<pts.length; i++) {
+        const age = (now - pts[i].t) / LIFE;
+        const alpha = Math.max(0, (1 - age) * 0.95 + 0.05);
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(255,45,45,${alpha})`;
+        ctx.lineWidth = 4 * (1 - age * 0.65);
+        ctx.lineCap = 'round';
+        ctx.moveTo(pts[i-1].x*z+ox, pts[i-1].y*z+oy);
+        ctx.lineTo(pts[i].x*z+ox, pts[i].y*z+oy);
+        ctx.stroke();
+      }
+    }
+    if (pts.length > 0 || laserIsDrawingRef.current)
+      laserRafRef.current = requestAnimationFrame(runLaserAnim);
+  }, []);
+
+  useEffect(() => {
+    const resize = () => {
+      const c = laserCanvasRef.current;
+      if (c && containerRef.current) { c.width=containerRef.current.clientWidth; c.height=containerRef.current.clientHeight; }
+    };
+    window.addEventListener('resize', resize); resize();
+    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(laserRafRef.current); };
+  }, []);
 
   // Multi-select resize effect
   useEffect(() => {
@@ -2152,16 +2303,45 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           reader.readAsDataURL(file); return;
         }
       }
-      if (clipboard && 'content' in clipboard) {
+      if (clipboard?.kind === 'board-selection') {
+        e.preventDefault(); pushToHistory();
+        const newIds: string[] = [];
+        const newNotes = (clipboard.notes || []).map((n: Note) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...n, id, x:n.x+20, y:n.y+20, createdAt:Date.now() };
+        });
+        const newImages = (clipboard.images || []).map((img: BoardImage) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...img, id, x:img.x+20, y:img.y+20 };
+        });
+        const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
+          const id = crypto.randomUUID(); newIds.push(id);
+          return { ...s, id, x:s.x+20, y:s.y+20 };
+        });
+        const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
+          ...d,
+          points: d.points.map(pt => ({ x:pt.x+20, y:pt.y+20 })),
+        }));
+        const newPathStart = drawings.length;
+        onSaveNotes([...notes, ...newNotes]);
+        onSaveImages([...images, ...newImages]);
+        onSaveShapes([...shapes, ...newShapes]);
+        onSaveDrawings([...drawings, ...newDrawings]);
+        setSelectedId(null);
+        setSelectedIds(new Set(newIds));
+        setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
+        setClipboard({ ...clipboard, notes:newNotes, images:newImages, shapes:newShapes, drawings:newDrawings });
+        toast.success("Pegado");
+      } else if (clipboard && 'content' in clipboard) {
         e.preventDefault(); pushToHistory();
         const newId=crypto.randomUUID();
         onSaveNotes([...notes, { ...clipboard, id:newId, x:clipboard.x+20, y:clipboard.y+20, createdAt:Date.now() }]);
-        setSelectedId(newId); toast.success("Nota duplicada");
+        setSelectedId(newId); setClipboard({ ...clipboard, id:newId, x:clipboard.x+20, y:clipboard.y+20, createdAt:Date.now() }); toast.success("Pegado");
       }
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [images, notes, clipboard, onSaveImages, onSaveNotes, offset, pushToHistory]);
+  }, [images, notes, shapes, drawings, clipboard, onSaveImages, onSaveNotes, onSaveShapes, onSaveDrawings, offset, pushToHistory, setClipboard]);
 
   useEffect(() => {
     const canvas=canvasRef.current; if (!canvas) return;
@@ -2309,11 +2489,42 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       }
     }
     if (tool==='hand') { setIsPanning(true); return; }
-    if (tool==='pencil'||tool==='eraser') {
+    if (tool==='pencil') {
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
-      onSaveDrawings([...drawings, { points:[{x,y}], color:tool==='eraser'?'#0A0C0F':currentColor, width:(tool==='eraser'?30:3)/zoom }]);
+      onSaveDrawings([...drawings, { points:[{x,y}], color:currentColor, width:3/zoom }]);
+    }
+    if (tool==='eraser') {
+      pushToHistory(); setIsDrawing(true);
+      const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+      const ex=(e.clientX-rect.left-offset.x)/zoom, ey=(e.clientY-rect.top-offset.y)/zoom;
+      const r=15/zoom;
+      const _dS=(px:number,py:number,ax:number,ay:number,bx:number,by:number)=>{const ddx=bx-ax,ddy=by-ay,lSq=ddx*ddx+ddy*ddy;if(lSq===0)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*ddx+(py-ay)*ddy)/lSq));return Math.hypot(px-(ax+t*ddx),py-(ay+t*ddy));};
+      const hitP=(p:DrawingPath)=>p.points.some((pt,i)=>{if(i===0)return Math.hypot(pt.x-ex,pt.y-ey)<=r+p.width/2;const prev=p.points[i-1];return _dS(ex,ey,prev.x,prev.y,pt.x,pt.y)<=r+p.width/2;});
+      const nd=drawingsRef.current.filter(p=>!hitP(p));
+      const ni=imagesRef.current.filter(img=>!(ex>=img.x&&ex<=img.x+img.width&&ey>=img.y&&ey<=img.y+img.height));
+      const nn=notesRef.current.filter(n=>{const{w,h}=getNoteDims(n);return!(ex>=n.x&&ex<=n.x+w&&ey>=n.y&&ey<=n.y+h);});
+      const ns=shapesRef.current.filter(s=>!(ex>=s.x&&ex<=s.x+s.width&&ey>=s.y&&ey<=s.y+s.height));
+      if(nd.length!==drawingsRef.current.length){drawingsRef.current=nd;onSaveDrawings(nd);}
+      if(ni.length!==imagesRef.current.length){imagesRef.current=ni;onSaveImages(ni);}
+      if(nn.length!==notesRef.current.length){notesRef.current=nn;onSaveNotes(nn);}
+      if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
+    }
+    if (['rect','rhombus','ellipse','line'].includes(tool)) {
+      pushToHistory(); setIsDrawing(true);
+      const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+      const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
+      setShapeStart({x,y}); setShapeCurrent({x,y});
+    }
+    if (tool==='laser') {
+      setIsDrawing(true); laserIsDrawingRef.current=true;
+      const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+      const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
+      setLaserPos({x,y});
+      laserTrailRef.current=[{x,y,t:Date.now()}];
+      cancelAnimationFrame(laserRafRef.current);
+      laserRafRef.current=requestAnimationFrame(runLaserAnim);
     }
   };
   const onMultiDragStart = () => { setMultiDragActive(true); setMultiDragDelta({x:0, y:0}); };
@@ -2377,7 +2588,41 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     if (isDrawing) {
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
-      const d=[...drawings]; d[d.length-1].points.push({x,y}); onSaveDrawings(d);
+      if (tool==='pencil') {
+        const d=[...drawings]; d[d.length-1].points.push({x,y}); onSaveDrawings(d);
+      } else if (tool==='eraser') {
+        const r=15/zoom;
+        const _dS=(px:number,py:number,ax:number,ay:number,bx:number,by:number)=>{const ddx=bx-ax,ddy=by-ay,lSq=ddx*ddx+ddy*ddy;if(lSq===0)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*ddx+(py-ay)*ddy)/lSq));return Math.hypot(px-(ax+t*ddx),py-(ay+t*ddy));};
+        const hitP=(p:DrawingPath)=>p.points.some((pt,i)=>{if(i===0)return Math.hypot(pt.x-x,pt.y-y)<=r+p.width/2;const prev=p.points[i-1];return _dS(x,y,prev.x,prev.y,pt.x,pt.y)<=r+p.width/2;});
+        const nd=drawingsRef.current.filter(p=>!hitP(p));
+        const ni=imagesRef.current.filter(img=>!(x>=img.x&&x<=img.x+img.width&&y>=img.y&&y<=img.y+img.height));
+        const nn=notesRef.current.filter(n=>{const{w,h}=getNoteDims(n);return!(x>=n.x&&x<=n.x+w&&y>=n.y&&y<=n.y+h);});
+        const ns=shapesRef.current.filter(s=>!(x>=s.x&&x<=s.x+s.width&&y>=s.y&&y<=s.y+s.height));
+        if(nd.length!==drawingsRef.current.length){drawingsRef.current=nd;onSaveDrawings(nd);}
+        if(ni.length!==imagesRef.current.length){imagesRef.current=ni;onSaveImages(ni);}
+        if(nn.length!==notesRef.current.length){notesRef.current=nn;onSaveNotes(nn);}
+        if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
+      }
+    }
+    if (isDrawing && ['rect','rhombus','ellipse','line'].includes(tool)) {
+      const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+      let x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
+      if (e.shiftKey && shapeStart) {
+        if (tool==='line') {
+          const ddx=Math.abs(x-shapeStart.x), ddy=Math.abs(y-shapeStart.y);
+          if (ddx>ddy) y=shapeStart.y; else x=shapeStart.x;
+        } else if (tool==='rect'||tool==='ellipse') {
+          const ddx=x-shapeStart.x, ddy=y-shapeStart.y, s=Math.min(Math.abs(ddx),Math.abs(ddy));
+          x=shapeStart.x+(ddx>=0?s:-s); y=shapeStart.y+(ddy>=0?s:-s);
+        }
+      }
+      setShapeCurrent({x,y});
+    }
+    if (tool==='laser') {
+      const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+      const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
+      setLaserPos({x,y});
+      if (isDrawing) laserTrailRef.current.push({x,y,t:Date.now()});
     }
   };
   const onMU=()=>{
@@ -2434,10 +2679,28 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       setMarqueeStart(null);
       setMarqueeEnd(null);
     }
+    if (isDrawing && shapeStart && shapeCurrent && ['rect','rhombus','ellipse','line'].includes(tool)) {
+      const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
+      let pts:{x:number;y:number}[]=[];
+      if (tool==='line') {
+        pts=[{x:sx,y:sy},{x:ex,y:ey}];
+      } else if (tool==='rect') {
+        pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
+      } else if (tool==='rhombus') {
+        const cx=(sx+ex)/2,cy=(sy+ey)/2;
+        pts=[{x:cx,y:sy},{x:ex,y:cy},{x:cx,y:ey},{x:sx,y:cy},{x:cx,y:sy}];
+      } else if (tool==='ellipse') {
+        const cx=(sx+ex)/2,cy=(sy+ey)/2,rx=Math.abs(ex-sx)/2,ry=Math.abs(ey-sy)/2;
+        pts=Array.from({length:65},(_,i)=>{const a=(i/64)*Math.PI*2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};});
+      }
+      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:2/zoom}]);
+      setShapeStart(null); setShapeCurrent(null);
+    }
+    if (tool==='laser') laserIsDrawingRef.current=false;
     setIsDrawing(false);
     setIsPanning(false);
   };
-  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
 
   const handlePathRotateStart = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault();
@@ -2482,7 +2745,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       {/* Floating Color Palette (Left Center) */}
-      {(tool === 'pencil' || tool === 'text') && (
+      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line'].includes(tool)) && (
         <div className="fixed left-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3 bg-[#1C1F26]/60 backdrop-blur-xl p-3 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 rotate-180 [writing-mode:vertical-lr]">Colores</div>
           {colors.map(c => (
@@ -2506,6 +2769,13 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Pencil size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>} title="Lápiz"/>
             <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={18}/>} title="Texto"/>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={tool==='line'}    onClick={()=>setTool('line')}    title="Línea" icon={<svg viewBox="0 0 18 18" width={18} height={18} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="15" x2="15" y2="3"/></svg>}/>
+            <ToolBtn active={tool==='rect'}    onClick={()=>setTool('rect')}    title="Rectángulo" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>}/>
+            <ToolBtn active={tool==='rhombus'} onClick={()=>setTool('rhombus')} title="Rombo" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="9,2 16,9 9,16 2,9"/></svg>}/>
+            <ToolBtn active={tool==='ellipse'} onClick={()=>setTool('ellipse')} title="Círculo / Elipse" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="9" cy="9" rx="6.5" ry="5"/></svg>}/>
+            <div className="w-px h-6 bg-white/10 mx-1"/>
+            <ToolBtn active={tool==='laser'}  onClick={()=>setTool('laser')}  title="Puntero láser" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="9" cy="9" r="2.5" fill="currentColor" opacity="0.9"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="9" y1="14" x2="9" y2="17"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="14" y1="9" x2="17" y2="9"/></svg>}/>
             <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Eraser size={18}/>} title="Borrador"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
@@ -2522,7 +2792,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
           {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-          {images.map(img => <DraggableImage key={img.id} image={img} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
           {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
         </div>
 
@@ -2640,6 +2909,49 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         })()}
 
         <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 20 }}/>
+        <canvas ref={laserCanvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 22 }}/>
+
+        <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents:'none', zIndex: 40 }}>
+          {images.map((img, index) => <DraggableImage key={img.id} image={img} stackIndex={index + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+        </div>
+
+        {/* Shape preview while dragging */}
+        {shapeStart && shapeCurrent && (() => {
+          const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
+          const common={stroke:currentColor,strokeWidth:2/zoom,fill:'none',strokeDasharray:`${6/zoom},${4/zoom}`,strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
+          let shape: React.ReactElement|null=null;
+          if (tool==='line') {
+            shape=<line {...common} x1={sx} y1={sy} x2={ex} y2={ey}/>;
+          } else if (tool==='rect') {
+            const rx=Math.min(sx,ex),ry=Math.min(sy,ey),rw=Math.abs(ex-sx),rh=Math.abs(ey-sy);
+            shape=<rect {...common} x={rx} y={ry} width={rw} height={rh} rx={2/zoom}/>;
+          } else if (tool==='rhombus') {
+            const cx=(sx+ex)/2,cy=(sy+ey)/2;
+            shape=<polygon {...common} points={`${cx},${sy} ${ex},${cy} ${cx},${ey} ${sx},${cy}`}/>;
+          } else if (tool==='ellipse') {
+            const cx=(sx+ex)/2,cy=(sy+ey)/2,rx2=Math.abs(ex-sx)/2,ry2=Math.abs(ey-sy)/2;
+            shape=<ellipse {...common} cx={cx} cy={cy} rx={rx2} ry={ry2}/>;
+          }
+          return shape ? (
+            <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:25}} xmlns="http://www.w3.org/2000/svg">
+              <g transform={`translate(${offset.x},${offset.y}) scale(${zoom})`}>{shape}</g>
+            </svg>
+          ) : null;
+        })()}
+
+        {/* Laser pointer */}
+        {tool==='laser' && laserPos && (
+          <div style={{
+            position:'absolute',
+            left: laserPos.x*zoom+offset.x,
+            top:  laserPos.y*zoom+offset.y,
+            transform:'translate(-50%,-50%)',
+            width:14, height:14, borderRadius:'50%',
+            background:'radial-gradient(circle, #ff4444 0%, #ff0000 40%, transparent 70%)',
+            boxShadow:'0 0 6px 3px rgba(255,50,50,0.85), 0 0 18px 6px rgba(255,0,0,0.4)',
+            pointerEvents:'none', zIndex:200,
+          }}/>
+        )}
       </div>
     </div>
   );
