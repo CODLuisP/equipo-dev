@@ -190,32 +190,6 @@ export default function LoginPage() {
 
           {/* Content */}
           <div style={{ position: "relative", zIndex: 1 }}>
-            {/* Logo */}
-            <div className="fade-up" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 52 }}>
-              <div style={{
-                width: 38, height: 38, borderRadius: 10,
-                background: "rgba(37,99,235,0.12)",
-                border: "1px solid rgba(37,99,235,0.28)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 0 16px rgba(37,99,235,0.15)",
-              }}>
-                <Terminal size={17} color="#60a5fa" strokeWidth={1.75} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10, fontWeight: 500,
-                  letterSpacing: "0.18em", textTransform: "uppercase",
-                  color: "#4a5070",
-                }}>
-                  Velsat Technology
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "block", animation: "pulseSignal 2s ease-in-out infinite" }} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#22c55e", letterSpacing: "0.1em", opacity: 0.75 }}>SISTEMA EN LÍNEA</span>
-                </div>
-              </div>
-            </div>
 
             {/* Heading */}
             <div className="fade-up delay-1">
@@ -240,41 +214,34 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Code block */}
-            <div className="fade-up delay-2" style={{
-              marginTop: 40,
-              background: "rgba(8,10,20,0.85)",
-              border: "1px solid rgba(37,99,235,0.14)",
-              borderLeft: "2px solid rgba(37,99,235,0.35)",
-              borderRadius: 14,
-              padding: "18px 22px",
-              backdropFilter: "blur(12px)",
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 12, lineHeight: 1.8,
-              maxWidth: 400,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(37,99,235,0.06)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {["#FF5F57","#FEBC2E","#28C840"].map(c => (
-                    <div key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c, opacity: 0.65 }} />
-                  ))}
-                </div>
-                <span style={{ fontSize: 9, color: "#2d3460", letterSpacing: "0.1em" }}>velsat.js</span>
-              </div>
-              {CODE_LINES.map((line, i) => (
-                <div key={i} style={{ paddingLeft: line.indent * 18, color: line.color, minHeight: "1.8em" }}>
-                  {line.text || " "}
-                  {i === CODE_LINES.length - 1 && (
-                    <span style={{
-                      display: "inline-block", width: 2, height: "0.9em",
-                      background: "#2563eb", marginLeft: 2,
-                      verticalAlign: "text-bottom",
-                      animation: "blink 1.1s step-end infinite",
-                    }} />
-                  )}
-                </div>
-              ))}
+            {/* Hero image */}
+            <div className="fade-up delay-2" style={{ marginTop: 44, position: "relative", display: "inline-block" }}>
+              {/* Glow layers */}
+              <div style={{
+                position: "absolute", inset: -24,
+                background: "radial-gradient(ellipse at center, rgba(37,99,235,0.18) 0%, transparent 68%)",
+                filter: "blur(16px)",
+                pointerEvents: "none",
+              }} />
+              <div style={{
+                position: "absolute", inset: -6,
+                borderRadius: 24,
+                background: "radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 75%)",
+                pointerEvents: "none",
+              }} />
+              <img
+                src="/assets/equipodev.png"
+                alt="Equipo Dev"
+                style={{
+                  display: "block",
+                  maxWidth: 520,
+                  width: "100%",
+                  height: "auto",
+                  position: "relative",
+                  zIndex: 1,
+                  filter: "drop-shadow(0 12px 40px rgba(37,99,235,0.40)) drop-shadow(0 2px 10px rgba(0,0,0,0.7))",
+                }}
+              />
             </div>
 
             {/* Stats */}
@@ -342,15 +309,20 @@ export default function LoginPage() {
 
             {/* Mobile logo */}
             <div className="fade-up lg:hidden" style={{ textAlign: "center", marginBottom: 36 }}>
-              <div style={{
-                width: 46, height: 46, borderRadius: 12,
-                background: "rgba(37,99,235,0.12)",
-                border: "1px solid rgba(37,99,235,0.28)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 14px",
-                boxShadow: "0 0 20px rgba(37,99,235,0.15)",
-              }}>
-                <Terminal size={20} color="#60a5fa" strokeWidth={1.75} />
+              <div style={{ position: "relative", display: "inline-block", marginBottom: 14 }}>
+                <div style={{
+                  position: "absolute", inset: -10, borderRadius: 20,
+                  background: "radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)",
+                  filter: "blur(8px)",
+                }} />
+                <img
+                  src="/assets/equipodev.png"
+                  alt="Equipo Dev"
+                  style={{
+                    height: 44, width: "auto", display: "block", position: "relative",
+                    filter: "drop-shadow(0 0 10px rgba(37,99,235,0.4))",
+                  }}
+                />
               </div>
               <h1 style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -378,12 +350,11 @@ export default function LoginPage() {
             {/* Card */}
             <div className="fade-up delay-1" style={{
               background: "rgba(11,13,28,0.9)",
-              border: "1px solid rgba(37,99,235,0.18)",
+              border: "0.5px solid rgba(37,99,235,0.18)",
               borderTop: "1px solid rgba(37,99,235,0.35)",
               borderRadius: 18,
               padding: "28px 26px",
               backdropFilter: "blur(20px)",
-              boxShadow: "0 0 0 1px rgba(37,99,235,0.06), 0 4px 0 rgba(37,99,235,0.12), 0 40px 90px rgba(0,0,0,0.6), 0 0 40px rgba(37,99,235,0.06)",
             }}>
               <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
@@ -479,7 +450,6 @@ export default function LoginPage() {
                     width: "100%",
                     fontFamily: "'Plus Jakarta Sans', sans-serif",
                     letterSpacing: "0.01em",
-                    boxShadow: loading ? "none" : "0 4px 20px rgba(37,99,235,0.4), 0 1px 0 rgba(255,255,255,0.08) inset",
                   }}
                   onMouseEnter={e => {
                     if (!loading) {
@@ -513,18 +483,8 @@ export default function LoginPage() {
               </form>
             </div>
 
-            {/* Footer */}
-            <div style={{ textAlign: "center", marginTop: 26, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-              <div style={{ height: 1, width: 28, background: "rgba(37,99,235,0.12)" }} />
-              <span style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9, color: "#252a45",
-                letterSpacing: "0.18em", textTransform: "uppercase",
-              }}>
-                Velsat Technology © 2025
-              </span>
-              <div style={{ height: 1, width: 28, background: "rgba(37,99,235,0.12)" }} />
-            </div>
+
+ 
           </div>
         </div>
       </div>
