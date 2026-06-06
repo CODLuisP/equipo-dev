@@ -11,22 +11,25 @@ type ButtonProps = {
 
 const variants = {
   primary: {
-    bg: "#FF5733",
+    bg: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
     color: "#fff",
-    border: "1px solid #FF5733",
-    hoverBg: "#E84C2A",
+    border: "1px solid rgba(124,58,237,0.5)",
+    hoverBg: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)",
+    shadow: "0 4px 14px rgba(124,58,237,0.35)",
   },
   secondary: {
     bg: "transparent",
-    color: "#9CA3AF",
-    border: "1px solid rgba(255,255,255,0.09)",
-    hoverBg: "rgba(255,255,255,0.05)",
+    color: "#8b91b8",
+    border: "1px solid rgba(124,58,237,0.15)",
+    hoverBg: "rgba(124,58,237,0.07)",
+    shadow: "none",
   },
   danger: {
     bg: "transparent",
-    color: "#FF5733",
-    border: "1px solid rgba(255,87,51,0.2)",
-    hoverBg: "rgba(255,87,51,0.08)",
+    color: "#f87171",
+    border: "1px solid rgba(239,68,68,0.2)",
+    hoverBg: "rgba(239,68,68,0.08)",
+    shadow: "none",
   },
 };
 
@@ -50,26 +53,33 @@ export default function ButtonBase({
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
-        padding: "7px 14px",
-        borderRadius: 8,
+        padding: "8px 16px",
+        borderRadius: 9,
         fontSize: 13,
         fontWeight: 600,
-        fontFamily: "'DM Sans', system-ui, sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         cursor: disabled ? "not-allowed" : "pointer",
         border: v.border,
         background: v.bg,
         color: v.color,
-        transition: "background 0.12s, opacity 0.12s",
+        transition: "all 0.15s",
         outline: "none",
         whiteSpace: "nowrap",
         opacity: disabled ? 0.4 : 1,
         letterSpacing: "0.01em",
+        boxShadow: v.shadow,
       }}
       onMouseEnter={e => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
+        if (!disabled) {
+          (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
+          if (variant === 'primary') (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+        }
       }}
       onMouseLeave={e => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.bg;
+        if (!disabled) {
+          (e.currentTarget as HTMLButtonElement).style.background = v.bg;
+          (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+        }
       }}
     >
       {children}

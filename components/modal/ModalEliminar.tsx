@@ -22,21 +22,22 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(4,6,10,0.88)",
-        backdropFilter: "blur(6px)",
-        fontFamily: "'DM Sans', system-ui, sans-serif",
+        background: "rgba(4,6,14,0.88)",
+        backdropFilter: "blur(8px)",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: "#0E1118",
-        border: "1px solid rgba(255,255,255,0.07)",
-        borderRadius: 16,
+        background: "#0d0f22",
+        border: "1px solid rgba(124,58,237,0.18)",
+        borderTop: "1px solid rgba(124,58,237,0.32)",
+        borderRadius: 18,
         padding: "24px 28px",
         margin: "0 16px",
         width: "100%",
         maxWidth: 380,
-        boxShadow: "0 25px 60px rgba(0,0,0,0.65)",
+        boxShadow: "0 0 0 1px rgba(124,58,237,0.06), 0 4px 0 rgba(124,58,237,0.10), 0 25px 60px rgba(0,0,0,0.65)",
       }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -45,16 +46,16 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: "rgba(255,87,51,0.07)",
-              border: "1px solid rgba(255,87,51,0.14)",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.18)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}>
-              <Trash2 size={15} color="#FF5733" />
+              <Trash2 size={15} color="#f87171" />
             </div>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#EDF0F4", margin: 0 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#eef0fb", margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {title}
             </h2>
           </div>
@@ -62,7 +63,7 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
             onClick={onClose}
             style={{
               background: "transparent",
-              border: "1px solid rgba(255,255,255,0.07)",
+              border: "1px solid rgba(124,58,237,0.15)",
               borderRadius: 7,
               width: 28,
               height: 28,
@@ -70,20 +71,28 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#6B7280",
+              color: "#6b7280",
               transition: "all 0.15s",
               flexShrink: 0,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#EDF0F4"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6B7280"; }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(124,58,237,0.10)";
+              e.currentTarget.style.color = "#a78bfa";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.28)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#6b7280";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
+            }}
           >
             <X size={14} />
           </button>
         </div>
 
-        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", marginBottom: 18 }} />
+        <div style={{ height: 1, background: "rgba(124,58,237,0.10)", marginBottom: 18 }} />
 
-        <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 24, lineHeight: 1.7 }}>
+        <p style={{ fontSize: 13, color: "#8b91b8", marginBottom: 24, lineHeight: 1.7, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           {message}
         </p>
 
@@ -91,29 +100,38 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
           <button
             onClick={onClose}
             style={{
-              padding: "7px 14px",
+              padding: "8px 16px",
               background: "transparent",
-              border: "1px solid rgba(255,255,255,0.09)",
-              borderRadius: 8,
-              color: "#9CA3AF",
+              border: "1px solid rgba(124,58,237,0.15)",
+              borderRadius: 9,
+              color: "#8b91b8",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
               transition: "all 0.12s",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#EDF0F4"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9CA3AF"; }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(124,58,237,0.07)";
+              e.currentTarget.style.color = "#c4b5fd";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.28)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#8b91b8";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
+            }}
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
             style={{
-              padding: "7px 14px",
-              background: "rgba(255,87,51,0.08)",
-              border: "1px solid rgba(255,87,51,0.18)",
-              borderRadius: 8,
-              color: "#FF5733",
+              padding: "8px 16px",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.22)",
+              borderRadius: 9,
+              color: "#f87171",
               fontSize: 13,
               fontWeight: 700,
               cursor: "pointer",
@@ -121,9 +139,16 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
               display: "flex",
               alignItems: "center",
               gap: 6,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,87,51,0.16)"; e.currentTarget.style.borderColor = "rgba(255,87,51,0.3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,87,51,0.08)"; e.currentTarget.style.borderColor = "rgba(255,87,51,0.18)"; }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(239,68,68,0.15)";
+              e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+              e.currentTarget.style.borderColor = "rgba(239,68,68,0.22)";
+            }}
           >
             <Trash2 size={13} /> Eliminar
           </button>

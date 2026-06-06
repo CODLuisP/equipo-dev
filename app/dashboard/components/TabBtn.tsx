@@ -22,26 +22,26 @@ export default function TabBtn({
         borderRadius: 8,
         fontSize: 12,
         fontWeight: active ? 700 : 500,
-        color: active ? "#E8ECF4" : "#6B7A8D",
-        background: active ? "rgba(255,87,51,0.1)" : "transparent",
-        border: active ? "1px solid rgba(255,87,51,0.22)" : "1px solid transparent",
+        color: active ? "#eef0fb" : "#6b7280",
+        background: active ? "rgba(124,58,237,0.14)" : "transparent",
+        border: active ? "1px solid rgba(124,58,237,0.28)" : "1px solid transparent",
         cursor: "pointer",
         transition: "all 0.18s cubic-bezier(0.4,0,0.2,1)",
         letterSpacing: active ? "-0.1px" : "0",
-        fontFamily: "var(--font-display, 'Syne', system-ui, sans-serif)",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         whiteSpace: "nowrap",
         position: "relative",
       }}
       onMouseEnter={e => {
         if (!active) {
-          e.currentTarget.style.color = "#C9CDD5";
-          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+          e.currentTarget.style.color = "#c4b5fd";
+          e.currentTarget.style.background = "rgba(124,58,237,0.07)";
+          e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
         }
       }}
       onMouseLeave={e => {
         if (!active) {
-          e.currentTarget.style.color = "#6B7A8D";
+          e.currentTarget.style.color = "#6b7280";
           e.currentTarget.style.background = "transparent";
           e.currentTarget.style.borderColor = "transparent";
         }
@@ -49,7 +49,7 @@ export default function TabBtn({
     >
       <span style={{
         display: "flex",
-        color: active ? "#FF5733" : "inherit",
+        color: active ? "#a78bfa" : "inherit",
         opacity: active ? 1 : 0.5,
         transition: "color 0.18s, opacity 0.18s",
       }}>

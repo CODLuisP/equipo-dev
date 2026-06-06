@@ -1,10 +1,5 @@
-import type { Metadata } from "next";
-import EquipoDevClient from "./EquipoDevClient";
-
-export const metadata: Metadata = {
-  title: "Equipo Dev · Dashboard",
-};
+import { redirect } from "next/navigation";
 
 export default function DashboardPage() {
-  return <EquipoDevClient />;
+  redirect("/dashboard/equipo");
 }

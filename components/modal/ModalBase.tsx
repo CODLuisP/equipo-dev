@@ -21,21 +21,22 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(4,6,10,0.88)",
-        backdropFilter: "blur(6px)",
-        fontFamily: "'DM Sans', system-ui, sans-serif",
+        background: "rgba(4,6,14,0.88)",
+        backdropFilter: "blur(8px)",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: "#0E1118",
-        border: "1px solid rgba(255,255,255,0.07)",
-        borderRadius: 16,
+        background: "#0d0f22",
+        border: "1px solid rgba(124,58,237,0.18)",
+        borderTop: "1px solid rgba(124,58,237,0.32)",
+        borderRadius: 18,
         padding: "24px 28px 28px",
         margin: "0 16px",
         width: "100%",
         maxWidth: 520,
-        boxShadow: "0 25px 60px rgba(0,0,0,0.65), 0 8px 20px rgba(0,0,0,0.3)",
+        boxShadow: "0 0 0 1px rgba(124,58,237,0.06), 0 4px 0 rgba(124,58,237,0.10), 0 25px 60px rgba(0,0,0,0.65), 0 0 40px rgba(124,58,237,0.05)",
       }}>
         <div style={{
           display: "flex",
@@ -43,14 +44,15 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
           alignItems: "center",
           marginBottom: 20,
           paddingBottom: 16,
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: "1px solid rgba(124,58,237,0.10)",
         }}>
           <h2 style={{
             fontSize: 15,
             fontWeight: 700,
-            color: "#EDF0F4",
+            color: "#eef0fb",
             margin: 0,
             letterSpacing: "-0.2px",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}>
             {title}
           </h2>
@@ -58,7 +60,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
             onClick={onClose}
             style={{
               background: "transparent",
-              border: "1px solid rgba(255,255,255,0.07)",
+              border: "1px solid rgba(124,58,237,0.15)",
               borderRadius: 7,
               width: 28,
               height: 28,
@@ -66,19 +68,19 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#6B7280",
+              color: "#6b7280",
               transition: "all 0.15s",
               flexShrink: 0,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(255,87,51,0.08)";
-              e.currentTarget.style.color = "#FF5733";
-              e.currentTarget.style.borderColor = "rgba(255,87,51,0.2)";
+              e.currentTarget.style.background = "rgba(124,58,237,0.10)";
+              e.currentTarget.style.color = "#a78bfa";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.28)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#6B7280";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+              e.currentTarget.style.color = "#6b7280";
+              e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
             }}
           >
             <X size={14} />

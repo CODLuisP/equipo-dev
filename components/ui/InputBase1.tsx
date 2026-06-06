@@ -24,14 +24,15 @@ export default function InputBase1({
   const isPassword = type === "password";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {label && (
         <label style={{
           fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
+          fontWeight: 600,
+          letterSpacing: "0.10em",
           textTransform: "uppercase",
-          color: "#4B5563",
+          color: "#4a5070",
+          fontFamily: "'JetBrains Mono', monospace",
         }}>
           {label}
         </label>
@@ -51,15 +52,22 @@ export default function InputBase1({
             paddingRight: isPassword ? 36 : 12,
             paddingTop: 9,
             paddingBottom: 9,
-            borderRadius: 8,
-            background: "#080A0D",
-            border: "1px solid rgba(255,255,255,0.07)",
-            color: "#EDF0F4",
+            borderRadius: 9,
+            background: "rgba(8,10,20,0.8)",
+            border: "1px solid rgba(124,58,237,0.15)",
+            color: "#eef0fb",
             outline: "none",
-            transition: "border-color 0.15s",
+            transition: "border-color 0.15s, box-shadow 0.15s",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
-          onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,87,51,0.4)"; }}
-          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+          onFocus={e => {
+            e.currentTarget.style.borderColor = "rgba(124,58,237,0.5)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.10)";
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
         />
         {isPassword && (
           <button
@@ -73,13 +81,13 @@ export default function InputBase1({
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: "#4B5563",
+              color: "#4a5070",
               display: "flex",
               padding: 0,
               transition: "color 0.15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#FF5733"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "#4B5563"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#a78bfa"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; }}
           >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
