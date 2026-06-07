@@ -40,10 +40,10 @@ const toasterProps = {
   toastOptions: {
     style: {
       background: "#0c0e1d", color: "#eef0fb",
-      border: "1px solid rgba(124,58,237,0.18)",
+      border: "1px solid rgba(37,99,235,0.18)",
       fontFamily: "'Plus Jakarta Sans', sans-serif",
       borderRadius: 12,
-      boxShadow: "0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(124,58,237,0.06)",
+      boxShadow: "0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(37,99,235,0.06)",
     }
   }
 };
@@ -102,14 +102,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <header className={isPizarra ? "fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-auto" : "mb-4 flex-shrink-0"}>
         <div
           className={isPizarra ? "px-2 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2" : "flex flex-col md:flex-row md:items-center justify-between gap-3 w-full"}
-          style={isPizarra ? { background: "rgba(10,12,26,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(124,58,237,0.20)" } : {}}
+          style={isPizarra ? { background: "rgba(10,12,26,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(37,99,235,0.20)" } : {}}
         >
           {/* Title — only when not pizarra */}
           {!isPizarra && (
             <div>
               <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, color: "#eef0fb", margin: 0, letterSpacing: "-0.4px" }}>
                 Equipo de{" "}
-                <span style={{ background: "linear-gradient(135deg,#a78bfa,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                <span style={{ background: "linear-gradient(135deg,#60a5fa,#93c5fd)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                   Programadores
                 </span>
               </h1>
@@ -128,15 +128,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 style={{
                   display: "flex", alignItems: "center", gap: 7,
                   padding: isPizarra ? "3px 8px 3px 4px" : "4px 10px 4px 4px",
-                  background: "rgba(124,58,237,0.07)",
-                  border: "1px solid rgba(124,58,237,0.18)",
+                  background: "rgba(37,99,235,0.07)",
+                  border: "1px solid rgba(37,99,235,0.18)",
                   borderRadius: 9, cursor: "pointer", transition: "all 0.15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.12)"; e.currentTarget.style.borderColor = "rgba(124,58,237,0.30)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(124,58,237,0.07)"; e.currentTarget.style.borderColor = "rgba(124,58,237,0.18)"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(37,99,235,0.12)"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.30)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(37,99,235,0.07)"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.18)"; }}
               >
                 <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={isPizarra ? 20 : 23} borderRadius={6} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#c4b5fd" }}>{currentUser.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#93c5fd" }}>{currentUser.name}</span>
               </button>
             )}
 
@@ -144,7 +144,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             <div style={{
               display: "flex", alignItems: "center", padding: 4, borderRadius: 11,
               background: isPizarra ? "transparent" : "rgba(11,13,28,0.9)",
-              border: isPizarra ? "none" : "1px solid rgba(124,58,237,0.15)",
+              border: isPizarra ? "none" : "1px solid rgba(37,99,235,0.15)",
               flexWrap: "wrap", gap: 2,
             }}>
               {NAV.map(({ href, icon, label }) => {
@@ -155,15 +155,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                     padding: "6px 11px", borderRadius: 8,
                     fontSize: 12, fontWeight: active ? 700 : 500,
                     color: active ? "#eef0fb" : "#6b7280",
-                    background: active ? "rgba(124,58,237,0.14)" : "transparent",
-                    border: active ? "1px solid rgba(124,58,237,0.28)" : "1px solid transparent",
+                    background: active ? "rgba(37,99,235,0.14)" : "transparent",
+                    border: active ? "1px solid rgba(37,99,235,0.28)" : "1px solid transparent",
                     transition: "all 0.18s", textDecoration: "none", whiteSpace: "nowrap",
                   }}
                   onMouseEnter={e => {
                     if (!active) {
-                      (e.currentTarget as HTMLElement).style.color = "#c4b5fd";
-                      (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.07)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.15)";
+                      (e.currentTarget as HTMLElement).style.color = "#93c5fd";
+                      (e.currentTarget as HTMLElement).style.background = "rgba(37,99,235,0.07)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(37,99,235,0.15)";
                     }
                   }}
                   onMouseLeave={e => {
@@ -174,7 +174,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                     }
                   }}
                   >
-                    <span style={{ display: "flex", color: active ? "#a78bfa" : "inherit", opacity: active ? 1 : 0.5 }}>
+                    <span style={{ display: "flex", color: active ? "#60a5fa" : "inherit", opacity: active ? 1 : 0.5 }}>
                       {icon}
                     </span>
                     <span>{label}</span>
@@ -190,13 +190,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 title={isToolkitVisible ? "Ocultar herramientas" : "Mostrar herramientas"}
                 style={{
                   padding: "7px 9px",
-                  background: isToolkitVisible ? "rgba(124,58,237,0.12)" : "rgba(124,58,237,0.04)",
-                  border: isToolkitVisible ? "1px solid rgba(124,58,237,0.30)" : "1px solid rgba(124,58,237,0.12)",
-                  borderRadius: 9, color: isToolkitVisible ? "#a78bfa" : "#4a5070",
+                  background: isToolkitVisible ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.04)",
+                  border: isToolkitVisible ? "1px solid rgba(37,99,235,0.30)" : "1px solid rgba(37,99,235,0.12)",
+                  borderRadius: 9, color: isToolkitVisible ? "#60a5fa" : "#4a5070",
                   cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.15s",
                 }}
-                onMouseEnter={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#c4b5fd"; e.currentTarget.style.borderColor = "rgba(124,58,237,0.25)"; } }}
-                onMouseLeave={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#4a5070"; e.currentTarget.style.borderColor = "rgba(124,58,237,0.12)"; } }}
+                onMouseEnter={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#93c5fd"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.25)"; } }}
+                onMouseLeave={e => { if (!isToolkitVisible) { e.currentTarget.style.color = "#4a5070"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.12)"; } }}
               >
                 <Sparkles size={15} />
               </button>
@@ -207,12 +207,12 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
               onClick={handleLogout}
               title="Cerrar sesión"
               style={{
-                padding: "7px 9px", background: "rgba(124,58,237,0.04)",
-                border: "1px solid rgba(124,58,237,0.12)", borderRadius: 9,
+                padding: "7px 9px", background: "rgba(37,99,235,0.04)",
+                border: "1px solid rgba(37,99,235,0.12)", borderRadius: 9,
                 color: "#4a5070", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.15s",
               }}
               onMouseEnter={e => { e.currentTarget.style.color = "#f87171"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)"; e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; e.currentTarget.style.borderColor = "rgba(124,58,237,0.12)"; e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.12)"; e.currentTarget.style.background = "rgba(37,99,235,0.04)"; }}
             >
               <LogOut size={14} />
             </button>

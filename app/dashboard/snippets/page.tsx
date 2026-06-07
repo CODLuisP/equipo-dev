@@ -5,19 +5,20 @@ import SectionSnippets from "@/app/dashboard/sections/SectionSnippets";
 
 export default function SnippetsPage() {
   const {
-    filteredSnippets, snippetSearch, setSnippetSearch, members,
+    snippets, snippetSearch, setSnippetSearch, members, currentUser,
     setOpenSnippetModal, setEditingSnippet,
     handleCopySnippet, handleDeleteSnippet,
     setDeleteConfig, setOpenDeleteModal,
   } = useDashboard();
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar pr-1">
+    <div className="h-full overflow-hidden">
       <SectionSnippets
-        snippets={filteredSnippets}
+        snippets={snippets}
         search={snippetSearch}
         setSearch={setSnippetSearch}
         members={members}
+        currentUser={currentUser}
         onAddSnippet={() => { setEditingSnippet(null); setOpenSnippetModal(true); }}
         onEditSnippet={s => { setEditingSnippet(s); setOpenSnippetModal(true); }}
         onCopy={handleCopySnippet}

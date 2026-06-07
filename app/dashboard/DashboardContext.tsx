@@ -232,15 +232,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const showTaskAlert = (title: string) => {
     toast.custom(() => (
       <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"14px 16px",
-        background:"#0d0f22", border:"1px solid rgba(124,58,237,0.22)", borderRadius:14,
-        boxShadow:"0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(124,58,237,0.06)",
+        background:"#0d0f22", border:"1px solid rgba(37,99,235,0.22)", borderRadius:14,
+        boxShadow:"0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(37,99,235,0.06)",
         minWidth:290, maxWidth:340, fontFamily:"'Plus Jakarta Sans', sans-serif" }}>
-        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(124,58,237,0.10)",
-          border:"1px solid rgba(124,58,237,0.22)", display:"flex", alignItems:"center",
+        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(37,99,235,0.10)",
+          border:"1px solid rgba(37,99,235,0.22)", display:"flex", alignItems:"center",
           justifyContent:"center", flexShrink:0, fontSize:16 }}>🎯</div>
         <div>
           <p style={{ fontWeight:700, color:"#eef0fb", fontSize:13, margin:0, lineHeight:1.3 }}>Nueva tarea asignada</p>
-          <p style={{ color:"#a78bfa", fontSize:12, margin:"3px 0 4px", fontWeight:600 }}>{title}</p>
+          <p style={{ color:"#60a5fa", fontSize:12, margin:"3px 0 4px", fontWeight:600 }}>{title}</p>
           <p style={{ color:"#4a5070", fontSize:11, margin:0 }}>Ver detalles en <span style={{ color:"#8b91b8", fontWeight:600 }}>Tareas</span></p>
         </div>
       </div>
@@ -280,7 +280,18 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   };
   const handleChangeTaskStatus = (id: string, status: Task["status"]) =>
     saveTasks(tasks.map(t => t.id === id ? { ...t, status, ...(status === "pendiente" ? { assignedTo: "" } : {}) } : t));
-  const handleStartTask = (id: string) => setAssignModal({ taskId: id });
+  const handleStartTask = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (task.assignedTo) {
+      // Ya tiene responsable — inicia directo sin pedir asignación
+      saveTasks(tasks.map(t => t.id === id ? { ...t, status: "en progreso" as const } : t));
+      if (currentUser && task.assignedTo === currentUser.id) showTaskAlert(task.title);
+      toast.success("Tarea iniciada");
+    } else {
+      setAssignModal({ taskId: id });
+    }
+  };
   const handleAssignAndStart = (memberId: string) => {
     if (!assignModal) return;
     const task = tasks.find(t => t.id === assignModal.taskId);
@@ -316,7 +327,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // ── Note / Board handlers ──
   const handleAddNote = (content: string, authorId: string) => {
     const m = members.find(m => m.id === authorId);
-    saveNotes([{ id: crypto.randomUUID(), content, authorId, createdAt: Date.now(), x: 80 + Math.random()*300, y: 80 + Math.random()*200, color: m?.color||"#7c3aed", type: "text" }, ...notes]);
+    saveNotes([{ id: crypto.randomUUID(), content, authorId, createdAt: Date.now(), x: 80 + Math.random()*300, y: 80 + Math.random()*200, color: m?.color||"#2563eb", type: "text" }, ...notes]);
     toast.success("Nota agregada"); setOpenNoteModal(false);
   };
   const handleDeleteNote  = (id: string) => saveNotes(notes.filter(n => n.id !== id));

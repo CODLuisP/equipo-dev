@@ -11,17 +11,17 @@ type ButtonProps = {
 
 const variants = {
   primary: {
-    bg: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+    bg: "#2563eb",
     color: "#fff",
-    border: "1px solid rgba(124,58,237,0.5)",
-    hoverBg: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)",
-    shadow: "0 4px 14px rgba(124,58,237,0.35)",
+    border: "1px solid rgba(37,99,235,0.5)",
+    hoverBg: "#1d4ed8",
+    shadow: "0 6px 20px rgba(37,99,235,0.3)",
   },
   secondary: {
     bg: "transparent",
     color: "#8b91b8",
-    border: "1px solid rgba(124,58,237,0.15)",
-    hoverBg: "rgba(124,58,237,0.07)",
+    border: "1px solid rgba(37,99,235,0.15)",
+    hoverBg: "rgba(37,99,235,0.07)",
     shadow: "none",
   },
   danger: {

@@ -54,18 +54,18 @@ export default function InputBase1({
             paddingBottom: 9,
             borderRadius: 9,
             background: "rgba(8,10,20,0.8)",
-            border: "1px solid rgba(124,58,237,0.15)",
+            border: "1px solid rgba(37,99,235,0.15)",
             color: "#eef0fb",
             outline: "none",
             transition: "border-color 0.15s, box-shadow 0.15s",
             fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
           onFocus={e => {
-            e.currentTarget.style.borderColor = "rgba(124,58,237,0.5)";
-            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.10)";
+            e.currentTarget.style.borderColor = "rgba(37,99,235,0.5)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.10)";
           }}
           onBlur={e => {
-            e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
+            e.currentTarget.style.borderColor = "rgba(37,99,235,0.15)";
             e.currentTarget.style.boxShadow = "none";
           }}
         />
@@ -86,7 +86,7 @@ export default function InputBase1({
               padding: 0,
               transition: "color 0.15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#a78bfa"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; }}
           >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}

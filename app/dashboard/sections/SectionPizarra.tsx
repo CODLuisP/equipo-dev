@@ -13,7 +13,7 @@ import AvatarImg from "@/app/dashboard/components/AvatarImg";
 // ─── Pizarra Helpers ──────────────────────────────────────────────────────────
 
 function ToolBtn({ active, onClick, icon, title }: any) {
-  return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[#E85D2F] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
+  return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[#2563eb] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
 }
 
 function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React.MouseEvent) => void; extraOffset?: number }) {
@@ -100,7 +100,7 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   );
 }
 
-function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onEditText }: any) {
+function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onEditText, stackIndex = 1 }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -219,7 +219,7 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       border: isText ? '1px solid transparent' : `1px solid ${note.color}40`,
       boxShadow: undefined,
       width: isText ? (pos.w > 0 ? pos.w : 'max-content') : 220,
-      zIndex: (isDragging||resizeDir) ? 49 : 9,
+      zIndex: stackIndex,
       transform: `rotate(${localRotation}deg)`,
       pointerEvents:'auto'
     }}
@@ -309,26 +309,26 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
 // ─── Dev Shapes ───────────────────────────────────────────────────────────────
 // defaultW/H proporcionales al viewBox de cada forma (vb = "x y w h")
 const DEV_SHAPES = [
-  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70,  color: '#F39C12' },
-  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82,  color: '#95A5A6' },
-  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64,  color: '#5DADE2' },
-  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96,  color: '#85C1E9' },
-  { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95,  color: '#2ECC71' },
-  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102, color: '#3498DB' },
-  { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102, color: '#1ABC9C' },
-  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63,  color: '#E67E22' },
-  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96,  color: '#9B59B6' },
-  { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90,  color: '#E74C3C' },
-  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82,  color: '#E85D2F' },
-  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82,  color: '#2980B9' },
-  { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88,  color: '#E74C3C' },
-  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91,  color: '#85C1E9' },
-  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88,  color: '#5DADE2' },
-  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90,  color: '#F1C40F' },
-  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64,  color: '#95A5A6' },
-  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84,  color: '#E67E22' },
-  { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88,  color: '#1ABC9C' },
-  { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93,  color: '#E74C3C' },
+  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70,  color: '#60a5fa' },
+  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82,  color: '#93c5fd' },
+  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64,  color: '#60a5fa' },
+  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96,  color: '#93c5fd' },
+  { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95,  color: '#4ade80' },
+  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102, color: '#2563eb' },
+  { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102, color: '#22d3ee' },
+  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63,  color: '#2563eb' },
+  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96,  color: '#60a5fa' },
+  { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90,  color: '#f87171' },
+  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82,  color: '#2563eb' },
+  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82,  color: '#60a5fa' },
+  { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88,  color: '#f87171' },
+  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91,  color: '#93c5fd' },
+  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88,  color: '#60a5fa' },
+  { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90,  color: '#fbbf24' },
+  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64,  color: '#93c5fd' },
+  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84,  color: '#2563eb' },
+  { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88,  color: '#22d3ee' },
+  { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93,  color: '#f87171' },
 ];
 
 // viewBox ajustado al contenido real de cada forma (sin márgenes sobrantes)
@@ -395,7 +395,7 @@ function ShapeSvg({ type, color, width, height, customTemplates }: { type: strin
   );
 }
 
-function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect }: any) {
+function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -452,7 +452,7 @@ function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zo
   const border = isSelected ? '1px dashed rgba(255,255,255,0.4)' : '1px solid transparent';
 
   return (
-    <div ref={elemDivRef} style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: isDragging?49:9, userSelect:'none', pointerEvents:'auto', transform:`rotate(${localRotation}deg)` }}
+    <div ref={elemDivRef} style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: stackIndex, userSelect:'none', pointerEvents:'auto', transform:`rotate(${localRotation}deg)` }}
       onMouseDown={e => { if (disabled) return; e.stopPropagation(); if (isInMultiSelect) { onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       className="group select-none">
       {isSelected && !disabled && <RotateHandle onMouseDown={handleRotateStart}/>}
@@ -481,7 +481,7 @@ function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zo
 }
 
 // ─── Shape Editor ─────────────────────────────────────────────────────────────
-const EDITOR_COLORS = ['#F4F5F7','#E85D2F','#E74C3C','#F39C12','#2ECC71','#3498DB','#1ABC9C','#5DADE2','#9B59B6','#E67E22','#95A5A6','#000000'];
+const EDITOR_COLORS = ['#F4F5F7','#2563eb','#60a5fa','#93c5fd','#22d3ee','#4ade80','#f87171','#fbbf24','#a3e635','#e879f9','#94a3b8','#000000'];
 
 type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri' | 'curve' | 'polygon' | 'star' | 'roundrect' | 'polyline' | 'editnode' | 'select';
 export type EStroke = { color: string; sw: number; fill: string } & (
@@ -724,7 +724,7 @@ const TOOL_DEFS: {id: DrawTool; label: string; icon: React.ReactElement}[] = [
 function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; onCancel: () => void }) {
   const [strokes, setStrokes] = useState<EStroke[]>([]);
   const [tool, setTool] = useState<DrawTool>('pen');
-  const [color, setColor] = useState('#E85D2F');
+  const [color, setColor] = useState('#2563eb');
   const [fillColor, setFillColor] = useState<string>('none');
   const [sw, setSw] = useState(2.5);
   const [label, setLabel] = useState('');
@@ -1266,7 +1266,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
   const preview = buildPreview();
 
-  const FILL_COLORS = ['none', '#F4F5F7', '#E85D2F', '#E74C3C', '#F39C12', '#2ECC71', '#3498DB', '#1ABC9C', '#9B59B6', '#E67E22', '#000000'];
+  const FILL_COLORS = ['none', '#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#94a3b8', '#000000'];
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
@@ -1307,7 +1307,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 <div key={ri} style={{display:'flex',gap:4}}>
                   {row.map(t=>(
                     <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
-                      style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#E85D2F':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
+                      style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(37,99,235,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(37,99,235,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#2563eb':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
                       {t.icon}
                     </button>
                   ))}
@@ -1329,8 +1329,8 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
               <div style={{display:'flex',gap:3}}>
                 {[1.5,2.5,4,7].map(w=>(
                   <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
-                    style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(155,89,182,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(155,89,182,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <div style={{borderRadius:'50%',background:sw===w?'#9B59B6':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
+                    style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(37,99,235,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(37,99,235,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <div style={{borderRadius:'50%',background:sw===w?'#2563eb':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
                   </button>
                 ))}
                 <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
@@ -1369,9 +1369,9 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   {[3,4,5,6,8,10,12].map(n=>(
                     <button key={n} onClick={()=>setSides(n)}
                       style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
-                        background:sides===n?'rgba(232,93,47,0.25)':'rgba(255,255,255,0.05)',
-                        border:`1px solid ${sides===n?'rgba(232,93,47,0.7)':'rgba(255,255,255,0.08)'}`,
-                        color:sides===n?'#E85D2F':'#8A9099'}}>
+                        background:sides===n?'rgba(37,99,235,0.25)':'rgba(255,255,255,0.05)',
+                        border:`1px solid ${sides===n?'rgba(37,99,235,0.7)':'rgba(255,255,255,0.08)'}`,
+                        color:sides===n?'#2563eb':'#8A9099'}}>
                       {n}
                     </button>
                   ))}
@@ -1447,7 +1447,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
                 const isSel=selectIdx===i;
                 return <rect key={`sh${i}`} x={x} y={y} width={w} height={h}
-                  fill="rgba(0,0,0,0)" stroke={isSel?'rgba(232,93,47,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
+                  fill="rgba(0,0,0,0)" stroke={isSel?'rgba(37,99,235,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
                   strokeDasharray={isSel?'5,3':undefined} rx={3}
                   style={{cursor:isSel?'grab':'pointer'}}
                   onMouseDown={e=>{
@@ -1471,7 +1471,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 ];
                 return <>{corners.map(({id,cx,cy,cur})=>(
                   <rect key={id} x={cx-5} y={cy-5} width={10} height={10} rx={2}
-                    fill="#0A0C0F" stroke="#E85D2F" strokeWidth={1.8}
+                    fill="#0A0C0F" stroke="#2563eb" strokeWidth={1.8}
                     style={{cursor:cur}}
                     onMouseDown={e=>{
                       e.preventDefault(); e.stopPropagation();
@@ -1490,7 +1490,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
                 }
                 const isSelected = editingIdx === i;
-                return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(232,93,47,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
+                return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(37,99,235,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
                   onMouseDown={e=>{e.preventDefault();e.stopPropagation();setEditingIdx(i);}}/>;
               })}
               {tool==='pen' && curPts && curPts.length>1 && (
@@ -1531,7 +1531,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                       return <g key={`arc${si}`}>
                         <line x1={a.x} y1={a.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
                         <line x1={b.x} y1={b.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
-                        <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#E85D2F" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
+                        <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#2563eb" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
                           onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
                       </g>;
                     }
@@ -1543,7 +1543,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   })}
                   {/* Vertex handles */}
                   {pts.map((p, pi) => (
-                    <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#E85D2F" strokeWidth={2} style={{cursor:'grab'}}
+                    <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#2563eb" strokeWidth={2} style={{cursor:'grab'}}
                       onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'vertex',segIdx:pi});}}/>
                   ))}
                 </>;
@@ -1751,13 +1751,13 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Nombre de la forma"
             style={{flex:1,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'7px 12px',color:'#F4F5F7',fontSize:13,outline:'none',fontFamily:"'DM Sans',sans-serif"}}
-            onFocus={e=>{e.target.style.borderColor='rgba(155,89,182,0.6)';}}
+            onFocus={e=>{e.target.style.borderColor='rgba(37,99,235,0.6)';}}
             onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,0.1)';}}/>
           <button onClick={onCancel} style={{padding:'7px 14px',borderRadius:9,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
           <button onClick={handleSave} disabled={strokes.length===0}
-            style={{padding:'7px 16px',borderRadius:9,background:strokes.length===0?'rgba(155,89,182,0.2)':'#9B59B6',border:'none',color:strokes.length===0?'#5A3070':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
-            onMouseEnter={e=>{if(strokes.length>0)e.currentTarget.style.background='#8E44AD';}}
-            onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='#9B59B6';}}>
+            style={{padding:'7px 16px',borderRadius:9,background:strokes.length===0?'rgba(37,99,235,0.2)':'#2563eb',border:'none',color:strokes.length===0?'#1e3a8a':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
+            onMouseEnter={e=>{if(strokes.length>0)e.currentTarget.style.background='#1d4ed8';}}
+            onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='#2563eb';}}>
             Guardar Forma
           </button>
         </div>
@@ -1774,8 +1774,8 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
   return (
     <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
       <button onClick={onToggle} title="Formas de desarrollo"
-        style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#E85D2F' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#E85D2F':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
-        onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(232,93,47,0.5)'; } }}
+        style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#2563eb' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#2563eb':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
+        onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(37,99,235,0.5)'; } }}
         onMouseLeave={e=>{ if (!isVisible) { e.currentTarget.style.color='#8A9099'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'; } }}>
         <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
@@ -1788,9 +1788,9 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
           <div style={{ display:'flex', gap:6 }}>
             <button onClick={onOpenEditor}
               title="Abrir editor de formas"
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(155,89,182,0.12)', border:'1px solid rgba(155,89,182,0.3)', borderRadius:9, cursor:'pointer', color:'#9B59B6', fontSize:10, fontWeight:700 }}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(155,89,182,0.22)';}}
-              onMouseLeave={e=>{e.currentTarget.style.background='rgba(155,89,182,0.12)';}}>
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(37,99,235,0.12)', border:'1px solid rgba(37,99,235,0.3)', borderRadius:9, cursor:'pointer', color:'#2563eb', fontSize:10, fontWeight:700 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(37,99,235,0.22)';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(37,99,235,0.12)';}}>
               <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14 L6 10 L14 2 L14 6 L2 14Z"/><path d="M10 4l2 2"/></svg>
               Crear Forma
             </button>
@@ -1870,6 +1870,11 @@ function getNoteDims(n: any) {
   return { w: 220, h: 120 };
 }
 
+function getPathD(points: { x: number; y: number }[]) {
+  if (points.length === 0) return '';
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+}
+
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
 
 export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, redo, clipboard, setClipboard }: {
@@ -1918,7 +1923,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
   const pathLiveRotRef = useRef<{angle:number;cx:number;cy:number}|null>(null);
 
-  const colors = ['#F4F5F7', '#E85D2F', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
+  const colors = ['#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171'];
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
@@ -1970,6 +1975,13 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       : { x: 160, y: 120 };
   };
 
+  const getLayerOrders = () => [
+    ...images.map((img, i) => img.zOrder ?? i),
+    ...drawings.map((p, i) => p.zOrder ?? i),
+    ...shapes.map((s, i) => s.zOrder ?? images.length + i),
+    ...notes.map((n, i) => n.createdAt ?? images.length + shapes.length + i),
+  ];
+
   const openTextEditorForNote = (note: Note) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -2000,6 +2012,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           y: center.y - height / 2,
           width,
           height,
+          zOrder: Date.now(),
         }]);
         toast.success("Imagen importada");
       };
@@ -2018,14 +2031,20 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     if (!selectedId) return;
     const index = images.findIndex(img => img.id === selectedId);
     if (index < 0) return;
-    const next = [...images];
-    const [item] = next.splice(index, 1);
-    if (mode === 'front') next.push(item);
-    if (mode === 'back') next.unshift(item);
-    if (mode === 'up') next.splice(Math.min(index + 1, next.length), 0, item);
-    if (mode === 'down') next.splice(Math.max(index - 1, 0), 0, item);
+    const current = images[index];
+    const orders = getLayerOrders().sort((a, b) => a - b);
+    const currentOrder = current.zOrder ?? index;
+    let zOrder = currentOrder;
+    if (mode === 'front') zOrder = (orders.at(-1) ?? currentOrder) + 1;
+    if (mode === 'back') zOrder = (orders[0] ?? currentOrder) - 1;
+    if (mode === 'up') zOrder = (orders.find(order => order > currentOrder) ?? currentOrder) + 1;
+    if (mode === 'down') {
+      const lower = [...orders].reverse().find(order => order < currentOrder);
+      zOrder = (lower ?? currentOrder) - 1;
+    }
+    if (zOrder === currentOrder) return;
     pushToHistory();
-    onSaveImages(next);
+    onSaveImages(images.map(img => img.id === selectedId ? { ...img, zOrder } : img));
   };
 
   const exportBoardPng = async () => {
@@ -2046,36 +2065,48 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     ctx.fillStyle = '#0A0C0F';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.translate(-minX, -minY);
-    for (const d of drawings) {
-      if (d.points.length < 2) continue;
-      ctx.beginPath(); ctx.strokeStyle = d.color; ctx.lineWidth = d.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.moveTo(d.points[0].x, d.points[0].y);
-      d.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.stroke();
+    const exportItems = [
+      ...images.map((img, i) => ({ kind: 'image' as const, data: img, zOrder: img.zOrder ?? i })),
+      ...drawings.map((p, i) => ({ kind: 'path' as const, data: p, zOrder: p.zOrder ?? i })),
+      ...shapes.map((s, i) => ({ kind: 'shape' as const, data: s, zOrder: s.zOrder ?? images.length + i })),
+      ...notes.map((n, i) => ({ kind: 'note' as const, data: n, zOrder: n.createdAt ?? images.length + shapes.length + i })),
+    ].sort((a, b) => a.zOrder - b.zOrder);
+    for (const item of exportItems) {
+      if (item.kind === 'path') {
+        const d = item.data;
+        if (d.points.length < 2) continue;
+        ctx.beginPath(); ctx.strokeStyle = d.color; ctx.lineWidth = d.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.moveTo(d.points[0].x, d.points[0].y);
+        d.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      }
+      if (item.kind === 'shape') {
+        const s = item.data;
+        ctx.save();
+        ctx.strokeStyle = s.color; ctx.fillStyle = `${s.color}22`; ctx.lineWidth = 2;
+        ctx.fillRect(s.x, s.y, s.width, s.height);
+        ctx.strokeRect(s.x, s.y, s.width, s.height);
+        if (s.label) { ctx.fillStyle = '#E8ECF4'; ctx.font = '12px sans-serif'; ctx.fillText(s.label, s.x, s.y + s.height + 16); }
+        ctx.restore();
+      }
+      if (item.kind === 'image') {
+        const img = item.data;
+        await new Promise<void>(resolve => {
+          const el = new window.Image();
+          el.onload = () => { ctx.drawImage(el, img.x, img.y, img.width, img.height); resolve(); };
+          el.onerror = () => resolve();
+          el.src = img.src;
+        });
+      }
+      if (item.kind === 'note') {
+        const n = item.data;
+        ctx.save();
+        ctx.fillStyle = n.color || '#F4F5F7';
+        ctx.font = `bold ${n.fontSize || (n.type === 'text' ? 18 : 13)}px sans-serif`;
+        n.content.split('\n').forEach((line, idx) => ctx.fillText(line, n.x, n.y + (idx + 1) * (n.fontSize || 18)));
+        ctx.restore();
+      }
     }
-    for (const s of shapes) {
-      ctx.save();
-      ctx.strokeStyle = s.color; ctx.fillStyle = `${s.color}22`; ctx.lineWidth = 2;
-      ctx.fillRect(s.x, s.y, s.width, s.height);
-      ctx.strokeRect(s.x, s.y, s.width, s.height);
-      if (s.label) { ctx.fillStyle = '#E8ECF4'; ctx.font = '12px sans-serif'; ctx.fillText(s.label, s.x, s.y + s.height + 16); }
-      ctx.restore();
-    }
-    for (const img of images) {
-      await new Promise<void>(resolve => {
-        const el = new window.Image();
-        el.onload = () => { ctx.drawImage(el, img.x, img.y, img.width, img.height); resolve(); };
-        el.onerror = () => resolve();
-        el.src = img.src;
-      });
-    }
-    notes.forEach(n => {
-      ctx.save();
-      ctx.fillStyle = n.color || '#F4F5F7';
-      ctx.font = `bold ${n.fontSize || (n.type === 'text' ? 18 : 13)}px sans-serif`;
-      n.content.split('\n').forEach((line, idx) => ctx.fillText(line, n.x, n.y + (idx + 1) * (n.fontSize || 18)));
-      ctx.restore();
-    });
     const link = document.createElement('a');
     link.download = `pizarra-${new Date().toISOString().slice(0,10)}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -2097,7 +2128,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     const rect = containerRef.current?.getBoundingClientRect();
     const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
     const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
-    onSaveShapes([...shapes, { id: crypto.randomUUID(), type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
+    onSaveShapes([...shapes, { id: crypto.randomUUID(), type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label, zOrder: Date.now() }]);
     setShowShapesPanel(false);
   };
 
@@ -2134,11 +2165,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         if (moved < 8) {
           const cx = rect ? (rect.width / 2 - offset.x) / zoom : 200;
           const cy = rect ? (rect.height / 2 - offset.y) / zoom : 200;
-          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: cx - info.defaultW / 2, y: cy - info.defaultH / 2, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label, zOrder: Date.now() }]);
         } else if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
           const wx = (e.clientX - rect.left - offset.x) / zoom - info.defaultW / 2;
           const wy = (e.clientY - rect.top - offset.y) / zoom - info.defaultH / 2;
-          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: wx, y: wy, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label }]);
+          onSaveShapes([...shapes, { id: crypto.randomUUID(), type: panelDrag.type, x: wx, y: wy, width: info.defaultW, height: info.defaultH, color: info.color, label: info.label, zOrder: Date.now() }]);
         }
       }
       setPanelDrag(null);
@@ -2218,14 +2249,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         });
         const newImages = (clipboard.images || []).map((img: BoardImage) => {
           const id = crypto.randomUUID(); newIds.push(id);
-          return { ...img, id, x: img.x + 20, y: img.y + 20 };
+          return { ...img, id, x: img.x + 20, y: img.y + 20, zOrder: Date.now() };
         });
         const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
           const id = crypto.randomUUID(); newIds.push(id);
-          return { ...s, id, x: s.x + 20, y: s.y + 20 };
+          return { ...s, id, x: s.x + 20, y: s.y + 20, zOrder: Date.now() };
         });
         const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
           ...d,
+          zOrder: Date.now(),
           points: d.points.map(pt => ({ x: pt.x + 20, y: pt.y + 20 })),
         }));
         const newPathStart = drawings.length;
@@ -2439,7 +2471,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               const height = img.width ? (img.height * width) / img.width : 180;
               const center = getViewportCenter();
               pushToHistory();
-              onSaveImages([...images, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height }]);
+              onSaveImages([...images, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
               toast.success("Imagen pegada");
             };
             img.src=src;
@@ -2456,14 +2488,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         });
         const newImages = (clipboard.images || []).map((img: BoardImage) => {
           const id = crypto.randomUUID(); newIds.push(id);
-          return { ...img, id, x:img.x+20, y:img.y+20 };
+          return { ...img, id, x:img.x+20, y:img.y+20, zOrder: Date.now() };
         });
         const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
           const id = crypto.randomUUID(); newIds.push(id);
-          return { ...s, id, x:s.x+20, y:s.y+20 };
+          return { ...s, id, x:s.x+20, y:s.y+20, zOrder: Date.now() };
         });
         const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
           ...d,
+          zOrder: Date.now(),
           points: d.points.map(pt => ({ x:pt.x+20, y:pt.y+20 })),
         }));
         const newPathStart = drawings.length;
@@ -2489,37 +2522,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
   useEffect(() => {
     const canvas=canvasRef.current; if (!canvas) return;
-    const ctx=canvas.getContext('2d'); if (!ctx) return;
-    const redraw = () => {
-      ctx.clearRect(0,0,canvas.width,canvas.height); ctx.save(); ctx.translate(offset.x,offset.y); ctx.scale(zoom,zoom);
-      drawings.forEach((p, idx) => {
-        if (p.points.length<2) return;
-        const isSel = selectedPathIndices.has(idx);
-        const pdx = isSel && multiDragActive ? multiDragDelta.x : 0;
-        const pdy = isSel && multiDragActive ? multiDragDelta.y : 0;
-        const rot = isSel && pathLiveRotRef.current ? pathLiveRotRef.current : null;
-        ctx.save();
-        if (rot) { ctx.translate(rot.cx,rot.cy); ctx.rotate(rot.angle*Math.PI/180); ctx.translate(-rot.cx,-rot.cy); }
-        ctx.beginPath(); ctx.strokeStyle=p.color; ctx.lineWidth=p.width; ctx.lineJoin='round'; ctx.lineCap='round';
-        ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
-        for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
-        ctx.stroke();
-        if (isSel) {
-          ctx.beginPath();
-          ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5/zoom;
-          ctx.setLineDash([7/zoom,4/zoom]); ctx.lineJoin='round'; ctx.lineCap='round';
-          ctx.moveTo(p.points[0].x+pdx, p.points[0].y+pdy);
-          for (let i=1;i<p.points.length;i++) ctx.lineTo(p.points[i].x+pdx, p.points[i].y+pdy);
-          ctx.stroke(); ctx.setLineDash([]);
-        }
-        ctx.restore();
-      });
-      ctx.restore();
+    const resize = () => {
+      if (containerRef.current) {
+        canvas.width=containerRef.current.clientWidth;
+        canvas.height=containerRef.current.clientHeight;
+      }
     };
-    const resize = () => { if (containerRef.current) { canvas.width=containerRef.current.clientWidth; canvas.height=containerRef.current.clientHeight; redraw(); } };
     window.addEventListener('resize', resize); resize();
     return () => window.removeEventListener('resize', resize);
-  }, [drawings, offset, zoom, selectedPathIndices, multiDragActive, multiDragDelta, pathLiveRot]);
+  }, []);
 
   // Infinite Scroll & Zoom listener
   useEffect(() => {
@@ -2637,7 +2648,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
-      onSaveDrawings([...drawings, { points:[{x,y}], color:currentColor, width:3/zoom }]);
+      onSaveDrawings([...drawings, { points:[{x,y}], color:currentColor, width:3/zoom, zOrder: Date.now() }]);
     }
     if (tool==='eraser') {
       pushToHistory(); setIsDrawing(true);
@@ -2837,7 +2848,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         const cx=(sx+ex)/2,cy=(sy+ey)/2,rx=Math.abs(ex-sx)/2,ry=Math.abs(ey-sy)/2;
         pts=Array.from({length:65},(_,i)=>{const a=(i/64)*Math.PI*2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};});
       }
-      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:2/zoom}]);
+      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:2/zoom,zOrder:Date.now()}]);
       setShapeStart(null); setShapeCurrent(null);
     }
     if (tool==='laser') laserIsDrawingRef.current=false;
@@ -2886,7 +2897,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
       {/* Ghost mientras arrastra desde el panel */}
       {panelDrag && (
-        <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(232,93,47,0.4))' }}>
+        <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(37,99,235,0.4))' }}>
           <ShapeSvg type={panelDrag.type} color={resolveShapeInfo(panelDrag.type)?.color ?? currentColor} width={44} height={44} customTemplates={customShapes}/>
         </div>
       )}
@@ -2933,7 +2944,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
           </div>
-          <button onClick={onAddNote} className="bg-[#E85D2F] hover:bg-[#FF6B3D] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
+          <button onClick={onAddNote} className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
             <Plus size={22}/>
           </button>
         </div>
@@ -2955,9 +2966,52 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
         onClick={(e) => { if (tool==='text') { if (editingText) { saveText(); return; } setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
 
+        {/* Imágenes + Formas + Notas — una sola capa ordenada por zOrder (más reciente = encima) */}
         <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents: tool==='select'?'auto':'none', zIndex: 10 }}>
-          {shapes.map(s => <DraggableShape key={s.id} shape={s} customTemplates={customShapes} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-          {notes.map(note => <DraggableNote key={note.id} note={note} members={members} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
+          {[
+            ...images.map((img, i) => ({ kind: 'image' as const, data: img, zOrder: img.zOrder ?? i })),
+            ...drawings.map((p, i) => ({ kind: 'path' as const, data: p, index: i, zOrder: p.zOrder ?? i })),
+            ...shapes.map((s,  i) => ({ kind: 'shape' as const, data: s,   zOrder: s.zOrder   ?? images.length + i })),
+            ...notes.map((n,   i) => ({ kind: 'note'  as const, data: n,   zOrder: n.createdAt ?? images.length + shapes.length + i })),
+          ]
+            .sort((a, b) => a.zOrder - b.zOrder)
+            .map((el, stackIdx) => {
+              if (el.kind === 'image') {
+                const img = el.data;
+                return <DraggableImage key={img.id} image={img} stackIndex={stackIdx + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+              }
+              if (el.kind === 'shape') {
+                const s = el.data;
+                return <DraggableShape key={s.id} shape={s} customTemplates={customShapes} stackIndex={stackIdx + 1} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+              }
+              if (el.kind === 'path') {
+                const p = el.data;
+                const idx = el.index;
+                if (p.points.length < 2) return null;
+                const isSel = selectedPathIndices.has(idx);
+                const pdx = isSel && multiDragActive ? multiDragDelta.x : 0;
+                const pdy = isSel && multiDragActive ? multiDragDelta.y : 0;
+                const rot = isSel && pathLiveRotRef.current ? pathLiveRotRef.current : null;
+                const transforms = [
+                  rot ? `rotate(${rot.angle} ${rot.cx} ${rot.cy})` : '',
+                  pdx || pdy ? `translate(${pdx} ${pdy})` : '',
+                ].filter(Boolean).join(' ');
+                const d = getPathD(p.points);
+                return (
+                  <svg key={`path-${idx}`} style={{ position:'absolute', inset:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:stackIdx + 1 }} xmlns="http://www.w3.org/2000/svg">
+                    <g transform={transforms || undefined}>
+                      <path d={d} stroke={p.color} strokeWidth={p.width} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                      {isSel && (
+                        <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`}/>
+                      )}
+                    </g>
+                  </svg>
+                );
+              }
+              const note = el.data;
+              return <DraggableNote key={note.id} note={note} members={members} stackIndex={stackIdx + 1} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+            })
+          }
         </div>
 
         {/* Text Editor */}
@@ -2992,8 +3046,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             top:  Math.min(marqueeStart.y, marqueeEnd.y) * zoom + offset.y,
             width:  Math.abs(marqueeEnd.x - marqueeStart.x) * zoom,
             height: Math.abs(marqueeEnd.y - marqueeStart.y) * zoom,
-            background: 'rgba(232,93,47,0.08)',
-            border: '1.5px dashed rgba(232,93,47,0.7)',
+            background: 'rgba(37,99,235,0.08)',
+            border: '1.5px dashed rgba(37,99,235,0.7)',
             borderRadius: 3,
             pointerEvents: 'none',
             zIndex: 30,
@@ -3050,11 +3104,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           const height = (bbox.h + pad * 2) * zoom;
           const handleStyle = (extra: React.CSSProperties): React.CSSProperties => ({
             position: 'absolute', width: 9, height: 9,
-            background: '#0A0C0F', border: '1.5px solid rgba(232,93,47,0.95)',
+            background: '#0A0C0F', border: '1.5px solid rgba(37,99,235,0.95)',
             borderRadius: 2, pointerEvents: 'auto', zIndex: 35, ...extra,
           });
           return (
-            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(232,93,47,0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
+            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(37,99,235,0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
               {/* Esquinas */}
               <div style={handleStyle({ top:-4, left:-4, cursor:'nw-resize' })} onMouseDown={e=>onMultiResizeStart('nw',e)}/>
               <div style={handleStyle({ top:-4, right:-4, cursor:'ne-resize' })} onMouseDown={e=>onMultiResizeStart('ne',e)}/>
@@ -3069,12 +3123,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           );
         })()}
 
-        <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 20 }}/>
-        <canvas ref={laserCanvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 22 }}/>
+        <canvas ref={canvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 0 }}/>
+        <canvas ref={laserCanvasRef} style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex: 62 }}/>
 
-        <div style={{ position:'absolute', inset:0, transform:`translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin:'0 0', pointerEvents:'none', zIndex: 40 }}>
-          {images.map((img, index) => <DraggableImage key={img.id} image={img} stackIndex={index + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive ? multiDragDelta : null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>)}
-        </div>
 
         {/* Shape preview while dragging */}
         {shapeStart && shapeCurrent && (() => {

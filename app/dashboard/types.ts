@@ -8,9 +8,9 @@ export interface Task {
 }
 export interface Snippet { id: string; title: string; content: string; label: 'env' | 'código' | 'config' | 'otro'; authorId: string; createdAt: number; }
 export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; width?: number; rotation?: number; }
-export interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; rotation?: number; }
-export interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; }
-export interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; rotation?: number; }
+export interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; rotation?: number; zOrder?: number; }
+export interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; zOrder?: number; }
+export interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; rotation?: number; zOrder?: number; }
 export interface CustomShape { id: string; label: string; svgContent: string; viewBox: string; defaultW: number; defaultH: number; }
 export interface SharedFile { id: string; name: string; type: string; size: number; dataUrl: string; x: number; y: number; createdAt: number; authorName: string; }
 

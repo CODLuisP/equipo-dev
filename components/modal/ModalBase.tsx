@@ -29,14 +29,14 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
     >
       <div style={{
         background: "#0d0f22",
-        border: "1px solid rgba(124,58,237,0.18)",
-        borderTop: "1px solid rgba(124,58,237,0.32)",
+        border: "1px solid rgba(37,99,235,0.18)",
+        borderTop: "1px solid rgba(37,99,235,0.32)",
         borderRadius: 18,
         padding: "24px 28px 28px",
         margin: "0 16px",
         width: "100%",
         maxWidth: 520,
-        boxShadow: "0 0 0 1px rgba(124,58,237,0.06), 0 4px 0 rgba(124,58,237,0.10), 0 25px 60px rgba(0,0,0,0.65), 0 0 40px rgba(124,58,237,0.05)",
+        boxShadow: "0 0 0 1px rgba(37,99,235,0.06), 0 4px 0 rgba(37,99,235,0.10), 0 25px 60px rgba(0,0,0,0.65), 0 0 40px rgba(37,99,235,0.05)",
       }}>
         <div style={{
           display: "flex",
@@ -44,7 +44,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
           alignItems: "center",
           marginBottom: 20,
           paddingBottom: 16,
-          borderBottom: "1px solid rgba(124,58,237,0.10)",
+          borderBottom: "1px solid rgba(37,99,235,0.10)",
         }}>
           <h2 style={{
             fontSize: 15,
@@ -60,7 +60,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
             onClick={onClose}
             style={{
               background: "transparent",
-              border: "1px solid rgba(124,58,237,0.15)",
+              border: "1px solid rgba(37,99,235,0.15)",
               borderRadius: 7,
               width: 28,
               height: 28,
@@ -73,14 +73,14 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
               flexShrink: 0,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(124,58,237,0.10)";
-              e.currentTarget.style.color = "#a78bfa";
-              e.currentTarget.style.borderColor = "rgba(124,58,237,0.28)";
+              e.currentTarget.style.background = "rgba(37,99,235,0.10)";
+              e.currentTarget.style.color = "#60a5fa";
+              e.currentTarget.style.borderColor = "rgba(37,99,235,0.28)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = "transparent";
               e.currentTarget.style.color = "#6b7280";
-              e.currentTarget.style.borderColor = "rgba(124,58,237,0.15)";
+              e.currentTarget.style.borderColor = "rgba(37,99,235,0.15)";
             }}
           >
             <X size={14} />
