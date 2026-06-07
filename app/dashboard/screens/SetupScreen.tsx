@@ -29,13 +29,13 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
       <Toaster {...toasterProps} />
 
       {/* Background glows */}
-      <div style={{ position: 'absolute', top: -100, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -100, left: -80, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -100, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.11) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -100, left: -80, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(29,78,216,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       {/* Dot grid */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(124,58,237,0.10) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(rgba(37,99,235,0.08) 1px, transparent 1px)',
         backgroundSize: '28px 28px',
         maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
         WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
@@ -44,29 +44,29 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
 
       {/* Card */}
       <div style={{
-        background: 'rgba(11,13,28,0.92)',
-        border: '1px solid rgba(124,58,237,0.18)',
-        borderTop: '1px solid rgba(124,58,237,0.35)',
-        borderRadius: 20,
+        background: '#0f1223',
+        border: '1px solid rgba(37,99,235,0.18)',
+        borderTop: '1px solid rgba(37,99,235,0.32)',
+        borderRadius: 22,
         padding: '40px 36px',
         width: '100%',
         maxWidth: 440,
         textAlign: 'center',
         position: 'relative',
         zIndex: 10,
-        boxShadow: '0 0 0 1px rgba(124,58,237,0.06), 0 4px 0 rgba(124,58,237,0.12), 0 30px 80px rgba(0,0,0,0.6), 0 0 50px rgba(124,58,237,0.06)',
+        boxShadow: '0 0 0 1px rgba(37,99,235,0.05), 0 30px 80px rgba(0,0,0,0.6), 0 0 50px rgba(37,99,235,0.05)',
       }}>
 
         {/* Icon */}
         <div style={{
           width: 64, height: 64, borderRadius: 18,
-          background: 'rgba(124,58,237,0.12)',
-          border: '1px solid rgba(124,58,237,0.30)',
+          background: 'rgba(37,99,235,0.10)',
+          border: '1px solid rgba(37,99,235,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 24px',
-          boxShadow: '0 0 30px rgba(124,58,237,0.18)',
+          boxShadow: '0 0 30px rgba(37,99,235,0.15)',
         }}>
-          <Users size={28} color="#a78bfa" />
+          <Users size={28} color="#60a5fa" />
         </div>
 
         <h2 style={{
@@ -77,7 +77,7 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
         }}>
           Bienvenido al{' '}
           <span style={{
-            background: 'linear-gradient(135deg, #a78bfa, #818cf8)',
+            background: 'linear-gradient(135deg, #60a5fa, #93c5fd)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>Equipo Dev</span>
@@ -91,7 +91,7 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
         {members.length > 0 && (
           <div style={{
             marginTop: 28, paddingTop: 24,
-            borderTop: '1px solid rgba(124,58,237,0.12)',
+            borderTop: '1px solid rgba(37,99,235,0.10)',
           }}>
             <p style={{
               fontSize: 10, fontWeight: 600,

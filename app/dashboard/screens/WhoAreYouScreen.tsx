@@ -29,33 +29,33 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
       <Toaster {...toasterProps} />
 
       {/* Background glows */}
-      <div style={{ position: 'absolute', top: -120, right: -80, width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.13) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -120, left: -80, width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -120, right: -80, width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -120, left: -80, width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(29,78,216,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.04) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
       {/* Dot grid */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(124,58,237,0.10) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(rgba(37,99,235,0.08) 1px, transparent 1px)',
         backgroundSize: '28px 28px',
         maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
         WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
         pointerEvents: 'none',
       }} />
 
-      {/* Decorative ring */}
+      {/* Decorative rings */}
       <div style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 560, height: 560, borderRadius: '50%',
-        border: '1px solid rgba(124,58,237,0.07)',
+        border: '1px solid rgba(37,99,235,0.07)',
         pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 720, height: 720, borderRadius: '50%',
-        border: '1px solid rgba(124,58,237,0.04)',
+        border: '1px solid rgba(37,99,235,0.04)',
         pointerEvents: 'none',
       }} />
 
@@ -65,13 +65,13 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
         {/* Icon */}
         <div style={{
           width: 62, height: 62, borderRadius: 16,
-          background: 'rgba(124,58,237,0.12)',
-          border: '1px solid rgba(124,58,237,0.30)',
+          background: 'rgba(37,99,235,0.10)',
+          border: '1px solid rgba(37,99,235,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 24px',
-          boxShadow: '0 0 30px rgba(124,58,237,0.18), 0 0 60px rgba(124,58,237,0.06)',
+          boxShadow: '0 0 30px rgba(37,99,235,0.16), 0 0 60px rgba(37,99,235,0.05)',
         }}>
-          <Users size={26} color="#a78bfa" />
+          <Users size={26} color="#60a5fa" />
         </div>
 
         {/* Title */}
@@ -83,7 +83,7 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
         }}>
           ¿Quién eres{' '}
           <span style={{
-            background: 'linear-gradient(135deg, #a78bfa, #818cf8)',
+            background: 'linear-gradient(135deg, #60a5fa, #93c5fd)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>hoy</span>?
@@ -106,8 +106,8 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
               key={member.id}
               onClick={() => onSelect(member)}
               style={{
-                background: 'rgba(13,15,34,0.9)',
-                border: '1px solid rgba(124,58,237,0.16)',
+                background: 'rgba(10,12,26,0.9)',
+                border: '1px solid rgba(37,99,235,0.14)',
                 borderRadius: 16,
                 padding: '24px 16px 20px',
                 cursor: 'pointer',
@@ -118,19 +118,18 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
                 animationDelay: `${i * 0.06}s`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(124,58,237,0.10)';
-                e.currentTarget.style.borderColor = 'rgba(124,58,237,0.38)';
+                e.currentTarget.style.background = 'rgba(37,99,235,0.08)';
+                e.currentTarget.style.borderColor = 'rgba(37,99,235,0.35)';
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,58,237,0.22), 0 0 24px rgba(124,58,237,0.10)';
+                e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(37,99,235,0.20), 0 0 24px rgba(37,99,235,0.08)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(13,15,34,0.9)';
-                e.currentTarget.style.borderColor = 'rgba(124,58,237,0.16)';
+                e.currentTarget.style.background = 'rgba(10,12,26,0.9)';
+                e.currentTarget.style.borderColor = 'rgba(37,99,235,0.14)';
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
               }}
             >
-              {/* Avatar with glow ring */}
               <div style={{ position: 'relative' }}>
                 <div style={{
                   position: 'absolute', inset: -4, borderRadius: 20,
