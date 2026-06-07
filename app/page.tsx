@@ -107,6 +107,19 @@ export default function LoginPage() {
           border-color: rgba(37,99,235,0.5) !important;
           box-shadow: 0 0 0 3px rgba(37,99,235,0.10) !important;
         }
+
+        @media (max-width: 1023px) {
+          .login-card-back-1,
+          .login-card-back-2 { display: none !important; }
+          .login-card-main {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 8px 0 !important;
+            border-radius: 0 !important;
+          }
+          .login-mobile-logo { display: none !important; }
+        }
       `}</style>
 
       <div style={{
@@ -124,162 +137,118 @@ export default function LoginPage() {
             flex: "0 0 52%",
             position: "relative",
             flexDirection: "column",
-            justifyContent: "center",
-            padding: "60px 68px",
+            justifyContent: "flex-end",
+            padding: "0 0 52px 0",
             overflow: "hidden",
             background: "#07091a",
           }}
         >
-          {/* Dot grid */}
+          {/* Imagen principal — ocupa casi todo el panel */}
+          <img
+            src="/assets/equipodev.png"
+            alt="Equipo Dev"
+            style={{
+              position: "absolute",
+              top: "50%", left: "50%",
+              transform: "translate(-50%, -52%)",
+              width: "68%",
+              height: "auto",
+              objectFit: "contain",
+              zIndex: 1,
+              filter: "drop-shadow(0 16px 48px rgba(37,99,235,0.30))",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Glow detrás de la imagen */}
           <div style={{
-            position: "absolute", inset: 0,
-            backgroundImage: `radial-gradient(rgba(37,99,235,0.12) 1px, transparent 1px)`,
+            position: "absolute", top: "30%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "70%", height: "55%",
+            background: "radial-gradient(ellipse at center, rgba(37,99,235,0.13) 0%, transparent 70%)",
+            filter: "blur(28px)",
+            pointerEvents: "none", zIndex: 0,
+          }} />
+
+          {/* Dot grid sutil */}
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 2,
+            backgroundImage: `radial-gradient(rgba(37,99,235,0.07) 1px, transparent 1px)`,
             backgroundSize: "28px 28px",
-            maskImage: "radial-gradient(ellipse 75% 75% at 40% 50%, black 40%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 75% 75% at 40% 50%, black 40%, transparent 100%)",
-          }} />
-
-          {/* Purple corner glow */}
-          <div style={{
-            position: "absolute", top: 0, right: 0,
-            width: "60%", height: "60%",
-            background: "radial-gradient(ellipse at top right, rgba(37,99,235,0.10) 0%, rgba(29,78,216,0.05) 40%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "absolute", bottom: 0, left: 0,
-            width: "50%", height: "40%",
-            background: "radial-gradient(ellipse at bottom left, rgba(29,78,216,0.08) 0%, transparent 70%)",
             pointerEvents: "none",
           }} />
 
-          {/* Decorative rings */}
+          {/* Gradiente superior para legibilidad del título */}
           <div style={{
-            position: "absolute",
-            width: 480, height: 480,
-            borderRadius: "50%",
-            border: "1px solid rgba(37,99,235,0.06)",
-            right: -140, top: "50%",
-            transform: "translateY(-50%)",
+            position: "absolute", top: 0, left: 0, right: 0,
+            height: "30%", zIndex: 3,
+            background: "linear-gradient(to bottom, #07091a 20%, rgba(7,9,26,0.7) 60%, transparent 100%)",
             pointerEvents: "none",
           }} />
+
+          {/* Gradiente inferior para legibilidad del footer */}
           <div style={{
-            position: "absolute",
-            width: 320, height: 320,
-            borderRadius: "50%",
-            border: "1px solid rgba(37,99,235,0.09)",
-            right: -60, top: "50%",
-            transform: "translateY(-50%)",
+            position: "absolute", bottom: 0, left: 0, right: 0,
+            height: "30%", zIndex: 3,
+            background: "linear-gradient(to top, #07091a 25%, rgba(7,9,26,0.7) 60%, transparent 100%)",
             pointerEvents: "none",
           }} />
 
           {/* Scanline sweep */}
           <div style={{
-            position: "absolute", left: 0, right: 0, height: 2,
-            background: "linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.06) 30%, rgba(37,99,235,0.14) 50%, rgba(37,99,235,0.06) 70%, transparent 100%)",
+            position: "absolute", left: 0, right: 0, height: 2, zIndex: 4,
+            background: "linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.08) 30%, rgba(37,99,235,0.16) 50%, rgba(37,99,235,0.08) 70%, transparent 100%)",
             animation: "sweep 9s linear infinite",
             pointerEvents: "none",
           }} />
 
-          {/* Bottom fade */}
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, right: 0, height: 120,
-            background: "linear-gradient(to top, #07091a, transparent)",
-            pointerEvents: "none",
-          }} />
-
-          {/* Content */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-
-            {/* Heading */}
-            <div className="fade-up delay-1">
-              <h1 style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: 42, fontWeight: 800, color: "#eef0fb",
-                margin: 0, lineHeight: 1.12, letterSpacing: "-1px",
-              }}>
-                Equipo{" "}
-                <span style={{
-                  background: "linear-gradient(135deg, #60a5fa, #93c5fd)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}>Dev.</span>
-              </h1>
-              <p style={{
-                fontSize: 14, color: "#8b91b8",
-                marginTop: 18, lineHeight: 1.65, maxWidth: 360,
-                fontWeight: 400,
-              }}>
-                Panel de gestión interna para el equipo de programadores. Tareas, snippets y colaboración en un solo lugar.
-              </p>
-            </div>
-
-            {/* Hero image */}
-            <div className="fade-up delay-2" style={{ marginTop: 44, position: "relative", display: "inline-block" }}>
-              {/* Glow layers */}
-              <div style={{
-                position: "absolute", inset: -24,
-                background: "radial-gradient(ellipse at center, rgba(37,99,235,0.18) 0%, transparent 68%)",
-                filter: "blur(16px)",
-                pointerEvents: "none",
-              }} />
-              <div style={{
-                position: "absolute", inset: -6,
-                borderRadius: 24,
-                background: "radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 75%)",
-                pointerEvents: "none",
-              }} />
-              <img
-                src="/assets/equipodev.png"
-                alt="Equipo Dev"
-                style={{
-                  display: "block",
-                  maxWidth: 520,
-                  width: "100%",
-                  height: "auto",
-                  position: "relative",
-                  zIndex: 1,
-                  filter: "drop-shadow(0 12px 40px rgba(37,99,235,0.40)) drop-shadow(0 2px 10px rgba(0,0,0,0.7))",
-                }}
-              />
-            </div>
-
-            {/* Stats */}
-            <div className="fade-up delay-3" style={{ display: "flex", gap: 0, marginTop: 36 }}>
-              {[
-                { value: "100%", label: "Equipo activo" },
-                { value: "∞",    label: "Snippets" },
-                { value: "24/7", label: "Disponible" },
-              ].map((s, i) => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center" }}>
-                  {i > 0 && <div style={{ width: 1, height: 32, background: "rgba(37,99,235,0.15)", margin: "0 28px" }} />}
-                  <div>
-                    <div style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: 20, fontWeight: 800,
-                      color: "#eef0fb", letterSpacing: "-0.5px",
-                    }}>
-                      {s.value}
-                    </div>
-                    <div style={{
-                      fontSize: 10, color: "#3a4060", marginTop: 3,
-                      letterSpacing: "0.08em",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      textTransform: "uppercase",
-                    }}>
-                      {s.label}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Título — arriba */}
+          <div className="fade-up" style={{ position: "absolute", top: 96, left: 52, right: 52, zIndex: 5 }}>
+            <h1 style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 38, fontWeight: 800, color: "#eef0fb",
+              margin: 0, lineHeight: 1.12, letterSpacing: "-0.8px",
+            }}>
+              Equipo{" "}
+              <span style={{
+                background: "linear-gradient(135deg, #60a5fa, #93c5fd)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}>Dev.</span>
+            </h1>
+            <p style={{
+              fontSize: 13, color: "#8b91b8",
+              marginTop: 10, lineHeight: 1.6, maxWidth: 380,
+              fontWeight: 400,
+            }}>
+              Panel de gestión interna para el equipo de programadores.
+            </p>
           </div>
 
-          {/* Vertical separator */}
-          <div style={{
-            position: "absolute", right: 0, top: "8%", height: "84%", width: 1,
-            background: "linear-gradient(to bottom, transparent, rgba(37,99,235,0.10) 30%, rgba(37,99,235,0.18) 50%, rgba(37,99,235,0.10) 70%, transparent)",
-          }} />
+          {/* Stats — footer */}
+          <div className="fade-up delay-1" style={{
+            position: "absolute", bottom: 96, left: 52, right: 52, zIndex: 5,
+            display: "flex", alignItems: "center",
+          }}>
+            {[
+              { value: "100%", label: "Equipo activo" },
+              { value: "∞",    label: "Snippets" },
+              { value: "24/7", label: "Disponible" },
+            ].map((s, i) => (
+              <div key={s.label} style={{ display: "flex", alignItems: "center" }}>
+                {i > 0 && <div style={{ width: 1, height: 28, background: "rgba(37,99,235,0.2)", margin: "0 24px" }} />}
+                <div>
+                  <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, color: "#eef0fb", letterSpacing: "-0.4px" }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 9, color: "#3a4060", marginTop: 2, letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase" }}>
+                    {s.label}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
 
         {/* ── Right login panel ── */}
@@ -292,199 +261,213 @@ export default function LoginPage() {
           position: "relative",
           background: "#080a14",
         }}>
-          {/* Background glow */}
+          {/* Fade izquierdo — funde con el panel izquierdo sin corte */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, bottom: 0, width: "40%",
+            background: "linear-gradient(to right, #07091a 0%, rgba(8,10,20,0.6) 50%, transparent 100%)",
+            pointerEvents: "none", zIndex: 0,
+          }} />
+          {/* Glow sutil arriba */}
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0, height: "50%",
-            background: "radial-gradient(ellipse 70% 60% at 50% -10%, rgba(37,99,235,0.08) 0%, transparent 100%)",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
-            width: 300, height: 300,
-            background: "radial-gradient(circle, rgba(29,78,216,0.05) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse 70% 60% at 60% -10%, rgba(37,99,235,0.06) 0%, transparent 100%)",
             pointerEvents: "none",
           }} />
 
-          <div style={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 1 }}>
+          <div style={{ width: "100%", maxWidth: 360, position: "relative", zIndex: 1 }}>
 
             {/* Mobile logo */}
-            <div className="fade-up lg:hidden" style={{ textAlign: "center", marginBottom: 36 }}>
-              <div style={{ position: "relative", display: "inline-block", marginBottom: 14 }}>
-                <div style={{
-                  position: "absolute", inset: -10, borderRadius: 20,
-                  background: "radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)",
-                  filter: "blur(8px)",
-                }} />
-                <img
-                  src="/assets/equipodev.png"
-                  alt="Equipo Dev"
-                  style={{
-                    height: 44, width: "auto", display: "block", position: "relative",
-                    filter: "drop-shadow(0 0 10px rgba(37,99,235,0.4))",
-                  }}
-                />
-              </div>
-              <h1 style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: 28, fontWeight: 800, color: "#eef0fb",
-                margin: 0, letterSpacing: "-0.6px",
-              }}>
+            <div className="login-mobile-logo fade-up lg:hidden" style={{ textAlign: "center", marginBottom: 36 }}>
+              <img
+                src="/assets/equipodev.png"
+                alt="Equipo Dev"
+                style={{ height: 44, width: "auto", display: "inline-block", filter: "drop-shadow(0 0 10px rgba(37,99,235,0.4))" }}
+              />
+              <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 28, fontWeight: 800, color: "#eef0fb", margin: "10px 0 0", letterSpacing: "-0.6px" }}>
                 Equipo <span style={{ color: "#60a5fa" }}>Dev</span>
               </h1>
             </div>
 
-            {/* Form heading */}
-            <div className="fade-up" style={{ marginBottom: 26 }}>
-              <h2 style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: 26, fontWeight: 800,
-                color: "#eef0fb", margin: 0, letterSpacing: "-0.6px",
+            {/* Stacked card effect — capas detrás */}
+            <div className="fade-up delay-1" style={{ position: "relative" }}>
+              {/* Capa trasera 2 — más inclinada */}
+              <div className="login-card-back-2" style={{
+                position: "absolute",
+                inset: 0, borderRadius: 22,
+                background: "rgba(29,78,216,0.30)",
+                border: "1px solid rgba(37,99,235,0.20)",
+                transform: "rotate(4deg) translate(8px, 6px)",
+                transformOrigin: "bottom center",
+                zIndex: 0,
+              }} />
+              {/* Capa trasera 1 — poco inclinada */}
+              <div className="login-card-back-1" style={{
+                position: "absolute",
+                inset: 0, borderRadius: 22,
+                background: "rgba(37,99,235,0.45)",
+                border: "1px solid rgba(37,99,235,0.35)",
+                transform: "rotate(2deg) translate(4px, 3px)",
+                transformOrigin: "bottom center",
+                zIndex: 1,
+              }} />
+
+              {/* Card principal */}
+              <div className="login-card-main" style={{
+                position: "relative", zIndex: 2,
+                background: "#0f1223",
+                border: "1px solid rgba(37,99,235,0.22)",
+                borderRadius: 22,
+                padding: "36px 32px 32px",
+                boxShadow: "0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(37,99,235,0.06)",
               }}>
-                Bienvenido de vuelta
-              </h2>
-              <p style={{ fontSize: 13, color: "#6b7280", marginTop: 6, fontWeight: 400 }}>
-                Accede al panel de gestión del equipo
-              </p>
-            </div>
 
-            {/* Card */}
-            <div className="fade-up delay-1" style={{
-              background: "rgba(11,13,28,0.9)",
-              border: "0.5px solid rgba(37,99,235,0.18)",
-              borderTop: "1px solid rgba(37,99,235,0.35)",
-              borderRadius: 18,
-              padding: "28px 26px",
-              backdropFilter: "blur(20px)",
-            }}>
-              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-                {/* Username */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <label style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10, fontWeight: 500,
-                    letterSpacing: "0.12em", textTransform: "uppercase",
-                    color: "#4a5070",
-                  }}>
-                    Usuario
-                  </label>
-                  <input
-                    className="login-input"
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    placeholder="tu usuario"
-                    required
-                    autoComplete="username"
-                    style={inputStyle(!!error)}
-                  />
+                {/* Card title */}
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <img
+                      src="/assets/logo.png"
+                      alt="Logo"
+                      style={{ height: 28, width: "auto"}}
+                    />
+                    <h2 style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 22, fontWeight: 800,
+                      color: "#eef0fb", margin: 0, letterSpacing: "-0.5px",
+                    }}>
+                      Iniciar sesión
+                    </h2>
+                  </div>
+                  <p style={{ fontSize: 12, color: "#4a5570", margin: 0, fontWeight: 400 }}>
+                    Accede al panel de gestión del equipo
+                  </p>
                 </div>
 
-                {/* Password */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <label style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10, fontWeight: 500,
-                    letterSpacing: "0.12em", textTransform: "uppercase",
-                    color: "#4a5070",
-                  }}>
-                    Contraseña
-                  </label>
-                  <div style={{ position: "relative" }}>
+                <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                  {/* Username */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 12, fontWeight: 600,
+                      color: "#8b91b8",
+                    }}>
+                      Usuario
+                    </label>
                     <input
                       className="login-input"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      type="text"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      placeholder="tu usuario"
                       required
-                      autoComplete="current-password"
-                      style={{ ...inputStyle(!!error), padding: "11px 42px 11px 14px" }}
+                      autoComplete="username"
+                      style={inputStyle(!!error)}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: "absolute", right: 12, top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "#4a5070", display: "flex", padding: 0, transition: "color 0.15s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
-                      onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; }}
-                    >
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
                   </div>
-                </div>
 
-                {/* Error */}
-                {error && (
-                  <div style={{
-                    background: "rgba(239,68,68,0.06)",
-                    border: "1px solid rgba(239,68,68,0.2)",
-                    borderRadius: 10, padding: "10px 13px",
-                    fontSize: 12, color: "#f87171",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", flexShrink: 0 }} />
-                    {error}
+                  {/* Password */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 12, fontWeight: 600,
+                      color: "#8b91b8",
+                    }}>
+                      Contraseña
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        className="login-input"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        autoComplete="current-password"
+                        style={{ ...inputStyle(!!error), padding: "11px 42px 11px 14px" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: "absolute", right: 12, top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "#4a5070", display: "flex", padding: 0, transition: "color 0.15s",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "#4a5070"; }}
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    marginTop: 4,
-                    background: loading
-                      ? "rgba(37,99,235,0.35)"
-                      : "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-                    border: "none", borderRadius: 11,
-                    padding: "13px 20px",
-                    color: "#fff", fontSize: 14, fontWeight: 700,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    transition: "opacity 0.15s, transform 0.15s, box-shadow 0.15s",
-                    width: "100%",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    letterSpacing: "0.01em",
-                  }}
-                  onMouseEnter={e => {
-                    if (!loading) {
-                      e.currentTarget.style.transform = "translateY(-1px)";
-                      e.currentTarget.style.boxShadow = "0 8px 28px rgba(37,99,235,0.5), 0 1px 0 rgba(255,255,255,0.08) inset";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = loading ? "none" : "0 4px 20px rgba(37,99,235,0.4), 0 1px 0 rgba(255,255,255,0.08) inset";
-                  }}
-                  onMouseDown={e => { if (!loading) e.currentTarget.style.transform = "translateY(0)"; }}
-                >
-                  {loading ? (
-                    <>
-                      <span style={{
-                        width: 14, height: 14,
-                        border: "2px solid rgba(255,255,255,0.25)", borderTopColor: "#fff",
-                        borderRadius: "50%", display: "inline-block",
-                        animation: "spin 0.7s linear infinite",
-                      }} />
-                      Verificando…
-                    </>
-                  ) : (
-                    <>
-                      Acceder al panel
-                      <ArrowRight size={15} strokeWidth={2.5} />
-                    </>
+                  {/* Error */}
+                  {error && (
+                    <div style={{
+                      background: "rgba(239,68,68,0.06)",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                      borderRadius: 10, padding: "10px 13px",
+                      fontSize: 12, color: "#f87171",
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", flexShrink: 0 }} />
+                      {error}
+                    </div>
                   )}
-                </button>
-              </form>
+
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      marginTop: 6,
+                      background: loading ? "rgba(37,99,235,0.35)" : "#2563eb",
+                      border: "none", borderRadius: 12,
+                      padding: "13px 20px",
+                      color: "#fff", fontSize: 14, fontWeight: 700,
+                      cursor: loading ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      transition: "background 0.15s, transform 0.15s, box-shadow 0.15s",
+                      width: "100%",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      boxShadow: "0 4px 20px rgba(37,99,235,0.35)",
+                    }}
+                    onMouseEnter={e => {
+                      if (!loading) {
+                        e.currentTarget.style.background = "#1d4ed8";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow = "0 8px 28px rgba(37,99,235,0.55)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = loading ? "rgba(37,99,235,0.35)" : "#2563eb";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,99,235,0.35)";
+                    }}
+                    onMouseDown={e => { if (!loading) e.currentTarget.style.transform = "translateY(0)"; }}
+                  >
+                    {loading ? (
+                      <>
+                        <span style={{
+                          width: 14, height: 14,
+                          border: "2px solid rgba(255,255,255,0.25)", borderTopColor: "#fff",
+                          borderRadius: "50%", display: "inline-block",
+                          animation: "spin 0.7s linear infinite",
+                        }} />
+                        Verificando…
+                      </>
+                    ) : (
+                      <>
+                        Acceder
+                        <ArrowRight size={15} strokeWidth={2.5} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
             </div>
 
-
- 
           </div>
         </div>
       </div>
