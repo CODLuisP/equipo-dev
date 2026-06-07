@@ -745,20 +745,21 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const [dragCur, setDragCur] = useState<{x:number;y:number}|null>(null);
   const [remastered, setRemastered] = useState(false);
 
-  // --- Boceto desde Imagen (Vectorizador) ---
+  // --- Boceto desde Imagen (Vectorizador automático) ---
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [edgeThreshold, setEdgeThreshold] = useState(0.20);
-  const [minPathLen, setMinPathLen] = useState(8);
-  const [vectStrokeW, setVectStrokeW] = useState(2.0);
   const [vectorizing, setVectorizing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [vectFillMode, setVectFillMode] = useState<'none' | 'solid'>('solid');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
-  const handleVectorize = (imgElement: HTMLImageElement, threshold: number, minLen: number, strokeW: number, fillMode: 'none' | 'solid') => {
+  // Parámetros fijos optimizados para máxima fidelidad sin intervención del usuario
+  const AUTO_THRESHOLD = 0.08;  // bajo = más regiones = más detalle
+  const AUTO_K         = 20;    // más colores = más fiel al original
+  const AUTO_STROKE_W  = 0.3;   // trazo fino para rellenos limpios
+
+  const handleVectorize = (imgElement: HTMLImageElement) => {
     setVectorizing(true);
     setTimeout(() => {
       try {
@@ -774,30 +775,52 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         let dw = PS, dh = PS, dx = 0, dy = 0;
         if (aspect > 1) { dh = Math.round(PS / aspect); dy = Math.round((PS - dh) / 2); }
         else { dw = Math.round(PS * aspect); dx = Math.round((PS - dw) / 2); }
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, PS, PS);
+        ctx.clearRect(0, 0, PS, PS);
         ctx.drawImage(imgElement, dx, dy, dw, dh);
 
         const id = ctx.getImageData(0, 0, PS, PS);
         const px = id.data;
         const W = PS, H = PS;
+        const opaque = new Uint8Array(W * H);
+        let opaqueCount = 0;
+        for (let i = 0; i < W * H; i++) {
+          if (px[i * 4 + 3] > 24) {
+            opaque[i] = 1;
+            opaqueCount++;
+          }
+        }
+        if (opaqueCount === 0) {
+          setStrokes([]);
+          toast.error("La imagen no tiene contenido visible para vectorizar");
+          setVectorizing(false);
+          return;
+        }
+        const hasTransparency = opaqueCount < W * H * 0.97;
 
         // ── 1. K-means color quantization ────────────────────────────────
-        const K = 14;
+        const K = hasTransparency ? 4 : AUTO_K;
         type RGB = [number, number, number];
-        const sampleStep = 4;
+        const sampleStep = 3;
         const samples: RGB[] = [];
         for (let y = 0; y < H; y += sampleStep)
           for (let x = 0; x < W; x += sampleStep) {
+            if (!opaque[y * W + x]) continue;
             const i = (y * W + x) * 4;
             samples.push([px[i], px[i + 1], px[i + 2]]);
           }
 
+        if (samples.length === 0) {
+          setStrokes([]);
+          toast.error("La imagen no tiene suficientes píxeles visibles");
+          setVectorizing(false);
+          return;
+        }
+
         let cents: RGB[] = Array.from({ length: K }, (_, k) =>
-          [...samples[Math.floor(k * samples.length / K)]] as RGB
+          [...samples[Math.min(samples.length - 1, Math.floor(k * samples.length / K))]] as RGB
         );
 
-        for (let iter = 0; iter < 20; iter++) {
+        for (let iter = 0; iter < 25; iter++) {
           const sums: [number, number, number][] = Array.from({ length: K }, () => [0, 0, 0]);
           const cnts = new Array<number>(K).fill(0);
           for (const [r, g, b] of samples) {
@@ -817,6 +840,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         // Assign each pixel to nearest centroid
         const labels = new Uint8Array(W * H);
         for (let i = 0; i < W * H; i++) {
+          if (!opaque[i]) continue;
           const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
           let bd = Infinity, bk = 0;
           for (let k = 0; k < K; k++) {
@@ -829,14 +853,15 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
         // ── 2. Connected-component BFS ────────────────────────────────────
         const visited = new Uint8Array(W * H);
-        // Scale minSize relative to canvas area; threshold controls coarseness
-        const minSize = Math.max(10, Math.round(W * H * (0.00002 + threshold * 0.0003)));
+        const minSize = hasTransparency
+          ? Math.max(90, Math.round(opaqueCount * 0.0025))
+          : Math.max(6, Math.round(W * H * (0.000012 + AUTO_THRESHOLD * 0.0002)));
 
         type Comp = { minIdx: number; colorLabel: number; size: number; mask: Uint8Array; isBg: boolean };
         const comps: Comp[] = [];
 
         for (let si = 0; si < W * H; si++) {
-          if (visited[si]) continue;
+          if (visited[si] || !opaque[si]) continue;
           const cl = labels[si];
           const mask = new Uint8Array(W * H);
           const queue: number[] = [si];
@@ -850,29 +875,26 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
             size++;
             const qx = idx % W, qy = Math.floor(idx / W);
             if (qx === 0 || qx === W - 1 || qy === 0 || qy === H - 1) touchesBorder = true;
-            if (qx + 1 < W) { const n = idx + 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
-            if (qx - 1 >= 0) { const n = idx - 1; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
-            if (qy + 1 < H) { const n = idx + W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
-            if (qy - 1 >= 0) { const n = idx - W; if (!visited[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qx + 1 < W) { const n = idx + 1; if (!visited[n] && opaque[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qx - 1 >= 0) { const n = idx - 1; if (!visited[n] && opaque[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qy + 1 < H) { const n = idx + W; if (!visited[n] && opaque[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
+            if (qy - 1 >= 0) { const n = idx - W; if (!visited[n] && opaque[n] && labels[n] === cl) { visited[n] = 1; queue.push(n); } }
           }
 
-          // Mark as background if it touches the canvas border AND is near-white (canvas fill)
           const cl_lum = 0.299 * cents[cl][0] + 0.587 * cents[cl][1] + 0.114 * cents[cl][2];
-          const isBg = touchesBorder && cl_lum > 215;
+          const isBg = !hasTransparency && touchesBorder && cl_lum > 215;
           if (size >= minSize) comps.push({ minIdx, colorLabel: cl, size, mask, isBg });
         }
 
-        comps.sort((a, b) => b.size - a.size); // largest first → renders as background
+        comps.sort((a, b) => b.size - a.size);
 
         // ── 3. Moore-neighbor contour tracing ────────────────────────────
-        // Directions: E SE S SW W NW N NE (clockwise)
         const CDX = [1, 1, 0, -1, -1, -1, 0, 1];
         const CDY = [0, 1, 1, 1, 0, -1, -1, -1];
 
         const traceContour = (compMask: Uint8Array, sx: number, sy: number): { x: number; y: number }[] => {
           const pts: { x: number; y: number }[] = [];
           let cx = sx, cy = sy;
-          // Entered scanning left→right so backtrack = West (dir 4); start looking from dir 5 (NW)
           let look = 5;
           const maxS = 60000;
           let steps = 0;
@@ -909,11 +931,10 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         const newStrokes: EStroke[] = [];
 
         for (const { minIdx, colorLabel, mask: compMask, isBg } of comps) {
-          if (isBg) continue; // skip canvas background region
+          if (isBg) continue;
 
           const [cr, cg, cb] = cents[colorLabel];
           const lum = 0.299 * cr + 0.587 * cg + 0.114 * cb;
-          // Brighten very-dark colors so they're visible on the dark pizarra (#0D0F14)
           const brighten = lum < 60 ? Math.min(1, (80 - lum) / 80) : 0;
           const fr = Math.round(cr + (255 - cr) * brighten * 0.85);
           const fg = Math.round(cg + (255 - cg) * brighten * 0.85);
@@ -924,37 +945,29 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           const raw = traceContour(compMask, sx, sy);
           if (raw.length < 4) continue;
 
-          // Deduplicate consecutive identical points
           const dedup: { x: number; y: number }[] = [raw[0]];
           for (let i = 1; i < raw.length; i++) {
             const c = raw[i], prev = dedup[dedup.length - 1];
             if (c.x !== prev.x || c.y !== prev.y) dedup.push(c);
           }
 
-          // Downsample long contours to at most ~700 pts before smoothing
-          const ds = dedup.filter((_, i) => i % Math.max(1, Math.floor(dedup.length / 700)) === 0);
+          const ds = dedup.filter((_, i) => i % Math.max(1, Math.floor(dedup.length / (hasTransparency ? 360 : 700))) === 0);
           if (ds.length < 4) continue;
 
-          // 2-pass smoothing
           const smoothed = smooth1(smooth1(ds));
-
-          // Scale and simplify
           const scaled = smoothed.map(p => ({ x: toSvg(p.x), y: toSvg(p.y) }));
-          const simplified = dougPeucker(scaled, Math.max(0.4, SIZE * 0.0035));
+          const simplified = dougPeucker(scaled, hasTransparency ? 1.5 : Math.max(0.3, SIZE * 0.003));
           if (simplified.length < 3) continue;
 
-          if (fillMode === 'solid') {
-            newStrokes.push({ kind: 'poly', color: colorHex, sw: 0.4, fill: colorHex, pts: simplified });
-          } else {
-            newStrokes.push({ kind: 'poly', color: colorHex, sw: strokeW, fill: 'none', pts: simplified });
-          }
+          // Siempre relleno sólido para máxima fidelidad al original
+          newStrokes.push({ kind: 'poly', color: colorHex, sw: AUTO_STROKE_W, fill: colorHex, pts: simplified });
         }
 
         setStrokes(newStrokes);
-        toast.success(`Vectorización completa: ${newStrokes.length} regiones`);
+        toast.success(`Listo · ${newStrokes.length} regiones vectorizadas`);
       } catch (err) {
         console.error(err);
-        toast.error("Ocurrió un error al digitalizar el boceto");
+        toast.error("Ocurrió un error al vectorizar la imagen");
       } finally {
         setVectorizing(false);
       }
@@ -973,7 +986,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
       const img = new Image();
       img.onload = () => {
         imageRef.current = img;
-        handleVectorize(img, edgeThreshold, minPathLen, vectStrokeW, vectFillMode);
+        handleVectorize(img);
       };
       img.src = dataUrl;
     };
@@ -984,12 +997,6 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
     const file = e.target.files?.[0];
     if (file) loadImage(file);
   };
-
-  useEffect(() => {
-    if (imageRef.current) {
-      handleVectorize(imageRef.current, edgeThreshold, minPathLen, vectStrokeW, vectFillMode);
-    }
-  }, [edgeThreshold, minPathLen, vectStrokeW, vectFillMode]);
 
   // Estados para curva interactiva de 3 puntos
   const [curvePhase, setCurvePhase] = useState<0 | 1 | 2>(0);
@@ -1335,7 +1342,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 ))}
                 <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
                   style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#8A9099',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>↩</button>
-                <button onClick={()=>{setStrokes([]); setPolylinePts([]); setPolylineLive(null); setImageSrc(null); imageRef.current = null;}} title="Limpiar todo" disabled={strokes.length===0}
+                <button onClick={()=>{setStrokes([]); setPolylinePts([]); setPolylineLive(null); setImageSrc(null);}} title="Limpiar todo" disabled={strokes.length===0}
                   style={{width:24,height:24,borderRadius:7,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:strokes.length===0?'#3A3F4A':'#E74C3C',cursor:strokes.length===0?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>✕</button>
               </div>
             </div>
@@ -1559,14 +1566,14 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           {/* Divisor vertical */}
           <div style={{width:1,background:'rgba(255,255,255,0.08)'}}/>
 
-          {/* Columna Derecha: Digitalizador de Bocetos (Boceto desde Imagen) */}
+          {/* Columna Derecha: Vectorizador de imagen automático */}
           <div style={{flex:1,minWidth:260,display:'flex',flexDirection:'column',gap:14,fontFamily:"'DM Sans',sans-serif"}}>
             <div>
               <p style={{margin:0,fontWeight:800,fontSize:13,color:'#2ECC71',display:'flex',alignItems:'center',gap:6}}>
-                <Sparkles size={14}/> Boceto desde Imagen
+                <Sparkles size={14}/> Imagen → Forma vectorial
               </p>
-              <p style={{margin:'4px 0 0',fontSize:11,color:'#5A6270',lineHeight:1.3}}>
-                Sube una imagen y conviértela en líneas vectoriales con sus colores originales.
+              <p style={{margin:'4px 0 0',fontSize:11,color:'#5A6270',lineHeight:1.4}}>
+                Sube una imagen y se convierte automáticamente. Sin ajustes, solo suelta y guarda.
               </p>
             </div>
 
@@ -1580,11 +1587,10 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 const file = e.dataTransfer.files?.[0];
                 if (file) loadImage(file);
               }}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { if (!vectorizing) fileInputRef.current?.click(); }}
               onMouseEnter={e => {
                 setIsHovered(true);
-                e.currentTarget.style.borderColor = '#2ECC71';
-                e.currentTarget.style.background = 'rgba(46,204,113,0.05)';
+                if (!vectorizing) { e.currentTarget.style.borderColor = '#2ECC71'; e.currentTarget.style.background = 'rgba(46,204,113,0.05)'; }
               }}
               onMouseLeave={e => {
                 setIsHovered(false);
@@ -1592,7 +1598,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 e.currentTarget.style.background = isDragOver ? 'rgba(46,204,113,0.1)' : 'rgba(255,255,255,0.02)';
               }}
               style={{
-                height: 100,
+                flex: 1,
                 borderRadius: 12,
                 border: isDragOver ? '2px dashed #2ECC71' : '1.5px dashed rgba(255,255,255,0.15)',
                 background: isDragOver ? 'rgba(46,204,113,0.1)' : 'rgba(255,255,255,0.02)',
@@ -1601,146 +1607,52 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                cursor: 'pointer',
+                cursor: vectorizing ? 'wait' : 'pointer',
                 transition: 'all 0.15s',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                minHeight: 120,
               }}
             >
               <input type="file" ref={fileInputRef} onChange={onFileChange} accept="image/*" style={{ display: 'none' }} />
-              {imageSrc ? (
+
+              {vectorizing ? (
+                /* Spinner de procesamiento */
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                  <div className="animate-spin" style={{ width:28, height:28, border:'3px solid rgba(255,255,255,0.1)', borderTopColor:'#2ECC71', borderRadius:'50%' }}/>
+                  <span style={{ fontSize:11, color:'#2ECC71', fontWeight:700 }}>Vectorizando…</span>
+                  {imageSrc && <img src={imageSrc} style={{ width:60, height:60, objectFit:'contain', opacity:0.3, borderRadius:6 }}/>}
+                </div>
+              ) : imageSrc ? (
                 <>
-                  <img src={imageSrc} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.8 }} />
+                  <img src={imageSrc} style={{ maxWidth:'100%', maxHeight:160, objectFit:'contain', borderRadius:8, opacity:0.85 }}/>
                   <div style={{
-                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: isHovered ? 1 : 0, transition: 'opacity 0.2s', color: '#fff', fontSize: 11, fontWeight: 700,
-                    pointerEvents: 'none'
-                  }}
-                  >
-                    <Upload size={14} style={{ marginRight: 5 }} /> Cambiar imagen
+                    position:'absolute', inset:0, background:'rgba(0,0,0,0.6)',
+                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:5,
+                    opacity: isHovered ? 1 : 0, transition:'opacity 0.2s', pointerEvents:'none'
+                  }}>
+                    <Upload size={16} color="#fff"/>
+                    <span style={{ fontSize:11, color:'#fff', fontWeight:700 }}>Cambiar imagen</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <Upload size={20} color="rgba(255,255,255,0.3)" />
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textAlign: 'center', padding: '0 10px' }}>
-                    Arrastra una imagen o haz clic aquí
+                  <Upload size={22} color="rgba(255,255,255,0.25)"/>
+                  <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', fontWeight:600, textAlign:'center', padding:'0 12px', lineHeight:1.5 }}>
+                    Arrastra una imagen aquí<br/>o haz clic para seleccionar
                   </span>
+                  <span style={{ fontSize:10, color:'rgba(255,255,255,0.18)', fontWeight:500 }}>PNG · JPG · WEBP · GIF</span>
                 </>
               )}
             </div>
 
-            {/* Sliders (Only if image is loaded) */}
-            {imageSrc && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Threshold Slider */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
-                    <span>UMBRAL DE DETALLE</span>
-                    <span style={{ color: '#2ECC71' }}>{edgeThreshold.toFixed(2)}</span>
-                  </div>
-                  <input
-                    type="range" min="0.05" max="0.60" step="0.01"
-                    value={edgeThreshold}
-                    onChange={e => setEdgeThreshold(parseFloat(e.target.value))}
-                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#5A6270' }}>
-                    <span>Más líneas</span>
-                    <span>Menos líneas</span>
-                  </div>
-                </div>
-
-                {/* Noise Filter Slider */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
-                    <span>FILTRO DE RUIDO (px)</span>
-                    <span style={{ color: '#2ECC71' }}>{minPathLen}px</span>
-                  </div>
-                  <input
-                    type="range" min="3" max="25" step="1"
-                    value={minPathLen}
-                    onChange={e => setMinPathLen(parseInt(e.target.value))}
-                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#5A6270' }}>
-                    <span>Detalle fino</span>
-                    <span>Trazos limpios</span>
-                  </div>
-                </div>
-
-                {/* Stroke Width Slider */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#8A9099' }}>
-                    <span>GROSOR DE LÍNEA</span>
-                    <span style={{ color: '#2ECC71' }}>{vectStrokeW.toFixed(1)}px</span>
-                  </div>
-                  <input
-                    type="range" min="1.0" max="5.0" step="0.1"
-                    value={vectStrokeW}
-                    onChange={e => setVectStrokeW(parseFloat(e.target.value))}
-                    style={{ width: '100%', accentColor: '#2ECC71', cursor: 'pointer', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
-                  />
-                </div>
-
-                {/* Estilo de Boceto Selector (Contorno vs Relleno) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#8A9099' }}>ESTILO DE BOCETO</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      onClick={() => setVectFillMode('none')}
-                      style={{
-                        flex: 1,
-                        padding: '6px 12px',
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: vectFillMode === 'none' ? 'rgba(46,204,113,0.15)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${vectFillMode === 'none' ? '#2ECC71' : 'rgba(255,255,255,0.08)'}`,
-                        color: vectFillMode === 'none' ? '#2ECC71' : '#8A9099',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      Solo Contorno
-                    </button>
-                    <button
-                      onClick={() => setVectFillMode('solid')}
-                      style={{
-                        flex: 1,
-                        padding: '6px 12px',
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: vectFillMode === 'solid' ? 'rgba(46,204,113,0.15)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${vectFillMode === 'solid' ? '#2ECC71' : 'rgba(255,255,255,0.08)'}`,
-                        color: vectFillMode === 'solid' ? '#2ECC71' : '#8A9099',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      Forma Rellena
-                    </button>
-                  </div>
-                </div>
-
-                {/* Processing status */}
-                {vectorizing && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px', borderRadius: 8, background: 'rgba(46,204,113,0.06)', border: '1px solid rgba(46,204,113,0.15)' }}>
-                    <div className="animate-spin" style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#2ECC71', borderRadius: '50%' }} />
-                    <span style={{ fontSize: 10, color: '#2ECC71', fontWeight: 700 }}>Procesando boceto...</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!imageSrc && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, textAlign: 'center', background: 'rgba(0,0,0,0.15)' }}>
-                <ImageIcon size={24} color="rgba(255,255,255,0.1)" />
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: '8px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
-                  Sube una imagen para ver la magia del boceto vectorial en la pizarra.
-                </p>
+            {/* Estado: imagen cargada y vectorizada */}
+            {imageSrc && !vectorizing && (
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 11px', borderRadius:9, background:'rgba(46,204,113,0.07)', border:'1px solid rgba(46,204,113,0.2)' }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#2ECC71', flexShrink:0 }}/>
+                <span style={{ fontSize:10, color:'#2ECC71', fontWeight:700 }}>
+                  Vectorización completa · Lista para guardar
+                </span>
               </div>
             )}
           </div>
