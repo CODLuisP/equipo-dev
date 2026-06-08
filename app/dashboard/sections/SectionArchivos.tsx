@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, RefObject } from "react";
 import {
   FolderOpen, UploadCloud, X, LinkIcon, ExternalLink, Download,
   FileText, Image as ImageIcon, FileCode, Archive, Film, Music,
-  Globe, Copy, Check, RefreshCw
+  Globe, Copy, Check, RefreshCw, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import ButtonBase from "@/components/ui/ButtonBase";
+import ArchivosBackground from "@/app/dashboard/sections/ArchivosBackground";
 import type { Member, SharedFile } from "@/app/dashboard/types";
 
 // ─── Floating File Card ───────────────────────────────────────────────────────
 
-function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: React.RefObject<HTMLDivElement>; }) {
+function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: RefObject<HTMLDivElement>; }) {
   const [pos, setPos] = useState({ x:file.x, y:file.y });
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -179,9 +180,10 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
 export default function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos: SharedFile[]; members: Member[]; currentUser: Member | null; onSave: (d: SharedFile[]) => void; }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [linkInput, setLinkInput]   = useState('');
-  const [showLink, setShowLink]     = useState(false);
+  const [isDragOver, setIsDragOver]       = useState(false);
+  const [linkInput, setLinkInput]         = useState('');
+  const [showLink, setShowLink]           = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
   const authorName = currentUser?.name || members[0]?.name || 'Equipo';
 
   const processFile = (file: File) => {
@@ -223,14 +225,23 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
                 <LinkIcon size={13}/> Pegar enlace
               </button>
               <input ref={fileInputRef} type="file" multiple className="hidden" onChange={e=>{Array.from(e.target.files||[]).forEach(processFile);e.target.value='';}}/>
+              {archivos.length > 0 && (
+                <button onClick={()=>setShowConfirmClear(true)}
+                  style={{ padding:"7px 10px", background:"rgba(239,68,68,0.07)", border:"1px solid rgba(239,68,68,0.18)", borderRadius:8, color:"#f87171", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:5, transition:"all 0.15s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(239,68,68,0.14)"; e.currentTarget.style.borderColor="rgba(239,68,68,0.35)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(239,68,68,0.07)"; e.currentTarget.style.borderColor="rgba(239,68,68,0.18)";}}>
+                  <Trash2 size={13}/> Limpiar todo
+                </button>
+              )}
               <ButtonBase onClick={()=>fileInputRef.current?.click()} className="flex items-center gap-2"><UploadCloud size={15}/> Subir archivo</ButtonBase>
             </>
           )}
         </div>
       </div>
-      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"#0D1017", backgroundImage:"radial-gradient(rgba(255,255,255,0.04) 1px, transparent 0)", backgroundSize:"32px 32px", border:isDragOver?"2px dashed #E85D2F":"1px solid rgba(255,255,255,0.06)", transition:"border-color 0.15s" }}
+      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"#080B12", border:isDragOver?"2px dashed #E85D2F":"1px solid rgba(255,255,255,0.06)", transition:"border-color 0.15s" }}
         onDragOver={e=>{e.preventDefault();setIsDragOver(true);}} onDragLeave={()=>setIsDragOver(false)}
         onDrop={e=>{e.preventDefault();setIsDragOver(false);Array.from(e.dataTransfer.files).forEach(processFile);}}>
+        <ArchivosBackground />
         {isDragOver && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm rounded-[16px] pointer-events-none">
             <UploadCloud size={52} className="text-[#E85D2F]"/>
@@ -247,6 +258,44 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
         {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
         <div className="absolute bottom-4 right-4 text-[10px] text-gray-800 font-bold uppercase tracking-widest pointer-events-none flex items-center gap-1.5"><FolderOpen size={10}/> Espacio compartido</div>
       </div>
+
+      {/* Modal confirmación limpiar todo */}
+      {showConfirmClear && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.65)', backdropFilter:'blur(6px)' }}
+          onMouseDown={e=>{ if (e.target===e.currentTarget) setShowConfirmClear(false); }}>
+          <div style={{ background:'rgba(14,17,24,0.98)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:18, padding:'28px 32px', width:360, display:'flex', flexDirection:'column', gap:20, boxShadow:'0 24px 64px rgba(0,0,0,0.8)', fontFamily:"'DM Sans',sans-serif" }}>
+            {/* Icono */}
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Trash2 size={18} color="#f87171"/>
+              </div>
+              <div>
+                <p style={{ margin:0, fontWeight:800, fontSize:15, color:'#F4F5F7', letterSpacing:'-0.3px' }}>¿Eliminar todo?</p>
+                <p style={{ margin:0, fontSize:12, color:'#5A6270', marginTop:3 }}>
+                  Se borrarán <span style={{ color:'#f87171', fontWeight:700 }}>{archivos.length} {archivos.length===1?'archivo':'archivos'}</span> del espacio compartido.
+                </p>
+              </div>
+            </div>
+            <p style={{ margin:0, fontSize:12, color:'#4A5060', lineHeight:1.6, borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:16 }}>
+              Esta acción no se puede deshacer. Los archivos subidos y enlaces agregados se eliminarán para todos.
+            </p>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setShowConfirmClear(false)}
+                style={{ flex:1, padding:'9px 0', borderRadius:10, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'#8A9099', fontSize:13, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.09)'; e.currentTarget.style.color='#F4F5F7';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='#8A9099';}}>
+                Cancelar
+              </button>
+              <button onClick={()=>{ onSave([]); setShowConfirmClear(false); toast.success('Espacio limpiado'); }}
+                style={{ flex:1, padding:'9px 0', borderRadius:10, background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.3)', color:'#f87171', fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,0.22)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.5)';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)';}}>
+                Sí, eliminar todo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

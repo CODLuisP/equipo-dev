@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import ButtonBase from "@/components/ui/ButtonBase";
 import InputBase1 from "@/components/ui/InputBase1";
+import BovedaBackground from "@/components/BovedaBackground";
 
 export interface VaultProject { 
   id: string; 
@@ -61,18 +62,19 @@ export function SectionBoveda({
 
   if (!isUnlocked) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="max-w-md w-full bg-[#1C1F26] border border-white/5 rounded-3xl p-10 text-center shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#E85D2F] to-transparent opacity-50" />
-          <div className="w-20 h-20 bg-[#E85D2F]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#E85D2F]/20">
-            <Shield size={40} className="text-[#E85D2F]" />
+      <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
+        <BovedaBackground />
+        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[#2563eb]/15 rounded-3xl p-10 text-center shadow-2xl backdrop-blur-sm" style={{ boxShadow: '0 0 60px rgba(37,99,235,0.08), 0 24px 64px rgba(0,0,0,0.6)' }}>
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#2563eb] to-transparent opacity-60" />
+          <div className="w-20 h-20 bg-[#2563eb]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#2563eb]/25" style={{ boxShadow: '0 0 32px rgba(37,99,235,0.15)' }}>
+            <Shield size={40} className="text-[#2563eb]" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Bóveda de Credenciales</h2>
           <p className="text-gray-500 text-sm mb-8">Esta sección está cifrada. Ingresa la contraseña del equipo para continuar.</p>
           <form onSubmit={handleUnlock} className="flex flex-col gap-4">
             <div className="relative">
               <input type="password" placeholder="Contraseña de acceso" value={pass} onChange={e => { setPass(e.target.value); setError(false); }}
-                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-4 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-[#E85D2F]/50`} autoFocus />
+                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-4 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-[#2563eb]/60`} autoFocus />
             </div>
             <ButtonBase type="submit" className="py-4 text-sm uppercase tracking-widest font-bold">Desbloquear Acceso</ButtonBase>
           </form>
@@ -86,7 +88,7 @@ export function SectionBoveda({
     <div className="flex flex-col h-full gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-           <span className="text-[10px] font-bold text-[#E85D2F] uppercase tracking-widest">Almacén Seguro</span>
+           <span className="text-[10px] font-bold text-[#2563eb] uppercase tracking-widest">Almacén Seguro</span>
            <h2 className="text-white font-bold text-2xl tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
         </div>
         <div className="flex items-center gap-3">
@@ -97,7 +99,7 @@ export function SectionBoveda({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pr-2 pb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto custom-scrollbar pr-1 pb-6">
         {projects.map(p => (
           <VaultCard key={p.id} project={p} onEdit={() => onEditProject(p)} onDelete={() => onDeleteProject(p)} onFullscreen={() => setFullViewProject(p)} />
         ))}
@@ -110,76 +112,70 @@ export function SectionBoveda({
       </div>
 
       {fullViewProject && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
-          <div className="max-w-6xl w-full h-full bg-[#1C1F26] border border-white/10 rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between bg-white/[0.02] gap-6">
-              <div className="flex items-center gap-4">
-                <div style={{ background: `${fullViewProject.color}20`, color: fullViewProject.color }} className="w-14 h-14 rounded-2xl flex items-center justify-center border border-white/5">
-                  <Archive size={28} />
-                </div>
-                <div>
-                  <h2 className="text-white font-bold text-2xl tracking-tight">{fullViewProject.name}</h2>
-                  <p className="text-gray-500 text-sm">Modo de búsqueda y lectura</p>
-                </div>
-              </div>
-              
-              <div className="flex-1 max-w-md relative group">
-                <Filter size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#E85D2F] transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar palabra o IP..." 
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
+          <div style={{ background:'#0C0E13', border:'1px solid rgba(255,255,255,0.08)' }} className="max-w-5xl w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+
+            {/* Header compacto — una sola barra */}
+            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex items-center gap-3 px-4 py-2 flex-shrink-0">
+              <span className="text-white font-semibold text-sm flex-shrink-0">{fullViewProject.name}</span>
+              {fullViewProject.description && <span className="text-gray-600 text-xs truncate">— {fullViewProject.description}</span>}
+
+              {/* Buscador inline */}
+              <div className="relative ml-auto flex-shrink-0">
+                <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600"/>
+                <input
+                  type="text"
+                  placeholder="Buscar..."
                   value={vaultSearchTerm}
                   onChange={e => setVaultSearchTerm(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-5 text-white outline-none focus:border-[#E85D2F]/50 transition-all font-medium placeholder:text-gray-700"
+                  style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:7, padding:'4px 10px 4px 26px', fontSize:12, color:'#d1d5db', outline:'none', width:160 }}
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Todo copiado"); }} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-gray-400 hover:text-white transition-all flex items-center gap-2 font-bold text-xs">
-                  <Copy size={18} /> COPIAR
-                </button>
-                <button onClick={() => { setFullViewProject(null); setVaultSearchTerm(''); }} className="p-4 bg-red-500/10 hover:bg-red-500/20 rounded-2xl text-red-500 transition-all">
-                  <X size={24} />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 p-8 overflow-hidden bg-black/20 relative">
-              <div className="w-full h-full bg-black/40 border border-white/5 rounded-3xl relative overflow-hidden shadow-inner">
-                {/* Highlight Layer (Behind) */}
-                <div 
-                  ref={vaultHighlightRef}
-                  className="absolute inset-0 p-8 text-sm md:text-lg font-mono whitespace-pre-wrap break-all leading-relaxed text-transparent pointer-events-none overflow-y-auto custom-scrollbar-none"
-                  dangerouslySetInnerHTML={{ __html: highlightMatches(fullViewProject.content + '\n', vaultSearchTerm) }}
-                />
-                {/* Editing Layer (Front) */}
-                <textarea
-                  ref={vaultTextareaRef}
-                  value={fullViewProject.content}
-                  onChange={e => {
-                    const newContent = e.target.value;
-                    setFullViewProject({ ...fullViewProject, content: newContent });
-                    onSaveVault(projects.map(p => p.id === fullViewProject.id ? { ...p, content: newContent } : p));
-                  }}
-                  onScroll={e => {
-                    if (vaultHighlightRef.current) {
-                      vaultHighlightRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
-                    }
-                  }}
-                  spellCheck={false}
-                  className="absolute inset-0 w-full h-full bg-transparent p-8 text-sm md:text-[12px] text-gray-300 font-mono outline-none resize-none whitespace-pre-wrap break-all leading-relaxed overflow-y-auto custom-scrollbar-lg"
-                  placeholder="Escribe tus credenciales aquí..."
-                />
-              </div>
+              <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Copiado"); }}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors flex-shrink-0"
+                style={{ fontSize:11, padding:'4px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:7 }}>
+                <Copy size={11}/> Copiar
+              </button>
+              <button onClick={() => { setFullViewProject(null); setVaultSearchTerm(''); }}
+                className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0 p-1 rounded">
+                <X size={16}/>
+              </button>
             </div>
 
-            <div className="p-6 flex items-center justify-between px-10 bg-black/20 border-t border-white/5">
-               <span className="text-[10px] text-gray-700 font-bold uppercase tracking-[0.2em]">Cifrado de Punto a Punto</span>
-               <div className="flex items-center gap-4 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                 <span>{fullViewProject.content.length} Caracteres</span>
-                 <span className="w-1 h-1 bg-gray-800 rounded-full" />
-                 <span>{fullViewProject.content.split('\n').length} Líneas</span>
-               </div>
+            {/* Editor */}
+            <div className="flex-1 overflow-hidden relative">
+              {/* Capa highlight */}
+              <div
+                ref={vaultHighlightRef}
+                className="absolute inset-0 pointer-events-none overflow-y-auto"
+                style={{ padding:'8px 12px', fontSize:13, lineHeight:'1.7', fontFamily:"'JetBrains Mono','Fira Mono',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', color:'transparent' }}
+                dangerouslySetInnerHTML={{ __html: highlightMatches(fullViewProject.content + '\n', vaultSearchTerm) }}
+              />
+              {/* Textarea editable */}
+              <textarea
+                ref={vaultTextareaRef}
+                value={fullViewProject.content}
+                onChange={e => {
+                  const v = e.target.value;
+                  setFullViewProject({ ...fullViewProject, content: v });
+                  onSaveVault(projects.map(p => p.id === fullViewProject.id ? { ...p, content: v } : p));
+                }}
+                onScroll={e => { if (vaultHighlightRef.current) vaultHighlightRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }}
+                spellCheck={false}
+                placeholder="Escribe tus credenciales aquí..."
+                className="absolute inset-0 w-full h-full bg-transparent outline-none resize-none overflow-y-auto custom-scrollbar-lg"
+                style={{ padding:'8px 12px', fontSize:13, lineHeight:'1.7', fontFamily:"'JetBrains Mono','Fira Mono',monospace", color:'#d1d5db', whiteSpace:'pre-wrap', wordBreak:'break-all', caretColor:'#2563eb' }}
+              />
+            </div>
+
+            {/* Footer mínimo */}
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)' }} className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
+              <span className="text-[10px] text-gray-800 font-mono">cifrado · equipo dev</span>
+              <div className="flex items-center gap-3 text-[10px] text-gray-700 font-mono">
+                <span>{fullViewProject.content.length} chars</span>
+                <span>{fullViewProject.content.split('\n').length} líneas</span>
+              </div>
             </div>
           </div>
         </div>
@@ -192,52 +188,42 @@ export function SectionBoveda({
 }
 
 // ─── Vault Card ───────────────────────────────────────────────────────────────
-function VaultCard({ project, onEdit, onDelete, onFullscreen }: { 
-  project: VaultProject; onEdit: () => void; onDelete: () => void; onFullscreen: () => void; 
+const LINE_H = 22; // px — line-height del editor
+
+function VaultCard({ project, onEdit, onDelete, onFullscreen }: {
+  project: VaultProject; onEdit: () => void; onDelete: () => void; onFullscreen: () => void;
 }) {
   return (
-    <div style={{ background:"#1C1F26", border:"1px solid rgba(255,255,255,0.06)" }} className="rounded-[28px] overflow-hidden flex flex-col group transition-all hover:border-white/10 shadow-xl">
-      <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-        <div className="flex items-center gap-3">
-          <div style={{ background: `${project.color}20`, color: project.color }} className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/5">
-            <Archive size={20} />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-sm leading-tight">{project.name}</h3>
-            <p className="text-[10px] text-gray-500 mt-0.5">{project.description || 'Credenciales de proyecto'}</p>
-          </div>
+    <div
+      onClick={onFullscreen}
+      style={{ background:"#0F1116", border:"1px solid rgba(255,255,255,0.07)", cursor:'pointer' }}
+      className="rounded-xl overflow-hidden flex flex-col group transition-all hover:border-white/14 shadow-lg"
+    >
+      {/* Header compacto */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-white font-semibold text-xs truncate">{project.name}</span>
+          {project.description && <span className="text-gray-600 text-[10px] truncate hidden sm:block">— {project.description}</span>}
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-          <button onClick={onEdit} className="p-1.5 text-gray-600 hover:text-white"><Settings size={14}/></button>
-          <button onClick={onDelete} className="p-1.5 text-gray-600 hover:text-red-500"><Trash2 size={14}/></button>
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" onClick={e=>e.stopPropagation()}>
+          <button onClick={onEdit}   className="p-1 text-gray-600 hover:text-white transition-colors rounded"><Settings size={12}/></button>
+          <button onClick={onDelete} className="p-1 text-gray-600 hover:text-red-500 transition-colors rounded"><Trash2 size={12}/></button>
+          <button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(project.content); toast.success("Copiado");}} className="p-1 text-gray-600 hover:text-white transition-colors rounded"><Copy size={12}/></button>
         </div>
       </div>
-      
-      <div className="p-5 flex flex-col gap-3">
-        <div 
-          onClick={onFullscreen}
-          className="p-4 bg-black/20 rounded-2xl border border-white/5 relative group/content cursor-pointer hover:bg-black/40 transition-colors"
-        >
-          <pre className="text-[11px] text-gray-300 font-mono whitespace-pre-wrap break-all leading-relaxed min-h-[60px] max-h-[150px] overflow-hidden">
-            {project.content || 'Sin contenido...'}
-          </pre>
-          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/content:opacity-100 transition-all">
-            <button 
-              onClick={(e) => { e.stopPropagation(); onFullscreen(); }}
-              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white"
-              title="Pantalla completa"
-            >
-              <Maximize size={12} />
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(project.content); toast.success("Contenido copiado"); }}
-              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white"
-              title="Copiar todo"
-            >
-              <Copy size={12} />
-            </button>
-          </div>
-        </div>
+
+      {/* Cuerpo */}
+      <div className="px-3 pt-2 pb-2 min-h-[110px] max-h-[154px] overflow-hidden relative">
+        <pre style={{ fontSize:11, lineHeight:'1.6', color:'#6b7280', fontFamily:"'JetBrains Mono','Fira Mono','Courier New',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', margin:0 }}>
+          {project.content || <span style={{color:'#374151', fontStyle:'italic', fontFamily:'sans-serif', fontSize:10}}>Sin contenido…</span>}
+        </pre>
+        <div className="absolute bottom-0 inset-x-0 h-8 pointer-events-none" style={{background:'linear-gradient(transparent,#0F1116)'}}/>
+      </div>
+
+      {/* Footer mínimo */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/4">
+        <span className="text-[9px] text-gray-700 font-mono">{project.content.split('\n').length} líneas</span>
+        <Maximize size={10} className="text-gray-700 group-hover:text-gray-500 transition-colors"/>
       </div>
     </div>
   );
@@ -276,6 +262,6 @@ function highlightMatches(text: string, term: string) {
   if (!term || term.length < 2) return text;
   try {
     const regex = new RegExp(`(${term})`, 'gi');
-    return text.replace(regex, '<mark style="background: #E85D2F; color: white; border-radius: 4px; padding: 0 2px;">$1</mark>');
+    return text.replace(regex, '<mark style="background: #2563eb; color: white; border-radius: 4px; padding: 0 2px;">$1</mark>');
   } catch { return text; }
 }
