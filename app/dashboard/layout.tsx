@@ -99,7 +99,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <Toaster {...toasterProps} />
 
       {/* ── Header ── */}
-      <header className={isPizarra ? "fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-auto" : "mb-4 flex-shrink-0"}>
+      <header className={isPizarra ? "fixed top-4 right-4 z-[1000] w-auto" : "mb-4 flex-shrink-0"}>
         <div
           className={isPizarra ? "px-2 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2" : "flex flex-col md:flex-row md:items-center justify-between gap-3 w-full"}
           style={isPizarra ? { background: "rgba(10,12,26,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(37,99,235,0.20)" } : {}}
@@ -142,17 +142,17 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
             {/* Nav tabs */}
             <div style={{
-              display: "flex", alignItems: "center", padding: 4, borderRadius: 11,
+              display: "flex", alignItems: "center", padding: isPizarra ? 2 : 4, borderRadius: 11,
               background: isPizarra ? "transparent" : "rgba(11,13,28,0.9)",
               border: isPizarra ? "none" : "1px solid rgba(37,99,235,0.15)",
-              flexWrap: "wrap", gap: 2,
+              flexWrap: "wrap", gap: isPizarra ? 1 : 2,
             }}>
               {NAV.map(({ href, icon, label }) => {
                 const active = pathname.startsWith(href);
                 return (
                   <Link key={href} href={href} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "6px 11px", borderRadius: 8,
+                    display: "flex", alignItems: "center", gap: isPizarra ? 4 : 6,
+                    padding: isPizarra ? "4px 7px" : "6px 11px", borderRadius: 8,
                     fontSize: 12, fontWeight: active ? 700 : 500,
                     color: active ? "#eef0fb" : "#6b7280",
                     background: active ? "rgba(37,99,235,0.14)" : "transparent",
@@ -227,8 +227,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {!isPizarra && isToolkitVisible && (
-          <div className="w-full lg:w-[400px] flex-shrink-0 animate-in slide-in-from-right duration-300">
-            <div className="sticky top-0 h-full max-h-[calc(100vh-120px)]">
+          <div className="w-full lg:w-[400px] flex-shrink-0 animate-in slide-in-from-right duration-300 h-full">
+            <div className="h-full">
               <DevToolkit members={members} currentUser={currentUser} />
             </div>
           </div>

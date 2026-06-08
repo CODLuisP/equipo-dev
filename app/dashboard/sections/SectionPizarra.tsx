@@ -1797,7 +1797,7 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         onClose={()=>setShowManager(false)}
       />
     )}
-    <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
+    <div style={{ position:'fixed', right: 16, top: 16, zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
       <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#2563eb' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#2563eb':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
         onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(37,99,235,0.5)'; } }}
@@ -1807,7 +1807,7 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         </svg>
       </button>
       {isVisible && (
-        <div style={{ position:'absolute', right:'calc(100% + 12px)', top:'50%', transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:226, maxHeight:'80vh', overflowY:'auto', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:12 }}>
+        <div style={{ position:'fixed', top:'50%', right:16, transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:226, maxHeight:'80vh', overflowY:'auto', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:12 }}>
 
           {/* Acciones */}
           <div style={{ display:'flex', gap:6 }}>

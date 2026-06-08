@@ -49,7 +49,7 @@ export function SectionBoveda({
 
   const vaultTextareaRef = useRef<HTMLTextAreaElement>(null);
   const vaultHighlightRef = useRef<HTMLDivElement>(null);
-  const SHARED_PASS = "dev123"; // Contraseña compartida inicial
+  const SHARED_PASS = "dev123";
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +65,7 @@ export function SectionBoveda({
       <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
         <BovedaBackground />
         <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[#2563eb]/15 rounded-3xl p-10 text-center shadow-2xl backdrop-blur-sm" style={{ boxShadow: '0 0 60px rgba(37,99,235,0.08), 0 24px 64px rgba(0,0,0,0.6)' }}>
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#2563eb] to-transparent opacity-60" />
+          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-[#2563eb] to-transparent opacity-60" />
           <div className="w-20 h-20 bg-[#2563eb]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#2563eb]/25" style={{ boxShadow: '0 0 32px rgba(37,99,235,0.15)' }}>
             <Shield size={40} className="text-[#2563eb]" />
           </div>
@@ -104,7 +104,7 @@ export function SectionBoveda({
           <VaultCard key={p.id} project={p} onEdit={() => onEditProject(p)} onDelete={() => onDeleteProject(p)} onFullscreen={() => setFullViewProject(p)} />
         ))}
         {projects.length === 0 && (
-          <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[32px]">
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-4xl">
             <Shield size={48} className="mx-auto text-white/5 mb-4" />
             <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">No hay proyectos en la bóveda</p>
           </div>
@@ -112,16 +112,16 @@ export function SectionBoveda({
       </div>
 
       {fullViewProject && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
+        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
           <div style={{ background:'#0C0E13', border:'1px solid rgba(255,255,255,0.08)' }} className="max-w-5xl w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
             {/* Header compacto — una sola barra */}
-            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex items-center gap-3 px-4 py-2 flex-shrink-0">
-              <span className="text-white font-semibold text-sm flex-shrink-0">{fullViewProject.name}</span>
+            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex items-center gap-3 px-4 py-2 shrink-0">
+              <span className="text-white font-semibold text-sm shrink-0">{fullViewProject.name}</span>
               {fullViewProject.description && <span className="text-gray-600 text-xs truncate">— {fullViewProject.description}</span>}
 
               {/* Buscador inline */}
-              <div className="relative ml-auto flex-shrink-0">
+              <div className="relative ml-auto shrink-0">
                 <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600"/>
                 <input
                   type="text"
@@ -133,12 +133,12 @@ export function SectionBoveda({
               </div>
 
               <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Copiado"); }}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors flex-shrink-0"
+                className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors shrink-0"
                 style={{ fontSize:11, padding:'4px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:7 }}>
                 <Copy size={11}/> Copiar
               </button>
               <button onClick={() => { setFullViewProject(null); setVaultSearchTerm(''); }}
-                className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0 p-1 rounded">
+                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 p-1 rounded">
                 <X size={16}/>
               </button>
             </div>
@@ -170,7 +170,7 @@ export function SectionBoveda({
             </div>
 
             {/* Footer mínimo */}
-            <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)' }} className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)' }} className="flex items-center justify-between px-4 py-1.5 shrink-0">
               <span className="text-[10px] text-gray-800 font-mono">cifrado · equipo dev</span>
               <div className="flex items-center gap-3 text-[10px] text-gray-700 font-mono">
                 <span>{fullViewProject.content.length} chars</span>
@@ -205,7 +205,7 @@ function VaultCard({ project, onEdit, onDelete, onFullscreen }: {
           <span className="text-white font-semibold text-xs truncate">{project.name}</span>
           {project.description && <span className="text-gray-600 text-[10px] truncate hidden sm:block">— {project.description}</span>}
         </div>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" onClick={e=>e.stopPropagation()}>
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0" onClick={e=>e.stopPropagation()}>
           <button onClick={onEdit}   className="p-1 text-gray-600 hover:text-white transition-colors rounded"><Settings size={12}/></button>
           <button onClick={onDelete} className="p-1 text-gray-600 hover:text-red-500 transition-colors rounded"><Trash2 size={12}/></button>
           <button onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(project.content); toast.success("Copiado");}} className="p-1 text-gray-600 hover:text-white transition-colors rounded"><Copy size={12}/></button>
@@ -213,7 +213,7 @@ function VaultCard({ project, onEdit, onDelete, onFullscreen }: {
       </div>
 
       {/* Cuerpo */}
-      <div className="px-3 pt-2 pb-2 min-h-[110px] max-h-[154px] overflow-hidden relative">
+      <div className="px-3 pt-2 pb-2 min-h-27.5 max-h-38.5 overflow-hidden relative">
         <pre style={{ fontSize:11, lineHeight:'1.6', color:'#6b7280', fontFamily:"'JetBrains Mono','Fira Mono','Courier New',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', margin:0 }}>
           {project.content || <span style={{color:'#374151', fontStyle:'italic', fontFamily:'sans-serif', fontSize:10}}>Sin contenido…</span>}
         </pre>

@@ -328,7 +328,27 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   // DevTools
   const [toolInput, setToolInput]   = useState('');
   const [toolOutput, setToolOutput] = useState('');
-  const [toolType, setToolType]     = useState<'json' | 'sql' | 'unit'>('json');
+  const [toolType, setToolType]     = useState<'json' | 'sql' | 'unit' | 'ts'>('json');
+
+  // Timestamp converter
+  const [tsInput, setTsInput]   = useState('');
+  const [tsResult, setTsResult] = useState<{ local: string; iso: string; rfc: string } | null>(null);
+
+  const handleConvertTs = () => {
+    const raw = tsInput.trim();
+    if (!raw) { toast.error("Ingresa un timestamp"); return; }
+    const num = Number(raw);
+    if (isNaN(num)) { toast.error("Timestamp inválido"); return; }
+    // Detectar si es segundos (10 dígitos) o milisegundos (13 dígitos)
+    const ms = raw.length <= 10 ? num * 1000 : num;
+    const d  = new Date(ms);
+    if (isNaN(d.getTime())) { toast.error("Timestamp inválido"); return; }
+    const local = d.toLocaleString('en-US', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+      month: '2-digit', day: '2-digit', year: 'numeric',
+    });
+    setTsResult({ local, iso: d.toISOString(), rfc: d.toUTCString() });
+  };
 
   // Staging
   const [links] = useState<StagingLink[]>([
@@ -580,23 +600,99 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
           {/* ── DEV TOOLS ── */}
           {activeTab === 'tools' && (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-              <div style={{ display:'flex', gap:8 }}>
-                {(['json','sql','unit'] as const).map(t => {
-                  const colors = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22' };
-                  return <button key={t} onClick={() => setToolType(t)} style={{ padding:'6px 10px', borderRadius:8, border:'1px solid', borderColor: toolType===t ? colors[t] : 'rgba(255,255,255,0.1)', background: toolType===t ? `${colors[t]}18` : 'transparent', color: toolType===t ? colors[t] : '#fff', fontSize:10, cursor:'pointer' }}>{t.toUpperCase()}</button>;
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {(['json','sql','unit','ts'] as const).map(t => {
+                  const tabColors: Record<string,string> = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22', ts:'#2563eb' };
+                  const tabLabels: Record<string,string> = { json:'JSON', sql:'SQL', unit:'px↔rem', ts:'Timestamp' };
+                  const c = tabColors[t];
+                  return (
+                    <button key={t} onClick={() => setToolType(t)} style={{
+                      padding:'6px 10px', borderRadius:8, border:'1px solid',
+                      borderColor: toolType===t ? c : 'rgba(255,255,255,0.1)',
+                      background: toolType===t ? `${c}18` : 'transparent',
+                      color: toolType===t ? c : 'rgba(255,255,255,0.45)',
+                      fontSize:10, fontWeight:700, cursor:'pointer', transition:'all 0.15s',
+                    }}>{tabLabels[t]}</button>
+                  );
                 })}
               </div>
-              <textarea placeholder="Pega aquí tu código…" value={toolInput} onChange={e => setToolInput(e.target.value)}
-                style={{ width:'100%', height:100, background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, padding:12, color:'#fff', fontSize:11, fontFamily:'monospace', resize:'none', outline:'none', boxSizing:'border-box' }} />
-              <button onClick={toolType==='json'?handleFormatJSON:toolType==='sql'?handleFormatSQL:handleUnitConvert}
-                style={{ padding:10, borderRadius:12, background:'#3498DB', border:'none', color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                <Zap size={14}/> Procesar {toolType.toUpperCase()}
-              </button>
-              {toolOutput && (
-                <div style={{ position:'relative' }}>
-                  <pre style={{ margin:0, padding:12, background:'rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, color:'#27AE60', fontSize:10, overflowX:'auto', maxHeight:150 }}>{toolOutput}</pre>
-                  <button onClick={copyOutput} style={{ position:'absolute', top:8, right:8, padding:5, background:'rgba(255,255,255,0.05)', border:'none', borderRadius:6, color:'#fff', cursor:'pointer' }}><Copy size={12}/></button>
+
+              {/* Timestamp converter */}
+              {toolType === 'ts' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  <p style={{ margin:0, fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.1em' }}>
+                    UNIX Timestamp → Fecha
+                  </p>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input
+                      type="text"
+                      placeholder="ej: 1749369838"
+                      value={tsInput}
+                      onChange={e => { setTsInput(e.target.value); setTsResult(null); }}
+                      onKeyDown={e => e.key === 'Enter' && handleConvertTs()}
+                      style={{ flex:1, background:'rgba(0,0,0,0.35)', border:'1px solid rgba(37,99,235,0.25)', borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12, fontFamily:'monospace', outline:'none', boxSizing:'border-box' }}
+                    />
+                    <button onClick={handleConvertTs} style={{
+                      padding:'9px 14px', borderRadius:10, background:'#2563eb', border:'none',
+                      color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer',
+                      display:'flex', alignItems:'center', gap:6, flexShrink:0,
+                    }}>
+                      <Zap size={13}/> Convertir
+                    </button>
+                  </div>
+
+                  {/* Botón "Ahora" */}
+                  <button onClick={() => { const now = String(Math.floor(Date.now()/1000)); setTsInput(now); setTsResult(null); }}
+                    style={{ alignSelf:'flex-start', padding:'4px 10px', borderRadius:7, background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.25)', color:'#60a5fa', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+                    Usar timestamp actual
+                  </button>
+
+                  {tsResult && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                      {[
+                        { label:'Local', value: tsResult.local },
+                        { label:'ISO 8601', value: tsResult.iso },
+                        { label:'RFC 2822', value: tsResult.rfc },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{
+                          padding:'10px 12px',
+                          background:'rgba(15,18,28,0.8)', borderRadius:10,
+                          border:'1px solid rgba(255,255,255,0.06)',
+                          borderLeft:'3px solid #2563eb',
+                        }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
+                            <span style={{ fontSize:9, fontWeight:900, color:'#ffffff', textTransform:'uppercase', letterSpacing:'0.1em' }}>{label}</span>
+                            <button onClick={() => { navigator.clipboard.writeText(value); toast.success("Copiado"); }}
+                              style={{ padding:4, background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.2)', color:'#60a5fa', cursor:'pointer', borderRadius:6, transition:'all 0.15s', display:'flex' }}
+                              onMouseEnter={e => { e.currentTarget.style.background='rgba(37,99,235,0.25)'; e.currentTarget.style.borderColor='rgba(37,99,235,0.5)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background='rgba(37,99,235,0.1)'; e.currentTarget.style.borderColor='rgba(37,99,235,0.2)'; }}>
+                              <Copy size={10}/>
+                            </button>
+                          </div>
+                          <span style={{ fontSize:13, fontWeight:600, color:'#e2e8f0', fontFamily:'monospace', wordBreak:'break-all', lineHeight:1.4 }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Otras herramientas */}
+              {toolType !== 'ts' && (
+                <>
+                  <textarea placeholder="Pega aquí tu código…" value={toolInput} onChange={e => setToolInput(e.target.value)}
+                    style={{ width:'100%', height:100, background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, padding:12, color:'#fff', fontSize:11, fontFamily:'monospace', resize:'none', outline:'none', boxSizing:'border-box' }} />
+                  <button onClick={toolType==='json'?handleFormatJSON:toolType==='sql'?handleFormatSQL:handleUnitConvert}
+                    style={{ padding:10, borderRadius:12, background:'#3498DB', border:'none', color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                    <Zap size={14}/> Procesar {toolType.toUpperCase()}
+                  </button>
+                  {toolOutput && (
+                    <div style={{ position:'relative' }}>
+                      <pre style={{ margin:0, padding:12, background:'rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, color:'#27AE60', fontSize:10, overflowX:'auto', maxHeight:150 }}>{toolOutput}</pre>
+                      <button onClick={copyOutput} style={{ position:'absolute', top:8, right:8, padding:5, background:'rgba(255,255,255,0.05)', border:'none', borderRadius:6, color:'#fff', cursor:'pointer' }}><Copy size={12}/></button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
