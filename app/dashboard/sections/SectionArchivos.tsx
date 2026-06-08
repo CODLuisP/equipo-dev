@@ -12,9 +12,10 @@ import type { Member, SharedFile } from "@/app/dashboard/types";
 
 // ─── Floating File Card ───────────────────────────────────────────────────────
 
-function FloatingFileCard({ file, onDelete, onDrop }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; }) {
+function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: React.RefObject<HTMLDivElement>; }) {
   const [pos, setPos] = useState({ x:file.x, y:file.y });
   const [isDragging, setIsDragging] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [showShare, setShowShare] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [publicLink, setPublicLink] = useState('');
@@ -102,16 +103,28 @@ function FloatingFileCard({ file, onDelete, onDrop }: { file: SharedFile; onDele
   };
 
   useEffect(() => {
-    const onMM=(e:MouseEvent)=>{ if (!isDragging) return; setPos(p=>({x:p.x+e.movementX,y:p.y+e.movementY})); };
+    const onMM=(e:MouseEvent)=>{
+      if (!isDragging) return;
+      setPos(p=>{
+        const container = containerRef.current;
+        const card = cardRef.current;
+        const maxX = container ? container.clientWidth  - (card?.offsetWidth  ?? 215) : Infinity;
+        const maxY = container ? container.clientHeight - (card?.offsetHeight ?? 180) : Infinity;
+        return {
+          x: Math.max(0, Math.min(p.x + e.movementX, maxX)),
+          y: Math.max(0, Math.min(p.y + e.movementY, maxY)),
+        };
+      });
+    };
     const onMU=()=>{ if (isDragging) { setIsDragging(false); onDrop(file.id,pos.x,pos.y); } };
     if (isDragging) { window.addEventListener('mousemove',onMM); window.addEventListener('mouseup',onMU); }
     return ()=>{ window.removeEventListener('mousemove',onMM); window.removeEventListener('mouseup',onMU); };
-  }, [isDragging, pos, file.id, onDrop]);
+  }, [isDragging, pos, file.id, onDrop, containerRef]);
 
   const { icon, accent, label } = getTypeInfo();
 
   return (
-    <div style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, boxShadow:isDragging?`0 20px 60px rgba(0,0,0,0.7),0 0 0 2px ${accent}50`:`0 8px 28px rgba(0,0,0,0.5),0 0 0 1px ${accent}15`, transition:isDragging?'none':'box-shadow 0.2s', userSelect:'none' }}
+    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, boxShadow:isDragging?`0 20px 60px rgba(0,0,0,0.7),0 0 0 2px ${accent}50`:`0 8px 28px rgba(0,0,0,0.5),0 0 0 1px ${accent}15`, transition:isDragging?'none':'box-shadow 0.2s', userSelect:'none' }}
       onMouseDown={e=>{ if ((e.target as HTMLElement).closest('button')) return; setIsDragging(true); }}>
       <div style={{ background:`linear-gradient(135deg,${accent}20 0%,${accent}07 100%)`, borderBottom:`1px solid ${accent}18`, padding:'14px 14px 10px' }}>
         <div className="flex items-start justify-between mb-2">
@@ -165,6 +178,7 @@ function FloatingFileCard({ file, onDelete, onDrop }: { file: SharedFile; onDele
 
 export default function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos: SharedFile[]; members: Member[]; currentUser: Member | null; onSave: (d: SharedFile[]) => void; }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [linkInput, setLinkInput]   = useState('');
   const [showLink, setShowLink]     = useState(false);
@@ -214,7 +228,7 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
           )}
         </div>
       </div>
-      <div style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"#0D1017", backgroundImage:"radial-gradient(rgba(255,255,255,0.04) 1px, transparent 0)", backgroundSize:"32px 32px", border:isDragOver?"2px dashed #E85D2F":"1px solid rgba(255,255,255,0.06)", transition:"border-color 0.15s" }}
+      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"#0D1017", backgroundImage:"radial-gradient(rgba(255,255,255,0.04) 1px, transparent 0)", backgroundSize:"32px 32px", border:isDragOver?"2px dashed #E85D2F":"1px solid rgba(255,255,255,0.06)", transition:"border-color 0.15s" }}
         onDragOver={e=>{e.preventDefault();setIsDragOver(true);}} onDragLeave={()=>setIsDragOver(false)}
         onDrop={e=>{e.preventDefault();setIsDragOver(false);Array.from(e.dataTransfer.files).forEach(processFile);}}>
         {isDragOver && (
@@ -230,7 +244,7 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
             <p className="text-xs uppercase tracking-widest">Arrastra archivos o usa el botón de arriba</p>
           </div>
         )}
-        {archivos.map(a=><FloatingFileCard key={a.id} file={a} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
+        {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
         <div className="absolute bottom-4 right-4 text-[10px] text-gray-800 font-bold uppercase tracking-widest pointer-events-none flex items-center gap-1.5"><FolderOpen size={10}/> Espacio compartido</div>
       </div>
     </div>

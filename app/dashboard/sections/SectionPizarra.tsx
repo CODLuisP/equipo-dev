@@ -128,12 +128,24 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       } else if (resizeDir) {
         const dx = e.movementX / zoom;
         const dy = e.movementY / zoom;
+        const corner = (resizeDir === 'nw' || resizeDir === 'ne' || resizeDir === 'sw' || resizeDir === 'se');
         setPos(p => {
           let { x, y, fs, w } = p;
-          if (resizeDir.includes('e') && w > 0) w = Math.max(50, w + dx);
-          if (resizeDir.includes('w') && w > 0) { x += dx; w = Math.max(50, w - dx); }
-          if (resizeDir.includes('s')) fs = Math.max(8, fs + dy);
-          if (resizeDir.includes('n')) { fs = Math.max(8, fs - dy); y += dy; }
+          if (corner) {
+            // Esquinas: escala uniforme — fontSize Y ancho proporcional
+            const delta = resizeDir.includes('s') ? dy : -dy;
+            const newFs = Math.max(8, fs + delta);
+            const ratio = newFs / fs;
+            if (w > 0) w = Math.max(50, w * ratio);
+            fs = newFs;
+            if (resizeDir.includes('n')) y += dy;
+          } else {
+            // Bordes medios: cambio independiente de ancho o alto
+            if (resizeDir === 'e' && w > 0) w = Math.max(50, w + dx);
+            if (resizeDir === 'w' && w > 0) { x += dx; w = Math.max(50, w - dx); }
+            if (resizeDir === 's') fs = Math.max(8, fs + dy);
+            if (resizeDir === 'n') { fs = Math.max(8, fs - dy); y += dy; }
+          }
           return { x, y, fs, w };
         });
       }
@@ -1287,9 +1299,9 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const FILL_COLORS = ['none', '#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#94a3b8', '#000000'];
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}
       onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
-      <div style={{background:'rgba(12,15,22,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:20,display:'flex',flexDirection:'column',gap:16,boxShadow:'0 32px 80px rgba(0,0,0,0.85)',width:660,maxWidth:'95vw'}}>
+      <div style={{background:'rgba(12,15,22,0.99)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:20,display:'flex',flexDirection:'column',gap:16,boxShadow:'0 32px 80px rgba(0,0,0,0.85)',width:660,maxWidth:'95vw',marginTop:12,marginRight:12}}>
 
         {/* Header */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -3282,7 +3294,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             ref={textareaRef}
             autoFocus
             className="bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
-            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: 22, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
+            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', textAlign, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
             value={editingText.content}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}

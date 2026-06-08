@@ -72,13 +72,11 @@ export default function ButtonBase({
       onMouseEnter={e => {
         if (!disabled) {
           (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
-          if (variant === 'primary') (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
         }
       }}
       onMouseLeave={e => {
         if (!disabled) {
           (e.currentTarget as HTMLButtonElement).style.background = v.bg;
-          (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
         }
       }}
     >
