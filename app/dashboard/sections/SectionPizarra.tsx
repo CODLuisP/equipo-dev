@@ -31,7 +31,7 @@ function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React
   );
 }
 
-function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, stackIndex = 1 }: any) {
+function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onContextMenu, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x:image.x, y:image.y, w:image.width, h:image.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir]   = useState<string|null>(null);
@@ -80,7 +80,9 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   const shadow = `0 10px 30px rgba(0,0,0,${isSelected ? 0.5 : 0.3})`;
   return (
     <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:stackIndex,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
-      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }} className="group select-none">
+      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
+      onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); onSelect(); onContextMenu?.(e.clientX, e.clientY); }}
+      className="group select-none">
       <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
@@ -288,14 +290,17 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
         </div>
       )}
 
-      <p className={isText ? 'font-bold' : 'text-xs text-gray-200 leading-relaxed'}
+      <p className={isText ? '' : 'text-xs text-gray-200 leading-relaxed'}
          style={{
            color: isText ? note.color : undefined,
            fontSize: isText ? pos.fs : undefined,
-           lineHeight: isText ? 1 : undefined,
+           lineHeight: isText ? 1.2 : undefined,
+           fontFamily: isText ? (note.fontFamily || "'Plus Jakarta Sans', sans-serif") : undefined,
+           textAlign: isText ? (note.textAlign || 'left') : undefined,
+           fontWeight: isText ? (note.fontWeight || 'bold') : undefined,
            margin: 0,
            padding: 0,
-           whiteSpace: isText ? 'pre-wrap' : 'pre-wrap',
+           whiteSpace: 'pre-wrap',
            wordBreak: isText ? 'break-word' : undefined,
            overflowWrap: isText ? 'anywhere' : undefined
          }}>
@@ -395,7 +400,7 @@ function ShapeSvg({ type, color, width, height, customTemplates }: { type: strin
   );
 }
 
-function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, stackIndex = 1 }: any) {
+function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onContextMenu, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
@@ -454,6 +459,7 @@ function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zo
   return (
     <div ref={elemDivRef} style={{ position:'absolute', left: pos.x+dx, top: pos.y+dy, width: pos.w, display:'flex', flexDirection:'column', alignItems:'center', cursor: disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')), zIndex: stackIndex, userSelect:'none', pointerEvents:'auto', transform:`rotate(${localRotation}deg)` }}
       onMouseDown={e => { if (disabled) return; e.stopPropagation(); if (isInMultiSelect) { onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
+      onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); onSelect(); onContextMenu?.(e.clientX, e.clientY); }}
       className="group select-none">
       {isSelected && !disabled && <RotateHandle onMouseDown={handleRotateStart}/>}
       <div style={{ position:'relative', width: pos.w, height: pos.h, border, borderRadius: 3 }}>
@@ -1261,14 +1267,19 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   const handleSave = () => {
     if (strokes.length === 0) return;
     const bb = calcBBox(strokes);
-    const bw=Math.max(bb.maxX-bb.minX,1),bh=Math.max(bb.maxY-bb.minY,1);
-    const nx=(x:number)=>(x-bb.minX)/bw*100;
-    const ny=(y:number)=>(y-bb.minY)/bh*100;
-    const svgContent = strokes.map(s=>strokeToSvgStr(s,nx,ny)).join('');
-    const aspect=bw/bh;
-    const dw=Math.min(Math.round(aspect>=1?100:100*aspect),120);
-    const dh=Math.min(Math.round(aspect>=1?100/aspect:100),120);
-    onSave({id:crypto.randomUUID(),label:label.trim()||'Mi Forma',svgContent,viewBox:'0 0 100 100',defaultW:dw,defaultH:dh});
+    const bw = Math.max(bb.maxX - bb.minX, 1);
+    const bh = Math.max(bb.maxY - bb.minY, 1);
+    // viewBox con aspect ratio real del contenido → sin letterboxing al renderizar en la pizarra
+    const vbW = 100;
+    const vbH = Math.max(1, Math.round(100 * bh / bw));
+    const nx = (x: number) => (x - bb.minX) / bw * vbW;
+    const ny = (y: number) => (y - bb.minY) / bh * vbH;
+    const svgContent = strokes.map(s => strokeToSvgStr(s, nx, ny)).join('');
+    const aspect = bw / bh;
+    const BASE = 120;
+    const dw = Math.min(Math.round(aspect >= 1 ? BASE : BASE * aspect), 160);
+    const dh = Math.min(Math.round(aspect >= 1 ? BASE / aspect : BASE), 160);
+    onSave({ id: crypto.randomUUID(), label: label.trim() || 'Mi Forma', svgContent, viewBox: `0 0 ${vbW} ${vbH}`, defaultW: dw, defaultH: dh });
   };
 
   const preview = buildPreview();
@@ -1678,12 +1689,102 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
   );
 }
 
-function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor, customTemplates, onDeleteCustom, onOpenEditor, selectedPathCount, onSaveSelectionAsShape }: {
+function MyShapesManager({ customTemplates, onDelete, onRename, onClose }: {
+  customTemplates: CustomShape[]; onDelete: (id:string)=>void; onRename: (id:string, label:string)=>void; onClose: ()=>void;
+}) {
+  const [editingId, setEditingId] = useState<string|null>(null);
+  const [editingVal, setEditingVal] = useState('');
+
+  const startEdit = (sh: CustomShape) => { setEditingId(sh.id); setEditingVal(sh.label); };
+  const commitEdit = () => {
+    if (editingId && editingVal.trim()) onRename(editingId, editingVal.trim());
+    setEditingId(null);
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:99998, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)' }}
+      onMouseDown={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:'rgba(18,21,28,0.98)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:20, padding:24, width:480, maxWidth:'92vw', maxHeight:'80vh', display:'flex', flexDirection:'column', gap:16, boxShadow:'0 32px 80px rgba(0,0,0,0.7)', fontFamily:"'DM Sans',sans-serif" }}>
+
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <p style={{ margin:0, fontWeight:800, fontSize:15, color:'#F4F5F7' }}>Mis Formas</p>
+            <p style={{ margin:'2px 0 0', fontSize:11, color:'#5A6270' }}>{customTemplates.length} forma{customTemplates.length!==1?'s':''} guardada{customTemplates.length!==1?'s':''}</p>
+          </div>
+          <button onClick={onClose} style={{ width:28, height:28, borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#8A9099', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg viewBox="0 0 10 10" width={10} height={10} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg>
+          </button>
+        </div>
+
+        {/* Lista */}
+        <div style={{ overflowY:'auto', display:'flex', flexDirection:'column', gap:8, maxHeight:'55vh' }}>
+          {customTemplates.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'32px 0', color:'rgba(255,255,255,0.2)', fontSize:12 }}>
+              No tienes formas guardadas todavía
+            </div>
+          ) : customTemplates.map(sh => (
+            <div key={sh.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, transition:'border-color 0.15s' }}
+              onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.13)'}
+              onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}>
+
+              {/* Preview */}
+              <div style={{ width:44, height:44, background:'rgba(255,255,255,0.04)', borderRadius:10, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,0.06)' }}>
+                <ShapeSvg type={sh.id} color="#60a5fa" width={34} height={34} customTemplates={customTemplates}/>
+              </div>
+
+              {/* Nombre editable */}
+              <div style={{ flex:1, minWidth:0 }}>
+                {editingId === sh.id ? (
+                  <input
+                    autoFocus
+                    value={editingVal}
+                    onChange={e=>setEditingVal(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={e=>{ if(e.key==='Enter') commitEdit(); if(e.key==='Escape') setEditingId(null); }}
+                    style={{ width:'100%', background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.5)', borderRadius:7, padding:'4px 8px', color:'#F4F5F7', fontSize:13, fontWeight:600, outline:'none', fontFamily:"'DM Sans',sans-serif" }}
+                  />
+                ) : (
+                  <button onClick={()=>startEdit(sh)} title="Editar nombre"
+                    style={{ background:'none', border:'none', padding:'2px 4px', borderRadius:6, cursor:'text', textAlign:'left', width:'100%', display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:'#D4D8E8', fontFamily:"'DM Sans',sans-serif", overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sh.label}</span>
+                    <svg viewBox="0 0 12 12" width={10} height={10} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink:0 }}><path d="M1 9l2 2 7-7-2-2-7 7z"/></svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Botón eliminar */}
+              <button onClick={()=>onDelete(sh.id)} title="Eliminar forma"
+                style={{ width:30, height:30, borderRadius:8, background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.15)', color:'#f87171', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}
+                onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.2)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.4)'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.15)'; }}>
+                <Trash2 size={13}/>
+              </button>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColor, customTemplates, onDeleteCustom, onRenameCustom, onOpenEditor, selectedPathCount, onSaveSelectionAsShape }: {
   isVisible: boolean; onToggle: () => void; onAddShape: (t:string)=>void; onDragStart: (t:string, e:React.MouseEvent)=>void; defaultColor: string;
-  customTemplates: CustomShape[]; onDeleteCustom: (id:string)=>void; onOpenEditor: ()=>void;
+  customTemplates: CustomShape[]; onDeleteCustom: (id:string)=>void; onRenameCustom: (id:string, label:string)=>void; onOpenEditor: ()=>void;
   selectedPathCount: number; onSaveSelectionAsShape: ()=>void;
 }) {
+  const [showManager, setShowManager] = useState(false);
   return (
+    <>
+    {showManager && (
+      <MyShapesManager
+        customTemplates={customTemplates}
+        onDelete={id=>{ onDeleteCustom(id); if(customTemplates.length<=1) setShowManager(false); }}
+        onRename={onRenameCustom}
+        onClose={()=>setShowManager(false)}
+      />
+    )}
     <div style={{ position:'fixed', right: 24, top:'50%', transform:'translateY(-50%)', zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
       <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#2563eb' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#2563eb':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
@@ -1718,33 +1819,31 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
             )}
           </div>
 
-          {/* Formas custom */}
+          {/* Mis formas — grid para arrastrar */}
           {customTemplates.length > 0 && (
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <p style={{ fontSize:10, fontWeight:800, color:'#2ECC71', textTransform:'uppercase', letterSpacing:'0.1em', margin:0, padding:'0 2px' }}>Mis Formas</p>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
                 {customTemplates.map(sh => (
-                  <div key={sh.id} style={{ position:'relative' }}>
-                    <button
-                      title={sh.label}
-                      onMouseDown={e => { e.preventDefault(); onDragStart(sh.id, e); }}
-                      style={{ width:'100%', display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(46,204,113,0.05)', border:'1px solid rgba(46,204,113,0.15)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
-                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.14)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.4)'; }}
-                      onMouseLeave={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.05)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.15)'; }}>
-                      <ShapeSvg type={sh.id} color={defaultColor} width={34} height={34} customTemplates={customTemplates}/>
-                      <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none' }}>{sh.label}</span>
-                    </button>
-                    <button onClick={()=>onDeleteCustom(sh.id)} title="Eliminar forma"
-                      style={{ position:'absolute', top:2, right:2, width:14, height:14, borderRadius:'50%', background:'rgba(231,76,60,0.8)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', opacity:0, transition:'opacity 0.15s' }}
-                      onMouseEnter={e=>{e.currentTarget.style.opacity='1';}}
-                      onMouseLeave={e=>{e.currentTarget.style.opacity='0';}}
-                      onFocus={e=>{e.currentTarget.style.opacity='1';}}
-                      onBlur={e=>{e.currentTarget.style.opacity='0';}}>
-                      <svg viewBox="0 0 8 8" width={8} height={8} fill="none" stroke="#fff" strokeWidth="2"><path d="M2 2l4 4M6 2l-4 4"/></svg>
-                    </button>
-                  </div>
+                  <button key={sh.id}
+                    title={sh.label}
+                    onMouseDown={e => { e.preventDefault(); onDragStart(sh.id, e); }}
+                    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px 8px', background:'rgba(46,204,113,0.05)', border:'1px solid rgba(46,204,113,0.15)', borderRadius:11, cursor:'grab', transition:'all 0.15s', userSelect:'none' }}
+                    onMouseEnter={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.14)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.4)'; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.background='rgba(46,204,113,0.05)'; e.currentTarget.style.borderColor='rgba(46,204,113,0.15)'; }}>
+                    <ShapeSvg type={sh.id} color={defaultColor} width={34} height={34} customTemplates={customTemplates}/>
+                    <span style={{ fontSize:9, color:'#8A9099', fontFamily:"'DM Sans',sans-serif", textAlign:'center', lineHeight:1.25, pointerEvents:'none', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', width:'100%' }}>{sh.label}</span>
+                  </button>
                 ))}
               </div>
+              {/* Botón gestionar */}
+              <button onClick={()=>setShowManager(true)}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'6px 10px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:9, cursor:'pointer', color:'#8A9099', fontSize:10, fontWeight:700, transition:'all 0.15s', width:'100%' }}
+                onMouseEnter={e=>{ e.currentTarget.style.background='rgba(255,255,255,0.08)'; e.currentTarget.style.color='#D4D8E8'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='#8A9099'; }}>
+                <svg viewBox="0 0 14 14" width={11} height={11} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><path d="M7 5v4M5 7h4"/></svg>
+                Ver y editar mis formas
+              </button>
             </div>
           )}
 
@@ -1768,6 +1867,7 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -1810,6 +1910,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [offset, setOffset]     = useState({ x:0, y:0 });
   const [zoom, setZoom]         = useState(1);
   const [selectedId, setSelectedId] = useState<string|null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x:number; y:number; id:string; kind:'image'|'shape' }|null>(null);
   const [currentColor, setCurrentColor] = useState('#F4F5F7');
   const [editingText, setEditingText] = useState<{ x: number, y: number, content: string, id?: string } | null>(null);
   const [isMarqueeing, setIsMarqueeing]           = useState(false);
@@ -1835,7 +1936,76 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
   const pathLiveRotRef = useRef<{angle:number;cx:number;cy:number}|null>(null);
 
-  const colors = ['#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171'];
+  const colors = ['#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#e879f9'];
+  const [pencilWidth, setPencilWidth] = useState(3);
+  const [textFontFamily, setTextFontFamily] = useState("'Plus Jakarta Sans', sans-serif");
+  const [textFontSize, setTextFontSize]     = useState(18);
+  const [textAlign, setTextAlign]           = useState<'left'|'center'|'right'>('left');
+  const [textBold, setTextBold]             = useState(false);
+
+  // Elementos seleccionados: path(s) o nota de texto
+  const selectedPathArr = [...selectedPathIndices].map(i => drawings[i]).filter(Boolean);
+  const hasSelectedPaths = selectedPathArr.length > 0;
+  const selectedTextNote = selectedId ? notes.find(n => n.id === selectedId && n.type === 'text') : null;
+  const hasSelectedText  = !!selectedTextNote;
+
+  // Sincronizar panel cuando cambia la selección de paths
+  const prevPathIdxKey = useRef('');
+  useEffect(() => {
+    const key = [...selectedPathIndices].sort().join(',');
+    if (key === prevPathIdxKey.current) return;
+    prevPathIdxKey.current = key;
+    if (selectedPathIndices.size > 0) {
+      const path = drawings[[...selectedPathIndices][0]];
+      if (path) {
+        setCurrentColor(path.color);
+        const rawW = path.width * zoom;
+        const closest = [3,5,10,18].reduce((a,b) => Math.abs(b-rawW) < Math.abs(a-rawW) ? b : a);
+        setPencilWidth(closest);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPathIndices]);
+
+  // Sincronizar panel cuando cambia la selección de nota de texto
+  useEffect(() => {
+    if (!selectedId) return;
+    const note = notes.find(n => n.id === selectedId && n.type === 'text');
+    if (note) {
+      setCurrentColor(note.color || '#F4F5F7');
+      if (note.fontFamily) setTextFontFamily(note.fontFamily);
+      if (note.fontSize)   setTextFontSize(note.fontSize);
+      if (note.textAlign)  setTextAlign(note.textAlign);
+      if (note.fontWeight) setTextBold(note.fontWeight === 'bold');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  // Aplicar color a paths/texto seleccionados + actualizar estado
+  const applyColor = (c: string) => {
+    setCurrentColor(c);
+    if (hasSelectedPaths) {
+      onSaveDrawings(drawings.map((d, i) => selectedPathIndices.has(i) ? { ...d, color: c } : d));
+    }
+    if (hasSelectedText && selectedId) {
+      onSaveNotes(notes.map(n => n.id === selectedId ? { ...n, color: c } : n));
+    }
+  };
+
+  // Aplicar grosor a paths seleccionados + actualizar estado
+  const applyWidth = (w: number) => {
+    setPencilWidth(w);
+    if (hasSelectedPaths) {
+      onSaveDrawings(drawings.map((d, i) => selectedPathIndices.has(i) ? { ...d, width: w / zoom } : d));
+    }
+  };
+
+  // Aplicar tipografía a nota de texto seleccionada
+  const applyTextProp = (patch: Partial<Note>) => {
+    if (hasSelectedText && selectedId) {
+      onSaveNotes(notes.map(n => n.id === selectedId ? { ...n, ...patch } : n));
+    }
+  };
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
@@ -1850,8 +2020,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if (rect) {
         const worldX = (editingText.x - rect.left - offset.x) / zoom;
         const worldY = (editingText.y - rect.top - offset.y) / zoom;
+        const textProps = { color: currentColor, type: 'text' as const, fontSize: textFontSize, fontFamily: textFontFamily, textAlign, fontWeight: textBold ? 'bold' as const : 'normal' as const };
         if (editingText.id) {
-          onSaveNotes(notes.map(n => n.id === editingText.id ? { ...n, content: editingText.content, x: worldX, y: worldY, color: currentColor, type: 'text' } : n));
+          onSaveNotes(notes.map(n => n.id === editingText.id ? { ...n, content: editingText.content, x: worldX, y: worldY, ...textProps } : n));
           setSelectedId(editingText.id);
         } else {
           const id = crypto.randomUUID();
@@ -1862,8 +2033,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             createdAt: Date.now(),
             x: worldX,
             y: worldY,
-            color: currentColor,
-            type: 'text'
+            ...textProps,
           }]);
           setSelectedId(id);
         }
@@ -1898,6 +2068,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     setCurrentColor(note.color || currentColor);
+    if (note.fontFamily)  setTextFontFamily(note.fontFamily);
+    if (note.fontSize)    setTextFontSize(note.fontSize);
+    if (note.textAlign)   setTextAlign(note.textAlign);
+    if (note.fontWeight)  setTextBold(note.fontWeight === 'bold');
+    setTool('text');
     setEditingText({
       id: note.id,
       content: note.content,
@@ -1958,6 +2133,72 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     pushToHistory();
     onSaveImages(images.map(img => img.id === selectedId ? { ...img, zOrder } : img));
   };
+
+  const reorderElement = (id: string, kind: 'image' | 'shape', mode: 'front' | 'back' | 'up' | 'down') => {
+    const orders = getLayerOrders().sort((a, b) => a - b);
+    if (kind === 'image') {
+      const el = images.find(i => i.id === id); if (!el) return;
+      const cur = el.zOrder ?? images.indexOf(el);
+      let z = cur;
+      if (mode === 'front') z = (orders.at(-1) ?? cur) + 1;
+      if (mode === 'back')  z = (orders[0] ?? cur) - 1;
+      if (mode === 'up')    z = (orders.find(o => o > cur) ?? cur) + 1;
+      if (mode === 'down')  { const low = [...orders].reverse().find(o => o < cur); z = (low ?? cur) - 1; }
+      if (z === cur) return;
+      pushToHistory();
+      onSaveImages(images.map(i => i.id === id ? { ...i, zOrder: z } : i));
+    } else {
+      const el = shapes.find(s => s.id === id); if (!el) return;
+      const cur = el.zOrder ?? shapes.indexOf(el);
+      let z = cur;
+      if (mode === 'front') z = (orders.at(-1) ?? cur) + 1;
+      if (mode === 'back')  z = (orders[0] ?? cur) - 1;
+      if (mode === 'up')    z = (orders.find(o => o > cur) ?? cur) + 1;
+      if (mode === 'down')  { const low = [...orders].reverse().find(o => o < cur); z = (low ?? cur) - 1; }
+      if (z === cur) return;
+      pushToHistory();
+      onSaveShapes(shapes.map(s => s.id === id ? { ...s, zOrder: z } : s));
+    }
+  };
+
+  // Copiar / Cortar / Pegar desde menú contextual
+  const copyElement = useCallback((id: string, kind: 'image' | 'shape') => {
+    if (kind === 'image') {
+      const img = images.find(i => i.id === id); if (!img) return;
+      setClipboard({ kind: 'board-selection', images: [img], shapes: [], notes: [], drawings: [] });
+    } else {
+      const shape = shapes.find(s => s.id === id); if (!shape) return;
+      setClipboard({ kind: 'board-selection', images: [], shapes: [shape], notes: [], drawings: [] });
+    }
+    toast.success('Copiado');
+  }, [images, shapes, setClipboard]);
+
+  const cutElement = useCallback((id: string, kind: 'image' | 'shape') => {
+    if (kind === 'image') {
+      const img = images.find(i => i.id === id); if (!img) return;
+      setClipboard({ kind: 'board-selection', images: [img], shapes: [], notes: [], drawings: [] });
+      pushToHistory(); onDeleteImage(img);
+    } else {
+      const shape = shapes.find(s => s.id === id); if (!shape) return;
+      setClipboard({ kind: 'board-selection', images: [], shapes: [shape], notes: [], drawings: [] });
+      pushToHistory(); onSaveShapes(shapes.filter(s => s.id !== id));
+    }
+    setSelectedId(null); setCtxMenu(null);
+    toast.success('Cortado');
+  }, [images, shapes, setClipboard, pushToHistory, onDeleteImage, onSaveShapes]);
+
+  const pasteFromCtx = useCallback(() => {
+    if (!clipboard || clipboard.kind !== 'board-selection') return;
+    pushToHistory();
+    const newImages = (clipboard.images || []).map((img: BoardImage) => ({ ...img, id: crypto.randomUUID(), x: img.x + 20, y: img.y + 20, zOrder: Date.now() }));
+    const newShapes = (clipboard.shapes || []).map((s: BoardShape) => ({ ...s, id: crypto.randomUUID(), x: s.x + 20, y: s.y + 20, zOrder: Date.now() }));
+    const newNotes  = (clipboard.notes  || []).map((n: Note)       => ({ ...n,  id: crypto.randomUUID(), x: n.x + 20, y: n.y + 20, createdAt: Date.now() }));
+    if (newImages.length) onSaveImages([...images, ...newImages]);
+    if (newShapes.length) onSaveShapes([...shapes, ...newShapes]);
+    if (newNotes.length)  onSaveNotes([...notes, ...newNotes]);
+    setClipboard({ ...clipboard, images: newImages, shapes: newShapes, notes: newNotes });
+    toast.success('Pegado');
+  }, [clipboard, images, shapes, notes, pushToHistory, onSaveImages, onSaveShapes, onSaveNotes, setClipboard]);
 
   const exportBoardPng = async () => {
     const allX: number[] = [], allY: number[] = [];
@@ -2112,6 +2353,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       setSelectedId(null);
       setSelectedIds(new Set());
       setSelectedPathIndices(new Set());
+      setCtxMenu(null);
     };
 
     const deleteSelection = () => {
@@ -2560,7 +2802,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
-      onSaveDrawings([...drawings, { points:[{x,y}], color:currentColor, width:3/zoom, zOrder: Date.now() }]);
+      onSaveDrawings([...drawings, { points:[{x,y}], color:currentColor, width:pencilWidth/zoom, zOrder: Date.now() }]);
     }
     if (tool==='eraser') {
       pushToHistory(); setIsDrawing(true);
@@ -2760,7 +3002,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         const cx=(sx+ex)/2,cy=(sy+ey)/2,rx=Math.abs(ex-sx)/2,ry=Math.abs(ey-sy)/2;
         pts=Array.from({length:65},(_,i)=>{const a=(i/64)*Math.PI*2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};});
       }
-      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:2/zoom,zOrder:Date.now()}]);
+      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:pencilWidth/zoom,zOrder:Date.now()}]);
       setShapeStart(null); setShapeCurrent(null);
     }
     if (tool==='laser') laserIsDrawingRef.current=false;
@@ -2803,7 +3045,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   return (
     <div className="h-full relative overflow-hidden">
       {/* Shapes Panel (Right Center) */}
-      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onOpenEditor={() => { setShowShapesPanel(false); setShowShapeEditor(true); }} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
+      <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onRenameCustom={(id, label) => onSaveCustomShapes(customShapes.map(s=>s.id===id?{...s,label}:s))} onOpenEditor={() => { setShowShapesPanel(false); setShowShapeEditor(true); }} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
       {showShapeEditor && <ShapeEditor onSave={shape => { onSaveCustomShapes([...customShapes, shape]); setShowShapeEditor(false); toast.success(`"${shape.label}" guardada en Mis Formas`); }} onCancel={() => setShowShapeEditor(false)} />}
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display:'none' }} />
 
@@ -2814,15 +3056,76 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         </div>
       )}
 
-      {/* Floating Color Palette (Left Center) */}
-      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line'].includes(tool)) && (
-        <div className="fixed left-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3 bg-[#1C1F26]/60 backdrop-blur-xl p-3 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 rotate-180 [writing-mode:vertical-lr]">Colores</div>
-          {colors.map(c => (
-            <button key={c} onClick={() => setCurrentColor(c)}
-              className={`w-7 h-7 rounded-full border-2 transition-all ${currentColor === c ? 'border-white scale-125 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-transparent hover:scale-110'}`}
-              style={{ background: c }} />
-          ))}
+      {/* Panel herramientas de dibujo: colores + grosor + tipografía */}
+      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line'].includes(tool) || hasSelectedPaths || hasSelectedText) && (
+        <div style={{ position:'fixed', left:16, top:16, zIndex:1000, background:'rgba(18,22,30,0.92)', backdropFilter:'blur(20px)', borderRadius:14, border:'1px solid rgba(255,255,255,0.09)', boxShadow:'0 12px 40px rgba(0,0,0,0.55)', padding:'7px', width: tool === 'text' ? 160 : 'auto' }}>
+
+          {/* Grosores — para lápiz, formas y texto */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3, marginBottom:6 }}>
+            {[{ w:3, r:3 }, { w:5, r:5 }, { w:10, r:7 }, { w:18, r:10 }].map(({ w, r }) => (
+              <button key={w} onClick={() => applyWidth(w)}
+                title={`${w}px`}
+                style={{ width:26, height:26, borderRadius:7, background: pencilWidth===w ? 'rgba(37,99,235,0.25)' : 'rgba(255,255,255,0.04)', border: pencilWidth===w ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}>
+                <div style={{ width:r*2, height:r*2, borderRadius:'50%', background: pencilWidth===w ? currentColor : 'rgba(255,255,255,0.4)', transition:'all 0.15s' }}/>
+              </button>
+            ))}
+          </div>
+          <div style={{ height:1, background:'rgba(255,255,255,0.07)', marginBottom:6 }}/>
+
+          {/* Opciones de texto — herramienta texto o nota de texto seleccionada */}
+          {(tool === 'text' || hasSelectedText) && (<>
+            {/* Familia de fuente */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, marginBottom:5 }}>
+              {([
+                { key:"'Plus Jakarta Sans', sans-serif", label:'Sans' },
+                { key:"'DM Sans', sans-serif",           label:'DM' },
+                { key:"'Georgia', serif",                label:'Serif' },
+                { key:"'Courier New', monospace",        label:'Mono' },
+              ] as {key:string;label:string}[]).map(f => (
+                <button key={f.key} onClick={() => { setTextFontFamily(f.key); applyTextProp({ fontFamily: f.key }); }}
+                  style={{ padding:'3px 0', borderRadius:6, background: textFontFamily===f.key ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textFontFamily===f.key ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontFamily===f.key ? '#93c5fd' : 'rgba(255,255,255,0.55)', fontSize:10, fontFamily:f.key, cursor:'pointer', transition:'all 0.15s' }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tamaño de fuente */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3, marginBottom:5 }}>
+              {[14, 18, 28, 42].map(sz => (
+                <button key={sz} onClick={() => { setTextFontSize(sz); applyTextProp({ fontSize: sz }); }}
+                  style={{ padding:'3px 0', borderRadius:6, background: textFontSize===sz ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textFontSize===sz ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontSize===sz ? '#93c5fd' : 'rgba(255,255,255,0.55)', fontSize: sz > 28 ? 12 : 10, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>
+                  {sz}
+                </button>
+              ))}
+            </div>
+
+            {/* Alineación + Negrita */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3, marginBottom:6 }}>
+              {([
+                { val:'left',   icon:<svg viewBox="0 0 14 14" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="1" y1="3" x2="13" y2="3"/><line x1="1" y1="6" x2="9" y2="6"/><line x1="1" y1="9" x2="13" y2="9"/><line x1="1" y1="12" x2="7" y2="12"/></svg>, label:'izq' },
+                { val:'center', icon:<svg viewBox="0 0 14 14" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="1" y1="3" x2="13" y2="3"/><line x1="3" y1="6" x2="11" y2="6"/><line x1="1" y1="9" x2="13" y2="9"/><line x1="3" y1="12" x2="11" y2="12"/></svg>, label:'ctr' },
+                { val:'right',  icon:<svg viewBox="0 0 14 14" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="1" y1="3" x2="13" y2="3"/><line x1="5" y1="6" x2="13" y2="6"/><line x1="1" y1="9" x2="13" y2="9"/><line x1="7" y1="12" x2="13" y2="12"/></svg>, label:'der' },
+              ] as {val:'left'|'center'|'right'; icon:React.ReactNode; label:string}[]).map(a => (
+                <button key={a.val} onClick={() => { setTextAlign(a.val); applyTextProp({ textAlign: a.val }); }}
+                  style={{ width:26, height:26, borderRadius:6, background: textAlign===a.val ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textAlign===a.val ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textAlign===a.val ? '#93c5fd' : 'rgba(255,255,255,0.45)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
+                  {a.icon}
+                </button>
+              ))}
+              <button onClick={() => { const nb = !textBold; setTextBold(nb); applyTextProp({ fontWeight: nb ? 'bold' : 'normal' }); }}
+                style={{ width:26, height:26, borderRadius:6, background: textBold ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textBold ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textBold ? '#93c5fd' : 'rgba(255,255,255,0.45)', fontWeight:800, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s', fontFamily:'sans-serif' }}>
+                B
+              </button>
+            </div>
+            <div style={{ height:1, background:'rgba(255,255,255,0.07)', marginBottom:6 }}/>
+          </>)}
+
+          {/* Colores en grid de 4 columnas */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3 }}>
+            {colors.map(c => (
+              <button key={c} onClick={() => applyColor(c)}
+                style={{ width:24, height:24, borderRadius:7, background:c, border: currentColor===c ? '2px solid #fff' : '2px solid rgba(255,255,255,0.08)', outline: currentColor===c ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset:1, cursor:'pointer', transition:'all 0.12s', transform: currentColor===c ? 'scale(1.12)' : 'scale(1)', boxShadow: 'none' }}/>
+            ))}
+          </div>
         </div>
       )}
 
@@ -2861,15 +3164,62 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           </button>
         </div>
 
-      {hasSelectedImage && (
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl" onMouseDown={e => e.stopPropagation()}>
-          <div className="flex items-center justify-center gap-2 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            <Layers size={13}/> Capa
-          </div>
-          <ToolBtn active={false} onClick={() => reorderSelectedImage('front')} icon={<BringToFront size={17}/>} title="Traer al frente"/>
-          <ToolBtn active={false} onClick={() => reorderSelectedImage('up')} icon={<ArrowUp size={17}/>} title="Subir capa"/>
-          <ToolBtn active={false} onClick={() => reorderSelectedImage('down')} icon={<ArrowDown size={17}/>} title="Bajar capa"/>
-          <ToolBtn active={false} onClick={() => reorderSelectedImage('back')} icon={<SendToBack size={17}/>} title="Enviar al fondo"/>
+      {/* Menú contextual (clic derecho sobre imagen o forma) */}
+      {ctxMenu && (
+        <div style={{ position:'fixed', left: ctxMenu.x, top: ctxMenu.y, zIndex:99999, background:'rgba(18,21,28,0.97)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:12, padding:'5px 0', minWidth:200, boxShadow:'0 16px 48px rgba(0,0,0,0.6)', backdropFilter:'blur(20px)', fontFamily:"'DM Sans',sans-serif" }}
+          onMouseLeave={()=>setCtxMenu(null)}>
+
+          {/* Copiar / Cortar / Pegar */}
+          {([
+            { label:'Copiar',  icon:<svg viewBox="0 0 14 14" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M2 10V2h8"/></svg>, kbd:'⌘C', fn:()=>{ copyElement(ctxMenu.id, ctxMenu.kind); setCtxMenu(null); } },
+            { label:'Cortar',  icon:<svg viewBox="0 0 14 14" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 2l10 10M6 8l-3 3a1.5 1.5 0 002 2l4-4M8 6l3-3a1.5 1.5 0 00-2-2L5 5"/></svg>, kbd:'⌘X', fn:()=>{ cutElement(ctxMenu.id, ctxMenu.kind); } },
+            { label:'Pegar',   icon:<svg viewBox="0 0 14 14" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="8" height="8" rx="1.5"/><path d="M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1"/></svg>, kbd:'⌘V', fn:()=>{ pasteFromCtx(); setCtxMenu(null); }, disabled:!clipboard || clipboard.kind!=='board-selection' },
+          ]).map(item => (
+            <button key={item.label}
+              onClick={item.disabled ? undefined : item.fn}
+              style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'7px 14px', background:'none', border:'none', color: item.disabled ? 'rgba(255,255,255,0.2)' : '#C8CCDA', fontSize:12, fontWeight:600, cursor: item.disabled ? 'default' : 'pointer', textAlign:'left' }}
+              onMouseEnter={e=>{ if(!item.disabled) e.currentTarget.style.background='rgba(255,255,255,0.07)'; }}
+              onMouseLeave={e=>e.currentTarget.style.background='none'}>
+              <span style={{ color: item.disabled ? 'rgba(255,255,255,0.15)' : '#6B7280' }}>{item.icon}</span>
+              <span style={{ flex:1 }}>{item.label}</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)', fontWeight:500 }}>{item.kbd}</span>
+            </button>
+          ))}
+
+          <div style={{ height:1, background:'rgba(255,255,255,0.08)', margin:'4px 0' }}/>
+
+          {/* Capas */}
+          {([
+            { label:'Traer al frente', icon:<BringToFront size={13}/>, action:'front' },
+            { label:'Subir capa',      icon:<ArrowUp size={13}/>,      action:'up'    },
+            { label:'Bajar capa',      icon:<ArrowDown size={13}/>,    action:'down'  },
+            { label:'Enviar al fondo', icon:<SendToBack size={13}/>,   action:'back'  },
+          ] as const).map(item => (
+            <button key={item.action}
+              onClick={()=>{ reorderElement(ctxMenu.id, ctxMenu.kind, item.action); setCtxMenu(null); }}
+              style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'7px 14px', background:'none', border:'none', color:'#C8CCDA', fontSize:12, fontWeight:600, cursor:'pointer', textAlign:'left' }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.07)'}
+              onMouseLeave={e=>e.currentTarget.style.background='none'}>
+              <span style={{ color:'#6B7280' }}>{item.icon}</span>
+              <span style={{ flex:1 }}>{item.label}</span>
+            </button>
+          ))}
+
+          <div style={{ height:1, background:'rgba(255,255,255,0.08)', margin:'4px 0' }}/>
+
+          {/* Eliminar */}
+          <button
+            onClick={()=>{
+              if (ctxMenu.kind==='image') { const img=images.find(i=>i.id===ctxMenu.id); if(img){ pushToHistory(); onDeleteImage(img); } }
+              else { pushToHistory(); onSaveShapes(shapes.filter(s=>s.id!==ctxMenu.id)); }
+              setSelectedId(null); setCtxMenu(null);
+            }}
+            style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'7px 14px', background:'none', border:'none', color:'#f87171', fontSize:12, fontWeight:600, cursor:'pointer', textAlign:'left' }}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.08)'}
+            onMouseLeave={e=>e.currentTarget.style.background='none'}>
+            <Trash2 size={13}/> <span style={{ flex:1 }}>Eliminar</span>
+            <span style={{ fontSize:10, color:'rgba(239,68,68,0.4)', fontWeight:500 }}>⌫</span>
+          </button>
         </div>
       )}
 
@@ -2890,11 +3240,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             .map((el, stackIdx) => {
               if (el.kind === 'image') {
                 const img = el.data;
-                return <DraggableImage key={img.id} image={img} stackIndex={stackIdx + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+                return <DraggableImage key={img.id} image={img} stackIndex={stackIdx + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:img.id,kind:'image'})}/>;
               }
               if (el.kind === 'shape') {
                 const s = el.data;
-                return <DraggableShape key={s.id} shape={s} customTemplates={customShapes} stackIndex={stackIdx + 1} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+                return <DraggableShape key={s.id} shape={s} customTemplates={customShapes} stackIndex={stackIdx + 1} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:s.id,kind:'shape'})}/>;
               }
               if (el.kind === 'path') {
                 const p = el.data;
@@ -3042,7 +3392,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         {/* Shape preview while dragging */}
         {shapeStart && shapeCurrent && (() => {
           const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
-          const common={stroke:currentColor,strokeWidth:2/zoom,fill:'none',strokeDasharray:`${6/zoom},${4/zoom}`,strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
+          const common={stroke:currentColor,strokeWidth:pencilWidth/zoom,fill:'none',strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
           let shape: React.ReactElement|null=null;
           if (tool==='line') {
             shape=<line {...common} x1={sx} y1={sy} x2={ex} y2={ey}/>;
