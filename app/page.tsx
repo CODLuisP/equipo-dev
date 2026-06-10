@@ -4,11 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import * as THREE from "three";
-
-const USERS = [
-  { username: "dev", password: "velsat" },
-  { username: "admin", password: "dev2025" },
-];
+import { api } from "@/lib/api";
 
 /* ─────────────────────────────────────────────
    Three.js helpers (same as WhoAreYouScreen)
@@ -136,17 +132,19 @@ function buildProgrammer(scene: THREE.Scene, posX: number, type: 0 | 1 | 2) {
 export default function LoginPage() {
   const router        = useRouter();
   const canvasRef     = useRef<HTMLCanvasElement>(null);
-  const [username, setUsername]         = useState("");
   const [password, setPassword]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]               = useState("");
   const [loading, setLoading]           = useState(false);
-  const [mounted, setMounted]           = useState(false);
+  const [ready, setReady]               = useState(false); // true solo si NO hay sesión
 
   useEffect(() => {
-    setMounted(true);
-    const s = sessionStorage.getItem("equipo_dev_session");
-    if (s) router.replace("/dashboard");
+    const token = localStorage.getItem("equipo_dev_token");
+    if (token) {
+      router.replace("/dashboard"); // redirige sin mostrar nada
+    } else {
+      setReady(true); // sin sesión → mostrar login
+    }
   }, [router]);
 
   /* Three.js scene — right panel */
@@ -235,23 +233,22 @@ export default function LoginPage() {
     animate();
 
     return () => { cancelAnimationFrame(animId); ro.disconnect(); renderer.dispose(); };
-  }, [mounted]);
+  }, [ready]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(""); setLoading(true);
-    await new Promise(r => setTimeout(r, 500));
-    const match = USERS.find(u => u.username === username.trim().toLowerCase() && u.password === password);
-    if (match) {
-      sessionStorage.setItem("equipo_dev_session", JSON.stringify({ user: match.username, at: Date.now() }));
+    try {
+      const { token } = await api.login(password);
+      localStorage.setItem("equipo_dev_token", token);
       router.push("/dashboard");
-    } else {
-      setError("Credenciales incorrectas. Verifica tu usuario y contraseña.");
+    } catch {
+      setError("Contraseña incorrecta. Inténtalo de nuevo.");
       setLoading(false);
     }
   };
 
-  if (!mounted) return null;
+  if (!ready) return null;
 
   const inputStyle = (hasError: boolean): React.CSSProperties => ({
     background: "rgba(8,10,20,0.75)",
@@ -338,7 +335,7 @@ export default function LoginPage() {
           <div style={{ position:"absolute", top:0, left:0, bottom:0, width:"35%", background:"linear-gradient(to right, #07091a 0%, rgba(8,10,20,0.5) 55%, transparent 100%)", pointerEvents:"none", zIndex:2 }} />
 
           {/* Form */}
-          <div style={{ width:"100%", maxWidth:360, position:"relative", zIndex:3 }}>
+          <div  style={{ width:"100%", maxWidth:360, position:"relative", zIndex:3 }}>
             <div className="fade-up delay-1" style={{ position:"relative" }}>
 
               {/* Capas inclinadas */}
@@ -346,24 +343,19 @@ export default function LoginPage() {
               <div className="login-card-back-1" style={{ position:"absolute", inset:0, borderRadius:22, background:"rgba(37,99,235,0.42)", border:"1px solid rgba(37,99,235,0.32)", transform:"rotate(2deg) translate(4px,3px)", transformOrigin:"bottom center", zIndex:1 }} />
 
               {/* Card principal */}
-              <div className="login-card-main" style={{ position:"relative", zIndex:2, background:"rgba(10,13,28,0.92)", border:"1px solid rgba(37,99,235,0.22)", borderRadius:22, padding:"36px 32px 32px", boxShadow:"0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(37,99,235,0.06)", backdropFilter:"blur(20px)" }}>
+              <div className="login-card-main " style={{ position:"relative", zIndex:2, background:"rgba(10,13,28,0.92)", border:"1px solid rgba(37,99,235,0.22)", borderRadius:22, padding:"36px 32px 32px", backdropFilter:"blur(20px)" }}>
 
                 <div style={{ marginBottom:28 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
                     <img src="/assets/logo.png" alt="Logo" style={{ height:26, width:"auto" }} />
-                    <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:22, fontWeight:800, color:"#eef0fb", margin:0, letterSpacing:"-0.5px" }}>Iniciar sesión</h2>
+                    <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:22, fontWeight:800, color:"#eef0fb", margin:0, letterSpacing:"-0.5px" }}>Acceso al equipo</h2>
                   </div>
-                  <p style={{ fontSize:12, color:"#4a5570", margin:0 }}>Accede al panel de gestión del equipo</p>
+                  <p style={{ fontSize:12, color:"#4a5570", margin:0 }}>Ingresa la contraseña compartida del equipo</p>
                 </div>
 
                 <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:16 }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    <label style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:"#8b91b8" }}>Usuario</label>
-                    <input className="login-input" type="text" value={username} onChange={e=>setUsername(e.target.value)} placeholder="tu usuario" required autoComplete="username" style={inputStyle(!!error)} />
-                  </div>
-
-                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    <label style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:"#8b91b8" }}>Contraseña</label>
+                    <label style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:"#8b91b8" }}>Contraseña del equipo</label>
                     <div style={{ position:"relative" }}>
                       <input className="login-input" type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" style={{ ...inputStyle(!!error), padding:"11px 42px 11px 14px" }} />
                       <button type="button" onClick={()=>setShowPassword(!showPassword)}
@@ -382,7 +374,7 @@ export default function LoginPage() {
                   )}
 
                   <button type="submit" disabled={loading}
-                    style={{ marginTop:6, background:loading?"rgba(37,99,235,0.35)":"#2563eb", border:"none", borderRadius:12, padding:"13px 20px", color:"#fff", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"background 0.15s, transform 0.15s, box-shadow 0.15s", width:"100%", fontFamily:"'Plus Jakarta Sans',sans-serif", boxShadow:"0 4px 20px rgba(37,99,235,0.35)" }}
+                    style={{ marginTop:6, background:loading?"rgba(37,99,235,0.35)":"#2563eb", border:"none", borderRadius:12, padding:"13px 20px", color:"#fff", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"background 0.15s, transform 0.15s, box-shadow 0.15s", width:"100%", fontFamily:"'Plus Jakarta Sans',sans-serif" }}
                     onMouseEnter={e=>{if(!loading){e.currentTarget.style.background="#1d4ed8";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(37,99,235,0.55)";}}}
                     onMouseLeave={e=>{e.currentTarget.style.background=loading?"rgba(37,99,235,0.35)":"#2563eb";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 20px rgba(37,99,235,0.35)";}}
                     onMouseDown={e=>{if(!loading)e.currentTarget.style.transform="translateY(0)";}}>

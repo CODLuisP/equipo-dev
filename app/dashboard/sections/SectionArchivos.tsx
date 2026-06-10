@@ -13,7 +13,7 @@ import type { Member, SharedFile } from "@/app/dashboard/types";
 
 // ─── Floating File Card ───────────────────────────────────────────────────────
 
-function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: RefObject<HTMLDivElement>; }) {
+function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: RefObject<HTMLDivElement | null>; }) {
   const [pos, setPos] = useState({ x:file.x, y:file.y });
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);

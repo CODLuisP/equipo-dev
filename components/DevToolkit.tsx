@@ -7,6 +7,8 @@ import {
   Monitor, Utensils, PhoneCall, Coffee, DoorOpen, Moon, LogOut, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSocket } from '@/lib/socket';
+import AvatarImg from '@/app/dashboard/components/AvatarImg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +22,11 @@ interface RadarEntry {
 }
 
 interface PendingAlert extends RadarEntry { alertId: string; }
+
+interface PresenceEntry {
+  userId: string; name: string; color: string; avatarSeed?: string;
+  lastSeen: number | null;
+}
 
 // ─── Status Icons ─────────────────────────────────────────────────────────────
 
@@ -158,164 +165,215 @@ function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () =
   );
 }
 
-// ─── Team Alert Overlay ───────────────────────────────────────────────────────
+// ─── Team Alert Notification (compacta, no interrumpe) ───────────────────────
 
-function TeamAlertOverlay({ alerts, onDismiss }: { alerts: PendingAlert[]; onDismiss: () => void }) {
-  const first = alerts[0];
-  const time  = useElapsed(first.timestamp);
+function TeamAlertNotification({ alert, onDismiss }: { alert: PendingAlert; onDismiss: (id: string) => void }) {
+  const time   = useElapsed(alert.timestamp);
+  const preset = AFK_PRESETS.find(p => p.iconKey === alert.iconKey);
+  const color  = preset?.color ?? alert.color;
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 30);
+    return () => clearTimeout(t);
+  }, []);
+
+  const dismiss = () => {
+    setVisible(false);
+    setTimeout(() => onDismiss(alert.alertId), 280);
+  };
 
   return (
     <div style={{
-      position:'fixed', inset:0, zIndex:9998,
-      background:'rgba(8,10,14,0.92)',
-      backdropFilter:'blur(24px)',
-      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      fontFamily:"'DM Sans', system-ui, sans-serif",
+      width: 300,
+      background: 'rgba(10,12,22,0.98)',
+      borderRadius: 14,
+      border: `1px solid rgba(255,255,255,0.07)`,
+      borderTop: `1px solid ${color}55`,
+      boxShadow: `0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03), 0 0 32px ${color}12`,
+      transform: visible ? 'translateX(0)' : 'translateX(115%)',
+      opacity: visible ? 1 : 0,
+      transition: 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease',
+      pointerEvents: 'auto',
+      overflow: 'hidden',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
-      <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:`radial-gradient(circle, ${first.color}12 0%, transparent 70%)`, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.025) 1px, transparent 0)', backgroundSize:'32px 32px', pointerEvents:'none' }} />
 
-      {/* X */}
-      <button
-        onClick={onDismiss}
-        style={{
-          position:'absolute', top:28, right:28, width:46, height:46,
-          borderRadius:13, background:'rgba(255,255,255,0.05)',
-          border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.45)',
-          cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-          transition:'all 0.15s', zIndex:10,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.45)'; }}
-      >
-        <X size={18}/>
-      </button>
+      {/* Color bar top */}
+      <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${color}, transparent)`, opacity: 0.7 }} />
 
-      {alerts.length > 1 && (
-        <div style={{ position:'absolute', top:28, left:28, background:'rgba(232,93,47,0.12)', border:'1px solid rgba(232,93,47,0.25)', borderRadius:10, padding:'6px 14px', fontSize:11, fontWeight:800, color:'#E85D2F' }}>
-          +{alerts.length - 1} más ausente{alerts.length > 2 ? 's' : ''}
-        </div>
-      )}
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11 }}>
 
-      <div style={{ position:'relative', zIndex:10, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
-        {/* Avatar */}
-        <div style={{
-          width:72, height:72, borderRadius:20,
-          background:`${first.color}18`, border:`2px solid ${first.color}45`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:26, fontWeight:900, color:first.color,
-          boxShadow:`0 0 40px ${first.color}25`, marginBottom:24,
-        }}>
-          {first.name.charAt(0).toUpperCase()}
-        </div>
-
-        {/* Status icon */}
-        <div style={{
-          width:80, height:80, borderRadius:22,
-          background:`${first.color}12`, border:`1.5px solid ${first.color}30`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          marginBottom:20,
-          boxShadow:`0 0 30px ${first.color}15`,
-        }}>
-          <StatusIcon iconKey={first.iconKey} size={38} color={first.color} strokeWidth={1.5} />
-        </div>
-
-        <h2 style={{ color:'#F4F5F7', fontSize:34, fontWeight:900, margin:'0 0 10px', letterSpacing:'-1px' }}>
-          <span style={{ color:first.color }}>{first.name}</span>
-          {' '}{AFK_MSG[first.statusText] ?? `está: ${first.statusText}`}
-        </h2>
-        <p style={{ color:'rgba(255,255,255,0.28)', fontSize:13, margin:'0 0 32px', fontWeight:500 }}>
-          Será notificado cuando regrese
-        </p>
-
-        {/* Timer */}
-        <div style={{ marginBottom:36 }}>
-          <p style={{ color:'rgba(255,255,255,0.2)', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.16em', margin:'0 0 8px' }}>
-            Tiempo fuera
-          </p>
-          <div style={{ fontSize:52, fontWeight:900, color:'rgba(255,255,255,0.45)', fontFamily:'monospace' }}>
-            {time}
+        {/* Avatar con badge de estado */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <AvatarImg
+            seed={alert.avatarSeed || alert.name}
+            name={alert.name}
+            color={color}
+            size={44}
+            borderRadius={11}
+          />
+          <div style={{
+            position: 'absolute', bottom: -4, right: -4,
+            width: 22, height: 22, borderRadius: 7,
+            background: `${color}22`,
+            border: `1.5px solid ${color}60`,
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <StatusIcon iconKey={alert.iconKey} size={11} color={color} strokeWidth={2.2} />
           </div>
         </div>
 
-        {/* Other AFK pills */}
-        {alerts.length > 1 && (
-          <div style={{ display:'flex', gap:8, marginBottom:32, flexWrap:'wrap', justifyContent:'center' }}>
-            {alerts.slice(1).map(a => (
-              <div key={a.alertId} style={{ background:`${a.color}12`, border:`1px solid ${a.color}30`, borderRadius:10, padding:'7px 14px', display:'flex', alignItems:'center', gap:8 }}>
-                <StatusIcon iconKey={a.iconKey} size={14} color={a.color} strokeWidth={2} />
-                <span style={{ fontSize:12, fontWeight:700, color:a.color }}>{a.name}</span>
-              </div>
-            ))}
+        {/* Contenido */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 3 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#f0f4ff', flexShrink: 0 }}>
+              {alert.name}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {AFK_MSG[alert.statusText] ?? alert.statusText}
+            </span>
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: color, opacity: 0.8, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.03em' }}>
+              {time}
+            </span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)', fontWeight: 500 }}>fuera</span>
+          </div>
+        </div>
 
+        {/* Dismiss */}
         <button
-          onClick={onDismiss}
+          onClick={dismiss}
           style={{
-            background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
-            color:'rgba(255,255,255,0.55)', borderRadius:14, padding:'13px 36px',
-            fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.2s',
+            flexShrink: 0, width: 24, height: 24, borderRadius: 7,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            color: 'rgba(255,255,255,0.25)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.1)'; e.currentTarget.style.color='#fff'; }}
-          onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.55)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.14)'; e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='rgba(255,255,255,0.25)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; }}
         >
-          Entendido, volver al trabajo
+          <X size={11} />
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Radar Team Row ───────────────────────────────────────────────────────────
+// Stack de notificaciones AFK (una sobre otra, esquina inferior izquierda)
+function TeamAlertStack({ alerts, onDismiss }: { alerts: PendingAlert[]; onDismiss: (id: string) => void }) {
+  return (
+    <div style={{
+      position:'fixed', bottom:24, left:24, zIndex:9998,
+      display:'flex', flexDirection:'column-reverse', gap:10,
+      pointerEvents:'none',
+    }}>
+      {alerts.map(a => (
+        <TeamAlertNotification key={a.alertId} alert={a} onDismiss={onDismiss} />
+      ))}
+    </div>
+  );
+}
 
-function RadarRow({ entry, isMe }: { entry: RadarEntry; isMe: boolean }) {
-  const time     = useElapsed(entry.timestamp);
-  const preset   = AFK_PRESETS.find(p => p.iconKey === entry.iconKey);
-  const afkColor = preset?.color ?? '#E74C3C';
+
+const ONLINE_WINDOW = 5 * 60 * 1000; // 5 minutos
+
+function useNow(interval = 15000) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), interval);
+    return () => clearInterval(t);
+  }, [interval]);
+  return now;
+}
+
+function TeamMemberRow({
+  member, radarEntry, presenceEntry, isMe, now,
+}: {
+  member: any; radarEntry?: RadarEntry; presenceEntry?: PresenceEntry;
+  isMe: boolean; now: number;
+}) {
+  const isOnline = presenceEntry != null && presenceEntry.lastSeen != null && (now - presenceEntry.lastSeen) < ONLINE_WINDOW;
+  const isAFK    = radarEntry?.isAFK ?? false;
+
+  const afkPreset  = AFK_PRESETS.find(p => p.iconKey === radarEntry?.iconKey);
+  const afkColor   = afkPreset?.color ?? '#E74C3C';
+
+  // Tiempo relativo de última conexión
 
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'11px 13px', borderRadius:13,
-      background: entry.isAFK ? `${afkColor}08` : 'rgba(255,255,255,0.025)',
-      border:`1px solid ${entry.isAFK ? `${afkColor}22` : 'rgba(255,255,255,0.05)'}`,
+      padding:'10px 13px', borderRadius:13,
+      background: isAFK ? `${afkColor}08` : isOnline ? 'rgba(39,174,96,0.04)' : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${isAFK ? `${afkColor}22` : isOnline ? 'rgba(39,174,96,0.15)' : 'rgba(255,255,255,0.05)'}`,
       transition:'all 0.3s',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
-        {/* Avatar */}
-        <div style={{
-          width:36, height:36, borderRadius:10,
-          background:`${entry.color}20`, border:`1.5px solid ${entry.color}40`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:13, fontWeight:900, color:entry.color, flexShrink:0,
-          boxShadow: entry.isAFK ? `0 0 12px ${afkColor}25` : 'none',
-        }}>
-          {entry.name.charAt(0).toUpperCase()}
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        {/* Avatar con dot de presencia */}
+        <div style={{ position:'relative', flexShrink:0 }}>
+          <div style={{
+            width:34, height:34, borderRadius:10,
+            background:`${member.color}20`, border:`1.5px solid ${member.color}40`,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:13, fontWeight:900, color:member.color,
+            boxShadow: isAFK ? `0 0 10px ${afkColor}25` : 'none',
+          }}>
+            {member.name.charAt(0).toUpperCase()}
+          </div>
+          {/* Dot de estado */}
+          <div style={{
+            position:'absolute', bottom:-2, right:-2,
+            width:9, height:9, borderRadius:'50%',
+            background: isAFK ? afkColor : isOnline ? '#27AE60' : '#4B5563',
+            border:'1.5px solid rgba(12,15,22,0.99)',
+            boxShadow: isOnline && !isAFK ? '0 0 6px #27AE6080' : 'none',
+          }}/>
         </div>
+
         <div>
           <div style={{ fontSize:12, fontWeight:800, color:'#F4F5F7', display:'flex', alignItems:'center', gap:5 }}>
-            {entry.name}
+            {member.name}
             {isMe && <span style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.3)', background:'rgba(255,255,255,0.06)', padding:'2px 5px', borderRadius:4, textTransform:'uppercase', letterSpacing:'0.06em' }}>tú</span>}
           </div>
-          <div style={{ fontSize:11, marginTop:3, color: entry.isAFK ? afkColor : 'rgba(255,255,255,0.4)', fontWeight: entry.isAFK ? 700 : 500, display:'flex', alignItems:'center', gap:5 }}>
-            <StatusIcon iconKey={entry.iconKey} size={11} color={entry.isAFK ? afkColor : 'rgba(255,255,255,0.35)'} strokeWidth={2} />
-            {entry.statusText}
+          <div style={{ fontSize:10, marginTop:2, fontWeight:600, display:'flex', alignItems:'center', gap:4,
+            color: isAFK ? afkColor : isOnline ? '#27AE60' : 'rgba(255,255,255,0.25)' }}>
+            {isAFK ? (
+              <>
+                <StatusIcon iconKey={radarEntry!.iconKey} size={10} color={afkColor} strokeWidth={2}/>
+                {radarEntry!.statusText}
+              </>
+            ) : isOnline ? (
+              'En línea'
+            ) : (
+              'Desconectado'
+            )}
           </div>
         </div>
       </div>
 
-      {entry.isAFK && entry.timestamp > 0 && (
+      {/* Lado derecho */}
+      {isAFK && radarEntry!.timestamp > 0 && (
         <div style={{ textAlign:'right' }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em' }}>Hace</div>
-          <div style={{ fontSize:16, fontWeight:900, color:afkColor, fontFamily:'monospace' }}>{time}</div>
+          <AFKTimer timestamp={radarEntry!.timestamp} color={afkColor}/>
         </div>
-      )}
-      {!entry.isAFK && (
-        <div style={{ width:7, height:7, borderRadius:'50%', background:'#27AE60', boxShadow:'0 0 8px #27AE6080' }} />
       )}
     </div>
   );
+}
+
+function AFKTimer({ timestamp, color }: { timestamp: number; color: string }) {
+  const now = useNow(1000);
+  const secs = Math.floor((now - timestamp) / 1000);
+  const m = Math.floor(secs / 60), s = secs % 60;
+  const display = m > 0 ? `${m}m ${s}s` : `${s}s`;
+  return <div style={{ fontSize:15, fontWeight:900, color, fontFamily:'monospace' }}>{display}</div>;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -362,6 +420,10 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   const [pendingAlerts, setPendingAlerts] = useState<PendingAlert[]>([]);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
+  // Presencia en tiempo real
+  const [presenceMap, setPresenceMap] = useState<Record<string, PresenceEntry>>({});
+  const now = useNow(15000);
+
   // Load persisted radar
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -390,36 +452,126 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
     }
   }, [currentUser]);
 
-  // BroadcastChannel
+  // BroadcastChannel (mismo navegador) + Socket.io (red)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const ch = new BroadcastChannel(CHANNEL_NAME);
-    channelRef.current = ch;
-    ch.onmessage = (ev: MessageEvent<{ type: 'AFK' | 'BACK'; entry: RadarEntry }>) => {
-      const { type, entry } = ev.data;
+
+    // Función común para procesar eventos AFK/BACK sin importar el origen
+    const handleAFK = (entry: RadarEntry) => {
       setRadarMap(prev => {
         const updated = { ...prev, [entry.userId]: entry };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         return updated;
       });
-      if (type === 'AFK') {
-        if (currentUser && entry.userId !== currentUser.id) {
-          setPendingAlerts(prev => [
-            ...prev.filter(a => a.userId !== entry.userId),
-            { ...entry, alertId: crypto.randomUUID() },
-          ]);
-        }
-      } else {
-        setPendingAlerts(prev => prev.filter(a => a.userId !== entry.userId));
-        if (currentUser && entry.userId !== currentUser.id) {
-          toast.success(`${entry.name} regresó`, {
-            duration: 4000,
-            style: { background:'#1C1F26', color:'#F4F5F7', border:'1px solid rgba(255,255,255,0.08)', fontFamily:"'DM Sans', system-ui, sans-serif" },
-          });
-        }
+      if (currentUser && entry.userId !== currentUser.id) {
+        setPendingAlerts(prev => [
+          ...prev.filter(a => a.userId !== entry.userId),
+          { ...entry, alertId: crypto.randomUUID() },
+        ]);
       }
     };
-    return () => ch.close();
+
+    const handleBack = (entry: RadarEntry) => {
+      setRadarMap(prev => {
+        const updated = { ...prev, [entry.userId]: entry };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+      setPendingAlerts(prev => prev.filter(a => a.userId !== entry.userId));
+      if (currentUser && entry.userId !== currentUser.id) {
+        toast.success(`${entry.name} regresó 👋`, {
+          duration: 4000,
+          style: { background:'#1C1F26', color:'#F4F5F7', border:'1px solid rgba(255,255,255,0.08)', fontFamily:"'DM Sans', system-ui, sans-serif" },
+        });
+      }
+    };
+
+    // ── BroadcastChannel (pestañas del mismo navegador) ──
+    const ch = new BroadcastChannel(CHANNEL_NAME);
+    channelRef.current = ch;
+    ch.onmessage = (ev: MessageEvent<{ type: 'AFK' | 'BACK'; entry: RadarEntry }>) => {
+      const { type, entry } = ev.data;
+      if (type === 'AFK') handleAFK(entry);
+      else handleBack(entry);
+    };
+
+    // ── Socket.io (otras máquinas en red) ──
+    const socket = getSocket();
+    socket.on('radar:afk',  handleAFK);
+    socket.on('radar:back', handleBack);
+
+    // Sincronización: recibir todos los AFK activos
+    const handleSync = (entries: RadarEntry[]) => {
+      entries.forEach(entry => {
+        setRadarMap(prev => {
+          const updated = { ...prev, [entry.userId]: entry };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          return updated;
+        });
+        if (currentUser && entry.userId !== currentUser.id) {
+          setPendingAlerts(prev =>
+            prev.find(a => a.userId === entry.userId)
+              ? prev
+              : [...prev, { ...entry, alertId: crypto.randomUUID() }]
+          );
+        }
+      });
+    };
+    socket.on('radar:sync', handleSync);
+
+    // Pedir el estado actual explícitamente (evita race condition)
+    const reqTimer = setTimeout(() => {
+      socket.emit('radar:request');
+      // Identificarse para presencia y pedir estado actual
+      if (currentUser?.id) {
+        socket.emit('presence:identify', {
+          userId: currentUser.id, name: currentUser.name,
+          color: currentUser.color, avatarSeed: currentUser.avatarSeed,
+        });
+      }
+      socket.emit('presence:request');
+    }, 300);
+
+    // ── Presencia en tiempo real ────────────────────────────────────────────
+    const handlePresenceSync = (entries: PresenceEntry[]) => {
+      setPresenceMap(prev => {
+        const updated = { ...prev };
+        entries.forEach(e => { updated[e.userId] = e; });
+        return updated;
+      });
+    };
+
+    const handlePresenceUpdate = (data: Partial<PresenceEntry> & { userId: string; lastSeen: number | null }) => {
+      const { userId, lastSeen } = data;
+      setPresenceMap(prev => {
+        if (lastSeen === null) {
+          const updated = { ...prev };
+          if (updated[userId]) updated[userId] = { ...updated[userId], lastSeen: null };
+          return updated;
+        }
+        // Merge: si vienen campos extra (name, color, etc.) los incorporamos
+        return { ...prev, [userId]: { ...prev[userId], ...data, userId, lastSeen } };
+      });
+    };
+
+    socket.on('presence:sync',   handlePresenceSync);
+    socket.on('presence:update', handlePresenceUpdate);
+
+    // Heartbeat: ping cada 60s para mantenerse como "online"
+    const heartbeat = setInterval(() => {
+      if (currentUser?.id) socket.emit('presence:ping', currentUser.id);
+    }, 60_000);
+
+    return () => {
+      clearTimeout(reqTimer);
+      clearInterval(heartbeat);
+      ch.close();
+      socket.off('radar:afk',       handleAFK);
+      socket.off('radar:back',       handleBack);
+      socket.off('radar:sync',       handleSync);
+      socket.off('presence:sync',    handlePresenceSync);
+      socket.off('presence:update',  handlePresenceUpdate);
+    };
   }, [currentUser]);
 
   // Change status
@@ -432,7 +584,9 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
     };
     setRadarMap(prev => { const u = { ...prev, [currentUser.id]: entry }; localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); return u; });
     setMyStatus(entry);
+    // Broadcast: pestañas del mismo navegador + otras máquinas en red
     channelRef.current?.postMessage({ type: 'AFK', entry });
+    getSocket().emit('radar:afk', entry);
   };
 
   const goOnline = () => {
@@ -444,7 +598,9 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
     };
     setRadarMap(prev => { const u = { ...prev, [currentUser.id]: entry }; localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); return u; });
     setMyStatus(null);
+    // Broadcast: pestañas del mismo navegador + otras máquinas en red
     channelRef.current?.postMessage({ type: 'BACK', entry });
+    getSocket().emit('radar:back', entry);
   };
 
   // DevTools
@@ -463,10 +619,17 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   };
   const copyOutput = () => { navigator.clipboard.writeText(toolOutput); toast.success("Copiado"); };
 
-  // Team list: only members with registered status, excluding current user
-  const teamList: RadarEntry[] = members
-    .filter((m: any) => m.id !== currentUser?.id && radarMap[m.id])
+  // Team list: ALL members except current user
+  const teamMembers = members.filter((m: any) => m.id !== currentUser?.id);
+  // Legacy: for AFK marquee
+  const teamList: RadarEntry[] = teamMembers
+    .filter((m: any) => radarMap[m.id])
     .map((m: any) => radarMap[m.id]);
+
+  const onlineCount = teamMembers.filter((m: any) => {
+    const p = presenceMap[m.id];
+    return p && p.lastSeen != null && (now - p.lastSeen) < ONLINE_WINDOW;
+  }).length;
 
   const isAFK      = myStatus !== null;
   const hasPending = pendingAlerts.length > 0;
@@ -487,11 +650,16 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
   return (
     <>
       {/* Overlays */}
-      {isAFK      && mounted && createPortal(<MyAFKOverlay    status={myStatus!}    onReturn={goOnline}                       />, document.body)}
-      {!isAFK && hasPending && mounted && createPortal(<TeamAlertOverlay alerts={pendingAlerts} onDismiss={() => setPendingAlerts([])} />, document.body)}
+      {isAFK   && mounted && createPortal(<MyAFKOverlay status={myStatus!} onReturn={goOnline} />, document.body)}
+      {hasPending && mounted && createPortal(
+        <TeamAlertStack
+          alerts={pendingAlerts}
+          onDismiss={id => setPendingAlerts(prev => prev.filter(a => a.alertId !== id))}
+        />, document.body
+      )}
 
       {/* Panel */}
-      <div style={{ background:'rgba(15,18,25,0.85)', backdropFilter:'blur(16px)', borderRadius:24, border:'1px solid rgba(255,255,255,0.1)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 20px 50px rgba(0,0,0,0.5)' }}>
+      <div style={{ background:'rgba(15,18,25,0.85)', backdropFilter:'blur(16px)', borderRadius:24, border:'1px solid rgba(255,255,255,0.1)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.3)' }}>
           <TabBtn id="radar"   icon={Activity} label="Live Radar" />
@@ -566,22 +734,36 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
               <div>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
                   <p style={{ fontSize:10, fontWeight:800, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', margin:0 }}>Estado del equipo</p>
-                  <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.2)', fontFamily:'monospace' }}>
-                    {teamList.filter(t=>t.isAFK).length} ausente{teamList.filter(t=>t.isAFK).length!==1?'s':''}
-                  </span>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:10, fontWeight:700, color:'#27AE60', fontFamily:'monospace' }}>
+                      {onlineCount} en línea
+                    </span>
+                    {teamList.filter(t=>t.isAFK).length > 0 && (
+                      <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.2)', fontFamily:'monospace' }}>
+                        · {teamList.filter(t=>t.isAFK).length} ausente{teamList.filter(t=>t.isAFK).length!==1?'s':''}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-                  {teamList.length === 0 && (
+                  {teamMembers.length === 0 && (
                     <div style={{ textAlign:'center', padding:'24px 16px', border:'1px dashed rgba(255,255,255,0.07)', borderRadius:14 }}>
                       <div style={{ display:'flex', justifyContent:'center', marginBottom:8, color:'rgba(255,255,255,0.15)' }}>
                         <Users size={24} />
                       </div>
-                      <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>Nadie más conectado aún</p>
-                      <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>Aparecerán aquí cuando abran la app</p>
+                      <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>Eres el único en el equipo</p>
+                      <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>Invita a más miembros en Ajustes</p>
                     </div>
                   )}
-                  {teamList.map(entry => (
-                    <RadarRow key={entry.userId} entry={entry} isMe={currentUser?.id === entry.userId} />
+                  {teamMembers.map((member: any) => (
+                    <TeamMemberRow
+                      key={member.id}
+                      member={member}
+                      radarEntry={radarMap[member.id]}
+                      presenceEntry={presenceMap[member.id]}
+                      isMe={false}
+                      now={now}
+                    />
                   ))}
                 </div>
               </div>

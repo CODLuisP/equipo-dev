@@ -31,7 +31,6 @@ const NAV = [
   { href: "/dashboard/pizarra",   icon: <StickyNote size={13}/>,  label: "Pizarra"  },
   { href: "/dashboard/archivos",  icon: <FolderOpen size={13}/>,  label: "Archivos" },
   { href: "/dashboard/boveda",    icon: <Shield size={13}/>,      label: "Bóveda"   },
-  { href: "/dashboard/ajustes",   icon: <Settings size={13}/>,    label: "Ajustes"  },
 ];
 
 const toasterProps = {
@@ -55,7 +54,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const isPizarra = pathname === "/dashboard/pizarra";
 
   const {
-    members, currentUser, isLoading, isSetup, showWhoAreYou,
+    members, currentUser, isLoading, isSetup, setIsSetup, showWhoAreYou,
     isToolkitVisible, setIsToolkitVisible,
     setShowWhoAreYou, handleAddMember, selectCurrentUser, handleLogout,
     openMemberModal, setOpenMemberModal,
@@ -69,8 +68,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     handleSaveSnippet, handleAddNote,
     handleSaveVaultProject,
     handleDeleteMember, handleDeleteTask, handleDeleteSnippet,
-    handleDeleteNote, handleDeleteVaultProject,
-    saveArchivos, archivos, saveVault, vaultProjects,
+    handleDeleteNote, handleDeleteVaultProject, handleDeleteArchivo,
+    saveVault, vaultProjects,
     isVaultUnlocked, setIsVaultUnlocked,
   } = useDashboard();
 
@@ -79,7 +78,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   if (isSetup) return (
     <>
       <Toaster {...toasterProps} />
-      <SetupScreen members={members} handleAddMember={handleAddMember} onFinish={() => {}} toasterProps={toasterProps} />
+      <SetupScreen members={members} handleAddMember={handleAddMember} onFinish={() => { setIsSetup(false); setShowWhoAreYou(true); }} toasterProps={toasterProps} />
     </>
   );
 
@@ -237,7 +236,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Global Modals ── */}
       <ModalBase open={openMemberModal} title="Agregar Miembro" onClose={() => setOpenMemberModal(false)}>
-        <MemberForm onAdd={(n, r) => { handleAddMember(n, r); setOpenMemberModal(false); }} />
+        <MemberForm onAdd={(n, r, seed) => { handleAddMember(n, r, seed); setOpenMemberModal(false); }} />
       </ModalBase>
 
       <ModalBase open={openTaskModal} title={editingTask ? "Editar Tarea" : "Nueva Tarea"} onClose={() => { setOpenTaskModal(false); setEditingTask(null); }}>
@@ -274,7 +273,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           if (type === "task")    handleDeleteTask(id);
           if (type === "snippet") handleDeleteSnippet(id);
           if (type === "note")    handleDeleteNote(id);
-          if (type === "archivo") saveArchivos(archivos.filter(a => a.id !== id));
+          if (type === "archivo") handleDeleteArchivo(id);
           if (type === "vault")   handleDeleteVaultProject(id);
           setOpenDeleteModal(false);
         }}

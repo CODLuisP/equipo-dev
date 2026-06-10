@@ -203,7 +203,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
   const total      = tasks.length;
   const pct        = total > 0 ? Math.round((done.length / total) * 100) : 0;
 
-  const metaSemanal = 15;
+  const metaSemanal = total > 0 ? total : 1;
   const metaProgreso = Math.min(Math.round((done.length / metaSemanal) * 100), 100);
 
   const [overPending,  setOverPending]  = useState(false);

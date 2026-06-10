@@ -53,7 +53,7 @@ export function SectionBoveda({
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pass === SHARED_PASS) {
+    if (pass.toLowerCase() === SHARED_PASS.toLowerCase()) {
       onUnlock(true); setError(false); setPass(''); toast.success("Bóveda desbloqueada");
     } else {
       setError(true); toast.error("Contraseña incorrecta");

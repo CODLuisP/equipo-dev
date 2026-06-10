@@ -244,10 +244,10 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       {isText && isSelected && (
         <div style={{
           position: 'absolute',
-          top: tbSnap.t,
-          bottom: tbSnap.b,
-          left: 0,
-          right: 0,
+          top: tbSnap.t - 6,
+          bottom: tbSnap.b - 6,
+          left: -6,
+          right: -6,
           border: '1px dashed rgba(255,255,255,0.4)',
           pointerEvents: 'none',
           borderRadius: 2,
@@ -1321,6 +1321,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                         : 'Dibuja con herramientas o digitaliza una imagen'}
             </p>
           </div>
+          
           <button onClick={onCancel} style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
             <svg viewBox="0 0 12 12" width={11} height={11} stroke="currentColor" strokeWidth="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>
           </button>
@@ -1590,7 +1591,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
           <div style={{width:1,background:'rgba(255,255,255,0.08)'}}/>
 
           {/* Columna Derecha: Vectorizador de imagen automático */}
-          <div style={{flex:1,minWidth:260,display:'flex',flexDirection:'column',gap:14,fontFamily:"'DM Sans',sans-serif"}}>
+          <div style={{flex:1,minWidth:240,display:'flex',flexDirection:'column',gap:14,fontFamily:"'DM Sans',sans-serif",padding:'10px 10px 10px 20px'}}>
             <div>
               <p style={{margin:0,fontWeight:800,fontSize:13,color:'#2ECC71',display:'flex',alignItems:'center',gap:6}}>
                 <Sparkles size={14}/> Imagen → Forma vectorial
@@ -1899,6 +1900,30 @@ function getPathD(points: { x: number; y: number }[]) {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
 }
 
+function getRoundedPolyPath(pts: { x: number; y: number }[], r: number): string {
+  const isClosed = pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length-1].x, pts[0].y - pts[pts.length-1].y) < 0.5;
+  const verts = isClosed ? pts.slice(0, -1) : pts;
+  const n = verts.length;
+  if (n < 3) return getPathD(pts);
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const prev = verts[(i - 1 + n) % n];
+    const curr = verts[i];
+    const next = verts[(i + 1) % n];
+    const dx1 = prev.x - curr.x, dy1 = prev.y - curr.y;
+    const dx2 = next.x - curr.x, dy2 = next.y - curr.y;
+    const len1 = Math.sqrt(dx1*dx1 + dy1*dy1) || 1;
+    const len2 = Math.sqrt(dx2*dx2 + dy2*dy2) || 1;
+    const ar = Math.min(r, len1 / 2, len2 / 2);
+    const p1x = curr.x + dx1/len1*ar, p1y = curr.y + dy1/len1*ar;
+    const p2x = curr.x + dx2/len2*ar, p2y = curr.y + dy2/len2*ar;
+    if (i === 0) d += `M${p1x.toFixed(2)},${p1y.toFixed(2)}`;
+    else d += `L${p1x.toFixed(2)},${p1y.toFixed(2)}`;
+    d += `Q${curr.x.toFixed(2)},${curr.y.toFixed(2)} ${p2x.toFixed(2)},${p2y.toFixed(2)}`;
+  }
+  return d + 'Z';
+}
+
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
 
 export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, redo, clipboard, setClipboard }: {
@@ -1949,11 +1974,12 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const pathLiveRotRef = useRef<{angle:number;cx:number;cy:number}|null>(null);
 
   const colors = ['#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#e879f9'];
-  const [pencilWidth, setPencilWidth] = useState(3);
+  const [pencilWidth, setPencilWidth] = useState(2);
   const [textFontFamily, setTextFontFamily] = useState("'Plus Jakarta Sans', sans-serif");
   const [textFontSize, setTextFontSize]     = useState(18);
   const [textAlign, setTextAlign]           = useState<'left'|'center'|'right'>('left');
   const [textBold, setTextBold]             = useState(false);
+  const [fillColor, setFillColor]           = useState<string|null>(null);
 
   // Elementos seleccionados: path(s) o nota de texto
   const selectedPathArr = [...selectedPathIndices].map(i => drawings[i]).filter(Boolean);
@@ -1972,8 +1998,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if (path) {
         setCurrentColor(path.color);
         const rawW = path.width * zoom;
-        const closest = [3,5,10,18].reduce((a,b) => Math.abs(b-rawW) < Math.abs(a-rawW) ? b : a);
+        const closest = [2,5,10,18].reduce((a,b) => Math.abs(b-rawW) < Math.abs(a-rawW) ? b : a);
         setPencilWidth(closest);
+        setFillColor(path.fill ? path.fill.slice(0, 7) : null);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1997,7 +2024,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const applyColor = (c: string) => {
     setCurrentColor(c);
     if (hasSelectedPaths) {
-      onSaveDrawings(drawings.map((d, i) => selectedPathIndices.has(i) ? { ...d, color: c } : d));
+      onSaveDrawings(drawings.map((d, i) =>
+        selectedPathIndices.has(i) ? { ...d, color: c, fill: d.fill ? (fillColor ?? c) + '30' : undefined } : d
+      ));
     }
     if (hasSelectedText && selectedId) {
       onSaveNotes(notes.map(n => n.id === selectedId ? { ...n, color: c } : n));
@@ -2012,10 +2041,25 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     }
   };
 
+  const applyFill = (color: string | null) => {
+    setFillColor(color);
+    if (hasSelectedPaths) {
+      onSaveDrawings(drawings.map((d, i) =>
+        selectedPathIndices.has(i) ? { ...d, fill: color ? color + '30' : undefined } : d
+      ));
+    }
+  };
+
   // Aplicar tipografía a nota de texto seleccionada
   const applyTextProp = (patch: Partial<Note>) => {
     if (hasSelectedText && selectedId) {
-      onSaveNotes(notes.map(n => n.id === selectedId ? { ...n, ...patch } : n));
+      const extra = patch.fontSize !== undefined ? { width: undefined } : {};
+      onSaveNotes(notes.map(n => {
+        if (n.id !== selectedId) return n;
+        const updated = { ...n, ...patch, ...extra };
+        if (extra.width === undefined && 'width' in extra) delete updated.width;
+        return updated;
+      }));
     }
   };
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -2241,8 +2285,10 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         const d = item.data;
         if (d.points.length < 2) continue;
         ctx.beginPath(); ctx.strokeStyle = d.color; ctx.lineWidth = d.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.fillStyle = d.fill || 'transparent';
         ctx.moveTo(d.points[0].x, d.points[0].y);
         d.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        if (d.fill) ctx.fill();
         ctx.stroke();
       }
       if (item.kind === 'shape') {
@@ -2777,25 +2823,37 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             }
           }
 
-          // Hit test: clic cerca de un trazo de lápiz → seleccionarlo directamente
+          // Hit test: clic cerca de un trazo o dentro del área de una forma cerrada
           const distToSeg = (px:number,py:number,ax:number,ay:number,bx:number,by:number) => {
             const dx=bx-ax, dy=by-ay, lenSq=dx*dx+dy*dy;
             if (lenSq===0) return Math.hypot(px-ax,py-ay);
             const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq));
             return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
           };
+          const isPointInPoly = (px:number, py:number, pts:{x:number;y:number}[]) => {
+            let inside = false;
+            for (let i=0, j=pts.length-1; i<pts.length; j=i++) {
+              const xi=pts[i].x, yi=pts[i].y, xj=pts[j].x, yj=pts[j].y;
+              if (((yi>py)!==(yj>py)) && px < ((xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+            }
+            return inside;
+          };
           for (let idx = drawings.length - 1; idx >= 0; idx--) {
             const p = drawings[idx];
             const hitDist = Math.max(p.width / 2 + 10, 14 / zoom);
-            const isHit = p.points.some((pt, i) => {
-              if (i === 0) return Math.hypot(pt.x - wx, pt.y - wy) <= hitDist;
-              const prev = p.points[i - 1];
-              return distToSeg(wx, wy, prev.x, prev.y, pt.x, pt.y) <= hitDist;
-            });
+            const isClosed = p.points.length > 3 &&
+              Math.hypot(p.points[0].x - p.points[p.points.length-1].x, p.points[0].y - p.points[p.points.length-1].y) < 3;
+            const isHit = (isClosed && isPointInPoly(wx, wy, p.points)) ||
+              p.points.some((pt, i) => {
+                if (i === 0) return Math.hypot(pt.x - wx, pt.y - wy) <= hitDist;
+                const prev = p.points[i - 1];
+                return distToSeg(wx, wy, prev.x, prev.y, pt.x, pt.y) <= hitDist;
+              });
             if (isHit) {
               setSelectedPathIndices(new Set([idx]));
               setSelectedIds(new Set());
               setSelectedId(null);
+              onMultiDragStart();
               return;
             }
           }
@@ -3002,19 +3060,31 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     }
     if (isDrawing && shapeStart && shapeCurrent && ['rect','rhombus','ellipse','line'].includes(tool)) {
       const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
-      let pts:{x:number;y:number}[]=[];
-      if (tool==='line') {
-        pts=[{x:sx,y:sy},{x:ex,y:ey}];
-      } else if (tool==='rect') {
-        pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
-      } else if (tool==='rhombus') {
-        const cx=(sx+ex)/2,cy=(sy+ey)/2;
-        pts=[{x:cx,y:sy},{x:ex,y:cy},{x:cx,y:ey},{x:sx,y:cy},{x:cx,y:sy}];
-      } else if (tool==='ellipse') {
-        const cx=(sx+ex)/2,cy=(sy+ey)/2,rx=Math.abs(ex-sx)/2,ry=Math.abs(ey-sy)/2;
-        pts=Array.from({length:65},(_,i)=>{const a=(i/64)*Math.PI*2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};});
+      const minSize = 6 / zoom;
+      const tooSmall = Math.abs(ex-sx) < minSize && Math.abs(ey-sy) < minSize;
+      if (!tooSmall) {
+        let pts:{x:number;y:number}[]=[];
+        if (tool==='line') {
+          pts=[{x:sx,y:sy},{x:ex,y:ey}];
+        } else if (tool==='rect') {
+          pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
+        } else if (tool==='rhombus') {
+          const cx=(sx+ex)/2,cy=(sy+ey)/2;
+          pts=[{x:cx,y:sy},{x:ex,y:cy},{x:cx,y:ey},{x:sx,y:cy},{x:cx,y:sy}];
+        } else if (tool==='ellipse') {
+          const cx=(sx+ex)/2,cy=(sy+ey)/2,rx=Math.abs(ex-sx)/2,ry=Math.abs(ey-sy)/2;
+          pts=Array.from({length:65},(_,i)=>{const a=(i/64)*Math.PI*2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};});
+        }
+        if (pts.length>=2) {
+          const newIdx = drawings.length;
+          const cornerRadius = (tool==='rect'||tool==='rhombus') ? 10/zoom : undefined;
+          onSaveDrawings([...drawings,{points:pts,color:currentColor,width:pencilWidth/zoom,fill:fillColor?fillColor+'30':undefined,cornerRadius,zOrder:Date.now()}]);
+          setSelectedPathIndices(new Set([newIdx]));
+          setSelectedIds(new Set());
+          setSelectedId(null);
+          setTool('select');
+        }
       }
-      if (pts.length>=2) onSaveDrawings([...drawings,{points:pts,color:currentColor,width:pencilWidth/zoom,zOrder:Date.now()}]);
       setShapeStart(null); setShapeCurrent(null);
     }
     if (tool==='laser') laserIsDrawingRef.current=false;
@@ -3074,7 +3144,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
           {/* Grosores — para lápiz, formas y texto */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3, marginBottom:6 }}>
-            {[{ w:3, r:3 }, { w:5, r:5 }, { w:10, r:7 }, { w:18, r:10 }].map(({ w, r }) => (
+            {[{ w:2, r:2 }, { w:5, r:5 }, { w:10, r:7 }, { w:18, r:10 }].map(({ w, r }) => (
               <button key={w} onClick={() => applyWidth(w)}
                 title={`${w}px`}
                 style={{ width:26, height:26, borderRadius:7, background: pencilWidth===w ? 'rgba(37,99,235,0.25)' : 'rgba(255,255,255,0.04)', border: pencilWidth===w ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}>
@@ -3082,6 +3152,43 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               </button>
             ))}
           </div>
+
+          {/* Fondo — solo para herramientas de forma o paths seleccionados */}
+          {(['rect','rhombus','ellipse'].includes(tool) || hasSelectedPaths) && (
+            <div style={{ marginBottom:6 }}>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', fontWeight:600, marginBottom:3, letterSpacing:'0.04em' }}>FONDO</div>
+              <div style={{ display:'flex', gap:3, alignItems:'center' }}>
+                {/* Sin fondo — patrón de transparencia tipo damero */}
+                <button onClick={() => applyFill(null)} title="Sin fondo"
+                  style={{ width:22, height:22, borderRadius:6, cursor:'pointer', transition:'all 0.15s', flexShrink:0, overflow:'hidden', padding:0,
+                    border: fillColor === null ? '1.5px solid rgba(37,99,235,0.8)' : '1.5px solid rgba(255,255,255,0.12)' }}>
+                  <svg viewBox="0 0 10 10" width={20} height={20} xmlns="http://www.w3.org/2000/svg">
+                    <rect width="10" height="10" fill="#444"/>
+                    <rect x="0" y="0" width="5" height="5" fill="#666"/>
+                    <rect x="5" y="5" width="5" height="5" fill="#666"/>
+                    <rect x="0" y="0" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="2.5" y="2.5" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="5" y="5" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="7.5" y="7.5" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="5" y="0" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="7.5" y="2.5" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="0" y="5" width="2.5" height="2.5" fill="#888"/>
+                    <rect x="2.5" y="7.5" width="2.5" height="2.5" fill="#888"/>
+                  </svg>
+                </button>
+                {/* Colores de fondo — opacidad muy baja */}
+                {['#3b82f6','#4ade80','#f87171','#fbbf24','#e879f9'].map(c => (
+                  <button key={c} onClick={() => applyFill(fillColor === c ? null : c)} title={c}
+                    style={{ width:22, height:22, borderRadius:6, cursor:'pointer', transition:'all 0.15s', flexShrink:0,
+                      background: c + '18',
+                      border: fillColor === c ? `1.5px solid ${c}90` : '1.5px solid rgba(255,255,255,0.08)',
+                      outline: fillColor === c ? `2px solid ${c}30` : 'none',
+                      outlineOffset: 1 }}/>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ height:1, background:'rgba(255,255,255,0.07)', marginBottom:6 }}/>
 
           {/* Opciones de texto — herramienta texto o nota de texto seleccionada */}
@@ -3270,11 +3377,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                   rot ? `rotate(${rot.angle} ${rot.cx} ${rot.cy})` : '',
                   pdx || pdy ? `translate(${pdx} ${pdy})` : '',
                 ].filter(Boolean).join(' ');
-                const d = getPathD(p.points);
+                const d = p.cornerRadius ? getRoundedPolyPath(p.points, p.cornerRadius) : getPathD(p.points);
                 return (
                   <svg key={`path-${idx}`} style={{ position:'absolute', inset:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:stackIdx + 1 }} xmlns="http://www.w3.org/2000/svg">
                     <g transform={transforms || undefined}>
-                      <path d={d} stroke={p.color} strokeWidth={p.width} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d={d} stroke={p.color} strokeWidth={p.width} fill={p.fill || 'none'} strokeLinecap="round" strokeLinejoin="round"/>
                       {isSel && (
                         <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`}/>
                       )}
@@ -3329,13 +3436,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         )}
 
         {/* Bounding box + handles + rotación para un solo trazo seleccionado */}
-        {selectedPathIndices.size === 1 && selectedIds.size === 0 && tool === 'select' && !isMarqueeing && !multiDragActive && !pathLiveRot && (() => {
+        {selectedPathIndices.size === 1 && selectedIds.size === 0 && tool === 'select' && !isMarqueeing && !pathLiveRot && (() => {
           const idx = [...selectedPathIndices][0];
           const p = drawings[idx]; if (!p || p.points.length < 2) return null;
           const bbox = multiResizeBBox ?? getMultiSelectBBox(); if (!bbox) return null;
           const pad = 6;
-          const left   = (bbox.x - pad) * zoom + offset.x;
-          const top    = (bbox.y - pad) * zoom + offset.y;
+          const dragOffsetX = multiDragActive ? multiDragDelta.x * zoom : 0;
+          const dragOffsetY = multiDragActive ? multiDragDelta.y * zoom : 0;
+          const left   = (bbox.x - pad) * zoom + offset.x + dragOffsetX;
+          const top    = (bbox.y - pad) * zoom + offset.y + dragOffsetY;
           const width  = (bbox.w + pad * 2) * zoom;
           const height = (bbox.h + pad * 2) * zoom;
           const corner = (extra: React.CSSProperties): React.CSSProperties => ({
@@ -3404,16 +3513,17 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         {/* Shape preview while dragging */}
         {shapeStart && shapeCurrent && (() => {
           const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
-          const common={stroke:currentColor,strokeWidth:pencilWidth/zoom,fill:'none',strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
+          const common={stroke:currentColor,strokeWidth:pencilWidth/zoom,fill:fillColor?fillColor+'30':'none',strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
           let shape: React.ReactElement|null=null;
           if (tool==='line') {
             shape=<line {...common} x1={sx} y1={sy} x2={ex} y2={ey}/>;
           } else if (tool==='rect') {
-            const rx=Math.min(sx,ex),ry=Math.min(sy,ey),rw=Math.abs(ex-sx),rh=Math.abs(ey-sy);
-            shape=<rect {...common} x={rx} y={ry} width={rw} height={rh} rx={2/zoom}/>;
+            const pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
+            shape=<path {...common} d={getRoundedPolyPath(pts,10/zoom)}/>;
           } else if (tool==='rhombus') {
             const cx=(sx+ex)/2,cy=(sy+ey)/2;
-            shape=<polygon {...common} points={`${cx},${sy} ${ex},${cy} ${cx},${ey} ${sx},${cy}`}/>;
+            const pts=[{x:cx,y:sy},{x:ex,y:cy},{x:cx,y:ey},{x:sx,y:cy},{x:cx,y:sy}];
+            shape=<path {...common} d={getRoundedPolyPath(pts,10/zoom)}/>;
           } else if (tool==='ellipse') {
             const cx=(sx+ex)/2,cy=(sy+ey)/2,rx2=Math.abs(ex-sx)/2,ry2=Math.abs(ey-sy)/2;
             shape=<ellipse {...common} cx={cx} cy={cy} rx={rx2} ry={ry2}/>;

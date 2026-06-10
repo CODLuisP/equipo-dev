@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Copy, Pencil, Trash2, Code, Check, Filter } from "lucide-react";
+import { Plus, Copy, Pencil, Trash2, Code, Check, Filter, Maximize2, X } from "lucide-react";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import type { Member, Snippet } from "@/app/dashboard/types";
 
@@ -128,13 +128,171 @@ function CodeBlock({ content, lang }: { content: string; lang: string }) {
   );
 }
 
+// ─── Snippet Full Screen ──────────────────────────────────────────────────────
+
+function SnippetFullScreen({ s, author, onClose, onCopy, copied }: {
+  s: Snippet; author?: Member; onClose: () => void;
+  onCopy: () => void; copied: boolean;
+}) {
+  const meta  = lm(s.label);
+  const lines = s.content.split('\n');
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(4,6,14,0.92)',
+        backdropFilter: 'blur(16px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}
+    >
+      <div style={{
+        width: '100%', maxWidth: 900, maxHeight: '90vh',
+        background: '#0b0d1e',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderTop: `2px solid ${meta.color}60`,
+        borderRadius: 20,
+        display: 'flex', flexDirection: 'column',
+        boxShadow: `0 40px 100px rgba(0,0,0,0.8), 0 0 60px ${meta.color}08`,
+        overflow: 'hidden',
+      }}>
+
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 18px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(255,255,255,0.02)',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              background: meta.bg, color: meta.color,
+              padding: '3px 9px', borderRadius: 6,
+              fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+            }}>{s.label}</span>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#f0f4ff', letterSpacing: '-0.3px' }}>
+              {s.title}
+            </h2>
+            {author && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>
+                <AvatarImg seed={author.avatarSeed || author.name} name={author.name} color={author.color} size={14} borderRadius={4} />
+                <span style={{ fontSize: 10, color: '#6b7280', fontWeight: 600 }}>{author.name}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={onCopy}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 9,
+                background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${copied ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                color: copied ? '#4ade80' : '#94a3b8',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                width: 32, height: 32, borderRadius: 9,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.12)'; e.currentTarget.style.color='#f87171'; }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='rgba(255,255,255,0.35)'; }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Código completo */}
+        <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.4)' }} className="custom-scrollbar">
+          {/* Barra superior del editor */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '7px 16px',
+            background: 'rgba(255,255,255,0.02)',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['#f87171','#fbbf24','#4ade80'].map(c => (
+                <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.5 }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'JetBrains Mono', monospace" }}>
+              {meta.lang} · {lines.length} líneas
+            </span>
+          </div>
+
+          {/* Líneas de código */}
+          <div style={{ padding: '12px 0' }}>
+            {lines.map((line, i) => (
+              <div key={i} style={{ display: 'flex', minHeight: 22 }}>
+                <span style={{
+                  minWidth: 48, paddingLeft: 16, paddingRight: 14, textAlign: 'right',
+                  userSelect: 'none', fontSize: 12, lineHeight: '22px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: 'rgba(255,255,255,0.12)',
+                  borderRight: '1px solid rgba(255,255,255,0.05)', flexShrink: 0,
+                }}>{i + 1}</span>
+                <span style={{
+                  paddingLeft: 16, paddingRight: 20, fontSize: 13, lineHeight: '22px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: '#93c5fd', whiteSpace: 'pre',
+                }}>{line || ' '}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '10px 18px',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          background: 'rgba(255,255,255,0.01)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 10, color: '#374151', fontFamily: "'JetBrains Mono', monospace" }}>
+            {new Date(s.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', fontWeight: 500 }}>
+            Esc para cerrar
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ─── Snippet Card ──────────────────────────────────────────────────────────────
 
-function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, copiedId }: {
+function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, onExpand, copiedId }: {
   s: Snippet; author?: Member; isCurrentUser: boolean;
   onCopy: (id: string, content: string) => void;
   onEdit: (s: Snippet) => void;
   onDelete: (s: Snippet) => void;
+  onExpand: (s: Snippet) => void;
   copiedId: string | null;
 }) {
   const meta   = lm(s.label);
@@ -160,6 +318,13 @@ function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, copie
           </h3>
         </div>
         <div className="flex gap-0.5 flex-shrink-0">
+          <button onClick={() => onExpand(s)} title="Pantalla completa"
+            style={{ padding: '5px', borderRadius: 6, border: 'none', cursor: 'pointer', color: '#4a5570', background: 'transparent', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#eef0fb'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4a5570'; }}
+          >
+            <Maximize2 size={11} />
+          </button>
           <button onClick={() => onCopy(s.id, s.content)} title="Copiar"
             style={{
               padding: '5px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
@@ -308,10 +473,12 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
   onAddSnippet: () => void; onEditSnippet: (s: Snippet) => void;
   onCopy: (c: string) => void; onDeleteSnippet: (s: Snippet) => void;
 }) {
-  const [filterLabel,  setFilterLabel]  = useState('all');
-  const [filterAuthor, setFilterAuthor] = useState('all');
-  const [sortBy,       setSortBy]       = useState('newest');
-  const [copiedId,     setCopiedId]     = useState<string | null>(null);
+  const [filterLabel,    setFilterLabel]    = useState('all');
+  const [filterAuthor,   setFilterAuthor]   = useState('all');
+  const [sortBy,         setSortBy]         = useState('newest');
+  const [copiedId,       setCopiedId]       = useState<string | null>(null);
+  const [expandedSnippet, setExpandedSnippet] = useState<Snippet | null>(null);
+  const [copiedFullscreen, setCopiedFullscreen] = useState(false);
 
   const handleCopy = (id: string, content: string) => {
     onCopy(content);
@@ -488,6 +655,7 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
                 onCopy={handleCopy}
                 onEdit={onEditSnippet}
                 onDelete={onDeleteSnippet}
+                onExpand={setExpandedSnippet}
                 copiedId={copiedId}
               />
             ))}
@@ -528,6 +696,17 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
           )}
         </div>
       </div>
+
+      {/* ── Fullscreen viewer ── */}
+      {expandedSnippet && (
+        <SnippetFullScreen
+          s={expandedSnippet}
+          author={members.find(m => m.id === expandedSnippet.authorId)}
+          onClose={() => { setExpandedSnippet(null); setCopiedFullscreen(false); }}
+          onCopy={() => { onCopy(expandedSnippet.content); setCopiedFullscreen(true); setTimeout(() => setCopiedFullscreen(false), 2000); }}
+          copied={copiedFullscreen}
+        />
+      )}
 
       {/* ── Sidebar de stats ── */}
       <StatsSidebar
