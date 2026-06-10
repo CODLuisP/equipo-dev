@@ -29,7 +29,7 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: "#0d0f22",
+        background: "#161929",
         border: "1px solid rgba(37,99,235,0.18)",
         borderTop: "1px solid rgba(37,99,235,0.32)",
         borderRadius: 18,
@@ -37,7 +37,6 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
         margin: "0 16px",
         width: "100%",
         maxWidth: 380,
-        boxShadow: "0 0 0 1px rgba(37,99,235,0.06), 0 4px 0 rgba(37,99,235,0.10), 0 25px 60px rgba(0,0,0,0.65)",
       }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>

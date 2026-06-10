@@ -125,7 +125,7 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
   const { icon, accent, label } = getTypeInfo();
 
   return (
-    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, boxShadow:isDragging?`0 20px 60px rgba(0,0,0,0.7),0 0 0 2px ${accent}50`:`0 8px 28px rgba(0,0,0,0.5),0 0 0 1px ${accent}15`, transition:isDragging?'none':'box-shadow 0.2s', userSelect:'none' }}
+    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, border:isDragging?`2px solid ${accent}50`:`1px solid ${accent}25`, transition:isDragging?'none':'border-color 0.2s', userSelect:'none' }}
       onMouseDown={e=>{ if ((e.target as HTMLElement).closest('button')) return; setIsDragging(true); }}>
       <div style={{ background:`linear-gradient(135deg,${accent}20 0%,${accent}07 100%)`, borderBottom:`1px solid ${accent}18`, padding:'14px 14px 10px' }}>
         <div className="flex items-start justify-between mb-2">
@@ -263,7 +263,7 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
       {showConfirmClear && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.65)', backdropFilter:'blur(6px)' }}
           onMouseDown={e=>{ if (e.target===e.currentTarget) setShowConfirmClear(false); }}>
-          <div style={{ background:'rgba(14,17,24,0.98)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:18, padding:'28px 32px', width:360, display:'flex', flexDirection:'column', gap:20, boxShadow:'0 24px 64px rgba(0,0,0,0.8)', fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ background:'rgba(14,17,24,0.98)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:18, padding:'28px 32px', width:360, display:'flex', flexDirection:'column', gap:20, fontFamily:"'DM Sans',sans-serif" }}>
             {/* Icono */}
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ width:40, height:40, borderRadius:12, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>

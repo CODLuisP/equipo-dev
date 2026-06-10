@@ -17,7 +17,7 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#080a14',
+      background: '#0d1021',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -54,7 +54,6 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
         textAlign: 'center',
         position: 'relative',
         zIndex: 10,
-        boxShadow: '0 0 0 1px rgba(37,99,235,0.05), 0 30px 80px rgba(0,0,0,0.6), 0 0 50px rgba(37,99,235,0.05)',
       }}>
 
         {/* Icon */}
@@ -64,7 +63,6 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
           border: '1px solid rgba(37,99,235,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 24px',
-          boxShadow: '0 0 30px rgba(37,99,235,0.15)',
         }}>
           <Users size={28} color="#60a5fa" />
         </div>

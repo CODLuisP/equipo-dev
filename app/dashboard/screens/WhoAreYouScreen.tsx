@@ -380,7 +380,6 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
           border: "1px solid rgba(37,99,235,0.28)",
           display: "flex", alignItems: "center", justifyContent: "center",
           margin: "0 auto 22px",
-          boxShadow: "0 0 28px rgba(37,99,235,0.15)",
         }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -418,7 +417,7 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
               key={member.id}
               onClick={() => onSelect(member)}
               style={{
-                background: "rgba(10,12,24,0.82)",
+                background: "rgba(22,25,41,0.92)",
                 border: "1px solid rgba(37,99,235,0.14)",
                 borderRadius: 16,
                 padding: "22px 14px 18px",
@@ -427,20 +426,17 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
                 backdropFilter: "blur(12px)",
                 transition: "all 0.22s cubic-bezier(0.4,0,0.2,1)",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 11,
-                boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
                 animationDelay: `${i * 0.06}s`,
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = "rgba(37,99,235,0.10)";
                 e.currentTarget.style.borderColor = "rgba(37,99,235,0.38)";
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = "0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(37,99,235,0.22), 0 0 22px rgba(37,99,235,0.09)";
+                e.currentTarget.style.transform = "translateY(-3px)";
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = "rgba(10,12,24,0.82)";
+                e.currentTarget.style.background = "rgba(22,25,41,0.92)";
                 e.currentTarget.style.borderColor = "rgba(37,99,235,0.14)";
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.35)";
               }}
             >
               <div style={{ position: "relative" }}>

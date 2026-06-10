@@ -162,7 +162,6 @@ function SnippetFullScreen({ s, author, onClose, onCopy, copied }: {
         borderTop: `2px solid ${meta.color}60`,
         borderRadius: 20,
         display: 'flex', flexDirection: 'column',
-        boxShadow: `0 40px 100px rgba(0,0,0,0.8), 0 0 60px ${meta.color}08`,
         overflow: 'hidden',
       }}>
 
@@ -422,7 +421,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.dot, flexShrink: 0, boxShadow: active ? `0 0 6px ${meta.dot}` : 'none' }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.dot, flexShrink: 0,  }} />
                   <span style={{ fontSize: 10, fontWeight: 600, color: active ? meta.color : '#8b91b8', textTransform: 'capitalize' }}>{label}</span>
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: active ? meta.color : '#374151', fontFamily: "'JetBrains Mono', monospace" }}>{count}</span>

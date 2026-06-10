@@ -37,9 +37,6 @@ function MemberCard({ member, index, onEdit, onDelete }: {
         overflow: 'hidden',
         transition: 'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',
         transform: hovered ? 'translateY(-7px) scale(1.02)' : 'none',
-        boxShadow: hovered
-          ? '0 28px 52px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05)'
-          : '0 6px 20px rgba(0,0,0,0.4)',
         backdropFilter: 'blur(12px)',
       }}
     >
@@ -83,8 +80,7 @@ function MemberCard({ member, index, onEdit, onDelete }: {
           <div style={{
             position: 'absolute', bottom: 1, right: 1, zIndex: 2,
             width: 11, height: 11, borderRadius: '50%',
-            background: '#22c55e', border: '2px solid #090c1a',
-            boxShadow: '0 0 7px #22c55e90',
+            background: '#22c55e', border: '2px solid #161929',
           }} />
         </div>
 
@@ -204,7 +200,6 @@ function AddCard({ onClick }: { onClick: () => void }) {
         background: hovered ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.06)',
         border: `1px solid rgba(37,99,235,${hovered ? '0.4' : '0.18'})`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: hovered ? '0 0 20px rgba(37,99,235,0.2)' : 'none',
         transition: 'all 0.22s',
       }}>
         <Plus size={20} color="#2563eb" />
@@ -240,7 +235,6 @@ function AvatarEditor({ member, onSave, onClose }: {
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 24, padding: '28px 28px 30px',
         width: 420, maxWidth: '95vw',
-        boxShadow: '0 40px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -289,7 +283,6 @@ function AvatarEditor({ member, onSave, onClose }: {
                 background: seed === p ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1.5px solid ${seed === p ? 'rgba(37,99,235,0.6)' : 'rgba(255,255,255,0.07)'}`,
                 borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
-                boxShadow: seed === p ? '0 0 12px rgba(37,99,235,0.25)' : 'none',
               }}
                 onMouseEnter={e => { if (seed !== p) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
                 onMouseLeave={e => { if (seed !== p) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; } }}
@@ -323,7 +316,7 @@ function AvatarEditor({ member, onSave, onClose }: {
               background: '#2563eb', border: 'none', borderRadius: 10,
               color: '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.4)', transition: 'background 0.15s',
+              transition: 'background 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.background = '#3b82f6'}
             onMouseLeave={e => e.currentTarget.style.background = '#2563eb'}
@@ -376,7 +369,7 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
               textTransform: 'uppercase', letterSpacing: '0.22em', marginBottom: 7,
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 5px #3b82f6', display: 'inline-block' }} />
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
               Gestión del Equipo
             </div>
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: '#f0f4ff', letterSpacing: '-0.7px', lineHeight: 1.1 }}>
@@ -397,7 +390,6 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
             border: '1px solid rgba(96,165,250,0.3)',
             borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: 700,
             cursor: 'pointer', flexShrink: 0,
-            boxShadow: '0 0 24px rgba(37,99,235,0.3), 0 4px 12px rgba(0,0,0,0.4)',
             transition: 'all 0.18s',
           }}
             onMouseEnter={e => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-2px)'; }}

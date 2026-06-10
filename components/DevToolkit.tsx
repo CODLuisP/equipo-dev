@@ -121,7 +121,6 @@ function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () =
         background:`${accentColor}15`, border:`1.5px solid ${accentColor}35`,
         display:'flex', alignItems:'center', justifyContent:'center',
         marginBottom:28,
-        boxShadow:`0 0 60px ${accentColor}20`,
       }}>
         <StatusIcon iconKey={status.iconKey} size={56} color={accentColor} strokeWidth={1.5} />
       </div>
@@ -153,11 +152,10 @@ function MyAFKOverlay({ status, onReturn }: { status: RadarEntry; onReturn: () =
         style={{
           background: accentColor, color:'#fff', border:'none', borderRadius:20,
           padding:'20px 56px', fontSize:18, fontWeight:800, cursor:'pointer',
-          boxShadow:`0 20px 60px ${accentColor}35, 0 0 0 1px ${accentColor}40`,
           letterSpacing:'-0.3px', transition:'all 0.2s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 28px 70px ${accentColor}45`; }}
-        onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow=`0 20px 60px ${accentColor}35`; }}
+        onMouseEnter={e => { e.currentTarget.style.opacity='0.9'; }}
+        onMouseLeave={e => { e.currentTarget.style.opacity='1'; }}
       >
         Ya regresé
       </button>
@@ -186,11 +184,10 @@ function TeamAlertNotification({ alert, onDismiss }: { alert: PendingAlert; onDi
   return (
     <div style={{
       width: 300,
-      background: 'rgba(10,12,22,0.98)',
+      background: 'rgba(22,25,41,0.98)',
       borderRadius: 14,
       border: `1px solid rgba(255,255,255,0.07)`,
       borderTop: `1px solid ${color}55`,
-      boxShadow: `0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03), 0 0 32px ${color}12`,
       transform: visible ? 'translateX(0)' : 'translateX(115%)',
       opacity: visible ? 1 : 0,
       transition: 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease',
@@ -236,7 +233,7 @@ function TeamAlertNotification({ alert, onDismiss }: { alert: PendingAlert; onDi
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
             <span style={{ fontSize: 10, fontWeight: 700, color: color, opacity: 0.8, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.03em' }}>
               {time}
             </span>
@@ -322,7 +319,6 @@ function TeamMemberRow({
             background:`${member.color}20`, border:`1.5px solid ${member.color}40`,
             display:'flex', alignItems:'center', justifyContent:'center',
             fontSize:13, fontWeight:900, color:member.color,
-            boxShadow: isAFK ? `0 0 10px ${afkColor}25` : 'none',
           }}>
             {member.name.charAt(0).toUpperCase()}
           </div>
@@ -332,7 +328,6 @@ function TeamMemberRow({
             width:9, height:9, borderRadius:'50%',
             background: isAFK ? afkColor : isOnline ? '#27AE60' : '#4B5563',
             border:'1.5px solid rgba(12,15,22,0.99)',
-            boxShadow: isOnline && !isAFK ? '0 0 6px #27AE6080' : 'none',
           }}/>
         </div>
 
@@ -659,9 +654,10 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
       )}
 
       {/* Panel */}
-      <div style={{ background:'rgba(15,18,25,0.85)', backdropFilter:'blur(16px)', borderRadius:24, border:'1px solid rgba(255,255,255,0.1)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ background:'rgba(22,25,41,0.92)', backdropFilter:'blur(16px)', borderRadius:24, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-        <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.3)' }}>
+
+        <div style={{ display:'flex', background:'rgba(0,0,0,0.3)' }}>
           <TabBtn id="radar"   icon={Activity} label="Live Radar" />
           <TabBtn id="tools"   icon={Terminal} label="DevTools"   />
           <TabBtn id="staging" icon={Globe}    label="Entornos"   />
@@ -693,7 +689,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                     </div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <div style={{ width:7, height:7, borderRadius:'50%', background: isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60', boxShadow:`0 0 8px ${isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60'}80` }} />
+                    <div style={{ width:7, height:7, borderRadius:'50%', background: isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60' }} />
                     <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
                       {isAFK ? 'ausente' : 'online'}
                     </span>
@@ -718,8 +714,8 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                         alignItems:'center', gap:8, cursor:'pointer',
                         transition:'all 0.15s', fontFamily:'inherit',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 8px 20px ${p.color}25`; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}
+                      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform='none'; }}
                     >
                       <StatusIcon iconKey={p.iconKey} size={22} color={p.color} strokeWidth={1.75} />
                       <span style={{ fontSize:10, fontWeight:800, textAlign:'center', lineHeight:1.2 }}>{p.text}</span>
@@ -889,7 +885,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
               {links.map(link => (
                 <div key={link.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:6, height:6, borderRadius:'50%', background: link.type==='prod'?'#27AE60':'#3498DB', boxShadow:`0 0 8px ${link.type==='prod'?'#27AE60':'#3498DB'}` }} />
+                    <div style={{ width:6, height:6, borderRadius:'50%', background: link.type==='prod'?'#27AE60':'#3498DB' }} />
                     <div>
                       <div style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{link.name}</div>
                       <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{link.url.replace('https://','')}</div>

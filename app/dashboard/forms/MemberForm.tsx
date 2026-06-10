@@ -49,8 +49,8 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
           <AvatarImg seed={avatarSeed} name={name || "?"} color={previewColor} size={86} borderRadius={43} />
           <div style={{ position: "absolute", bottom: 2, right: 2,
             width: 14, height: 14, borderRadius: "50%",
-            background: "#22c55e", border: "2px solid #090c1a",
-            boxShadow: "0 0 8px #22c55e80" }} />
+            background: "#22c55e", border: "2px solid #161929",
+}} />
         </div>
         <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.3)" }}>
           {name || "Nombre del miembro"}
@@ -72,7 +72,6 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
                 background: avatarSeed === p ? `${previewColor}18` : "rgba(255,255,255,0.03)",
                 border: `1.5px solid ${avatarSeed === p ? previewColor + "70" : "rgba(255,255,255,0.07)"}`,
                 borderRadius: 9, cursor: "pointer", transition: "all 0.15s",
-                boxShadow: avatarSeed === p ? `0 0 10px ${previewColor}25` : "none",
               }}
               onMouseEnter={e => { if (!(avatarSeed === p)) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; } }}
               onMouseLeave={e => { if (!(avatarSeed === p)) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; } }}
@@ -129,7 +128,6 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
                   transition: "all 0.15s",
                   color: active ? r.color : "rgba(255,255,255,0.35)",
                   fontSize: 11, fontWeight: active ? 700 : 500,
-                  boxShadow: active ? `0 0 12px ${r.color}18` : "none",
                   textAlign: "left",
                 }}
                 onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; } }}
@@ -154,7 +152,6 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
           border: "none", borderRadius: 12,
           color: name.trim() ? "#fff" : "rgba(255,255,255,0.25)",
           fontSize: 14, fontWeight: 800, cursor: name.trim() ? "pointer" : "not-allowed",
-          boxShadow: name.trim() ? "0 0 24px rgba(37,99,235,0.35), 0 4px 12px rgba(0,0,0,0.4)" : "none",
           transition: "all 0.18s",
           letterSpacing: "-0.2px",
         }}

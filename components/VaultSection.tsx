@@ -64,9 +64,9 @@ export function SectionBoveda({
     return (
       <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
         <BovedaBackground />
-        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[#2563eb]/15 rounded-3xl p-10 text-center shadow-2xl backdrop-blur-sm" style={{ boxShadow: '0 0 60px rgba(37,99,235,0.08), 0 24px 64px rgba(0,0,0,0.6)' }}>
+        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[#2563eb]/15 rounded-3xl p-10 text-center backdrop-blur-sm">
           <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-[#2563eb] to-transparent opacity-60" />
-          <div className="w-20 h-20 bg-[#2563eb]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#2563eb]/25" style={{ boxShadow: '0 0 32px rgba(37,99,235,0.15)' }}>
+          <div className="w-20 h-20 bg-[#2563eb]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#2563eb]/25">
             <Shield size={40} className="text-[#2563eb]" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Bóveda de Credenciales</h2>

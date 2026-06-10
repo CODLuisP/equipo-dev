@@ -132,7 +132,6 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: input.trim() ? '#fff' : 'rgba(37,99,235,0.35)',
             transition: 'all 0.15s',
-            boxShadow: input.trim() ? '0 0 16px rgba(37,99,235,0.3)' : 'none',
           }}
         >
           <Plus size={16} />
@@ -147,7 +146,7 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
           background: 'rgba(34,197,94,0.06)',
           border: '1px solid rgba(34,197,94,0.18)',
         }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e', flexShrink: 0 }} />
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
           <span style={{ fontSize: 11, fontWeight: 700, color: '#4ade80', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Escuchando — cada frase se agrega automáticamente
           </span>

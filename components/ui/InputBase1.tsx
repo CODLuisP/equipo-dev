@@ -53,20 +53,18 @@ export default function InputBase1({
             paddingTop: 9,
             paddingBottom: 9,
             borderRadius: 9,
-            background: "rgba(8,10,20,0.8)",
+            background: "rgba(22,25,41,0.9)",
             border: "1px solid rgba(37,99,235,0.15)",
             color: "#eef0fb",
             outline: "none",
-            transition: "border-color 0.15s, box-shadow 0.15s",
+            transition: "border-color 0.15s",
             fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
           onFocus={e => {
             e.currentTarget.style.borderColor = "rgba(37,99,235,0.5)";
-            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.10)";
           }}
           onBlur={e => {
             e.currentTarget.style.borderColor = "rgba(37,99,235,0.15)";
-            e.currentTarget.style.boxShadow = "none";
           }}
         />
         {isPassword && (

@@ -19,6 +19,7 @@ import TaskForm from "@/app/dashboard/forms/TaskForm";
 import SnippetForm from "@/app/dashboard/forms/SnippetForm";
 import NoteForm from "@/app/dashboard/forms/NoteForm";
 import ButtonBase from "@/components/ui/ButtonBase";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import SetupScreen from "@/app/dashboard/screens/SetupScreen";
 import WhoAreYouScreen from "@/app/dashboard/screens/WhoAreYouScreen";
 
@@ -38,11 +39,10 @@ const toasterProps = {
   theme: "dark" as const,
   toastOptions: {
     style: {
-      background: "#0c0e1d", color: "#eef0fb",
+      background: "#161929", color: "#eef0fb",
       border: "1px solid rgba(37,99,235,0.18)",
       fontFamily: "'Plus Jakarta Sans', sans-serif",
       borderRadius: 12,
-      boxShadow: "0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(37,99,235,0.06)",
     }
   }
 };
@@ -92,7 +92,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden",
-      background: "#080a14", fontFamily: "'Plus Jakarta Sans', sans-serif",
+      background: "#0d1021", fontFamily: "'Plus Jakarta Sans', sans-serif",
       padding: isPizarra ? "0" : "18px 22px 22px",
     }}>
       <Toaster {...toasterProps} />
@@ -101,7 +101,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <header className={isPizarra ? "fixed top-4 right-4 z-[1000] w-auto" : "mb-4 flex-shrink-0"}>
         <div
           className={isPizarra ? "px-2 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2" : "flex flex-col md:flex-row md:items-center justify-between gap-3 w-full"}
-          style={isPizarra ? { background: "rgba(10,12,26,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(37,99,235,0.20)" } : {}}
+          style={isPizarra ? { background: "rgba(22,25,41,0.92)", backdropFilter: "blur(16px)", border: "1px solid rgba(37,99,235,0.20)" } : {}}
         >
           {/* Title — only when not pizarra */}
           {!isPizarra && (
@@ -289,7 +289,9 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardProvider>
-      <DashboardInner>{children}</DashboardInner>
+      <TooltipProvider>
+        <DashboardInner>{children}</DashboardInner>
+      </TooltipProvider>
     </DashboardProvider>
   );
 }

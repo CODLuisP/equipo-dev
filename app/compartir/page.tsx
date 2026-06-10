@@ -221,7 +221,7 @@ function ShareView() {
         .icon-box.orange { background: rgba(243,156,18,0.1); color: #F39C12; }
 
         .main-card { 
-          background: rgba(15,18,25,0.7); 
+          background: rgba(22,25,41,0.85);
           backdrop-filter: blur(50px); 
           border: 1px solid rgba(255,255,255,0.06); 
           border-radius: 40px; 

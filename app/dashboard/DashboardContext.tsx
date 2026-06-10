@@ -405,7 +405,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const showTaskAlert = (title: string) => {
     toast.custom(() => (
       <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"14px 16px",
-        background:"#0d0f22", border:"1px solid rgba(37,99,235,0.22)", borderRadius:14,
+        background:"#161929", border:"1px solid rgba(37,99,235,0.22)", borderRadius:14,
         boxShadow:"0 12px 32px rgba(0,0,0,0.5)", minWidth:290, maxWidth:340,
         fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
         <div style={{ width:36, height:36, borderRadius:10, background:"rgba(37,99,235,0.10)",
