@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 type ButtonProps = {
   children: React.ReactNode;
@@ -11,25 +11,22 @@ type ButtonProps = {
 
 const variants = {
   primary: {
-    bg: "#2563eb",
+    bg: "var(--blue)",
     color: "#fff",
-    border: "1px solid rgba(37,99,235,0.5)",
+    border: "1px solid rgba(var(--blue-rgb),0.5)",
     hoverBg: "#1d4ed8",
-    shadow: "0 6px 20px rgba(37,99,235,0.3)",
   },
   secondary: {
     bg: "transparent",
-    color: "#8b91b8",
-    border: "1px solid rgba(37,99,235,0.15)",
-    hoverBg: "rgba(37,99,235,0.07)",
-    shadow: "none",
+    color: "var(--text-2)",
+    border: "1px solid rgba(var(--blue-rgb),0.15)",
+    hoverBg: "rgba(var(--blue-rgb),0.07)",
   },
   danger: {
     bg: "transparent",
     color: "#f87171",
     border: "1px solid rgba(239,68,68,0.2)",
     hoverBg: "rgba(239,68,68,0.08)",
-    shadow: "none",
   },
 };
 
@@ -67,17 +64,12 @@ export default function ButtonBase({
         whiteSpace: "nowrap",
         opacity: disabled ? 0.4 : 1,
         letterSpacing: "0.01em",
-        boxShadow: v.shadow,
       }}
       onMouseEnter={e => {
-        if (!disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
-        }
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.hoverBg;
       }}
       onMouseLeave={e => {
-        if (!disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background = v.bg;
-        }
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.bg;
       }}
     >
       {children}

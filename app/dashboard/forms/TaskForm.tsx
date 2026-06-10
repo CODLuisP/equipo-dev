@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import { Trash2, Mic, MicOff, Plus, CheckSquare } from "lucide-react";
@@ -89,7 +89,7 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
               color: '#f0f4ff', fontSize: 13, fontWeight: 500, outline: 'none',
               transition: 'border-color 0.15s',
             }}
-            onFocus={e => { if (!listening) e.currentTarget.style.borderColor = 'rgba(37,99,235,0.5)'; }}
+            onFocus={e => { if (!listening) e.currentTarget.style.borderColor = 'rgba(var(--blue-rgb),0.5)'; }}
             onBlur={e  => { if (!listening) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}
           />
         </div>
@@ -126,11 +126,11 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
           disabled={!input.trim()}
           style={{
             width: 42, height: 42, flexShrink: 0,
-            background: input.trim() ? '#2563eb' : 'rgba(37,99,235,0.08)',
-            border: `1px solid ${input.trim() ? 'rgba(96,165,250,0.4)' : 'rgba(37,99,235,0.15)'}`,
+            background: input.trim() ? 'var(--blue)' : 'rgba(var(--blue-rgb),0.08)',
+            border: `1px solid ${input.trim() ? 'rgba(72,149,239,0.4)' : 'rgba(var(--blue-rgb),0.15)'}`,
             borderRadius: 10, cursor: input.trim() ? 'pointer' : 'not-allowed',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: input.trim() ? '#fff' : 'rgba(37,99,235,0.35)',
+            color: input.trim() ? '#fff' : 'rgba(var(--blue-rgb),0.35)',
             transition: 'all 0.15s',
           }}
         >
@@ -160,8 +160,8 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '9px 12px',
-              background: editingIdx === i ? 'rgba(37,99,235,0.07)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${editingIdx === i ? 'rgba(37,99,235,0.35)' : 'rgba(255,255,255,0.06)'}`,
+              background: editingIdx === i ? 'rgba(var(--blue-rgb),0.07)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${editingIdx === i ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: 9, transition: 'border-color 0.15s',
             }}>
               <CheckSquare size={12} style={{ color: '#3b82f6', flexShrink: 0 }} />

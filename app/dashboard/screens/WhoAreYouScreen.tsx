@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import { Toaster } from "sonner";
@@ -42,7 +42,7 @@ function buildProgrammer(
 
   const torsoColor  = [0x1e3a5f, 0x1a4a3a, 0x3b1f60][type];
   const hairColor   = type === 2 ? 0x888888 : 0x2c1810;
-  const symColor    = ["#60a5fa", "#34d399", "#c084fc"][type];
+  const symColor    = ["var(--blue-soft)", "#34d399", "#c084fc"][type];
   const skin        = 0xf0c090;
 
   /* ── legs ── */
@@ -376,12 +376,12 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
         {/* Icon */}
         <div style={{
           width: 58, height: 58, borderRadius: 15,
-          background: "rgba(37,99,235,0.10)",
-          border: "1px solid rgba(37,99,235,0.28)",
+          background: "rgba(var(--blue-rgb),0.10)",
+          border: "1px solid rgba(var(--blue-rgb),0.28)",
           display: "flex", alignItems: "center", justifyContent: "center",
           margin: "0 auto 22px",
         }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -391,18 +391,18 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
 
         {/* Title */}
         <h1 style={{
-          fontSize: 28, fontWeight: 800, color: "#eef0fb",
+          fontSize: 28, fontWeight: 800, color: "var(--text)",
           margin: "0 0 8px", letterSpacing: "-0.6px",
           fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}>
           ¿Quién eres{" "}
           <span style={{
-            background: "linear-gradient(135deg, #60a5fa, #93c5fd)",
+            background: "linear-gradient(135deg,var(--blue-soft),var(--blue-light))",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}>hoy</span>?
         </h1>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 34px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: "var(--text-3)", margin: "0 0 34px", lineHeight: 1.5 }}>
           Selecciona tu perfil para personalizar las notificaciones
         </p>
 
@@ -417,8 +417,8 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
               key={member.id}
               onClick={() => onSelect(member)}
               style={{
-                background: "rgba(22,25,41,0.92)",
-                border: "1px solid rgba(37,99,235,0.14)",
+                background: "rgba(var(--surface-rgb),0.92)",
+                border: "1px solid rgba(var(--blue-rgb),0.14)",
                 borderRadius: 16,
                 padding: "22px 14px 18px",
                 cursor: "pointer",
@@ -429,13 +429,13 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
                 animationDelay: `${i * 0.06}s`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(37,99,235,0.10)";
-                e.currentTarget.style.borderColor = "rgba(37,99,235,0.38)";
+                e.currentTarget.style.background = "rgba(var(--blue-rgb),0.10)";
+                e.currentTarget.style.borderColor = "rgba(var(--blue-rgb),0.38)";
                 e.currentTarget.style.transform = "translateY(-3px)";
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = "rgba(22,25,41,0.92)";
-                e.currentTarget.style.borderColor = "rgba(37,99,235,0.14)";
+                e.currentTarget.style.background = "rgba(var(--surface-rgb),0.92)";
+                e.currentTarget.style.borderColor = "rgba(var(--blue-rgb),0.14)";
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
@@ -448,10 +448,10 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
                 <AvatarImg seed={member.avatarSeed || member.name} name={member.name} color={member.color} size={58} borderRadius={14} />
               </div>
               <div>
-                <p style={{ color: "#eef0fb", fontWeight: 700, fontSize: 13, margin: 0, letterSpacing: "-0.1px" }}>
+                <p style={{ color: "var(--text)", fontWeight: 700, fontSize: 13, margin: 0, letterSpacing: "-0.1px" }}>
                   {member.name}
                 </p>
-                <p style={{ color: "#6b7280", fontSize: 11, margin: "3px 0 0", fontWeight: 500 }}>
+                <p style={{ color: "var(--text-3)", fontSize: 11, margin: "3px 0 0", fontWeight: 500 }}>
                   {member.role}
                 </p>
               </div>
@@ -470,7 +470,7 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
             display: "flex", alignItems: "center", gap: 6,
             margin: "28px auto 0",
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = "#8b91b8"; }}
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--text-2)"; }}
           onMouseLeave={e => { e.currentTarget.style.color = "#3a4060"; }}
         >
           Continuar sin seleccionar

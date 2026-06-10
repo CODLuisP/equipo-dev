@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
@@ -13,7 +13,7 @@ import AvatarImg from "@/app/dashboard/components/AvatarImg";
 // ─── Pizarra Helpers ──────────────────────────────────────────────────────────
 
 function ToolBtn({ active, onClick, icon, title }: any) {
-  return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[#2563eb] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
+  return <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-all ${active?'bg-[var(--blue)] text-white':'text-gray-500 hover:text-white hover:bg-white/5'}`}>{icon}</button>;
 }
 
 function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React.MouseEvent) => void; extraOffset?: number }) {
@@ -326,24 +326,24 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
 // ─── Dev Shapes ───────────────────────────────────────────────────────────────
 // defaultW/H proporcionales al viewBox de cada forma (vb = "x y w h")
 const DEV_SHAPES = [
-  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70,  color: '#60a5fa' },
-  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82,  color: '#93c5fd' },
-  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64,  color: '#60a5fa' },
-  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96,  color: '#93c5fd' },
+  { type: 'database',     label: 'Base de Datos',  defaultW: 80,  defaultH: 70,  color: 'var(--blue-soft)' },
+  { type: 'server',       label: 'Servidor',        defaultW: 80,  defaultH: 82,  color: 'var(--blue-light)' },
+  { type: 'cloud',        label: 'Cloud',           defaultW: 110, defaultH: 64,  color: 'var(--blue-soft)' },
+  { type: 'monitor',      label: 'Computadora',     defaultW: 108, defaultH: 96,  color: 'var(--blue-light)' },
   { type: 'mobile',       label: 'Móvil',           defaultW: 50,  defaultH: 95,  color: '#4ade80' },
-  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102, color: '#2563eb' },
+  { type: 'browser',      label: 'Browser',         defaultW: 108, defaultH: 102, color: 'var(--blue)' },
   { type: 'terminal',     label: 'Terminal',        defaultW: 108, defaultH: 102, color: '#22d3ee' },
-  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63,  color: '#2563eb' },
-  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96,  color: '#60a5fa' },
+  { type: 'api',          label: 'API',             defaultW: 110, defaultH: 63,  color: 'var(--blue)' },
+  { type: 'microservice', label: 'Microservicio',   defaultW: 80,  defaultH: 96,  color: 'var(--blue-soft)' },
   { type: 'router',       label: 'Router',          defaultW: 90,  defaultH: 90,  color: '#f87171' },
-  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82,  color: '#2563eb' },
-  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82,  color: '#60a5fa' },
+  { type: 'loadbalancer', label: 'Load Balancer',   defaultW: 96,  defaultH: 82,  color: 'var(--blue)' },
+  { type: 'docker',       label: 'Docker',          defaultW: 100, defaultH: 82,  color: 'var(--blue-soft)' },
   { type: 'git',          label: 'Git',             defaultW: 88,  defaultH: 88,  color: '#f87171' },
-  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91,  color: '#93c5fd' },
-  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88,  color: '#60a5fa' },
+  { type: 'user',         label: 'Usuario',         defaultW: 80,  defaultH: 91,  color: 'var(--blue-light)' },
+  { type: 'globe',        label: 'Internet',        defaultW: 88,  defaultH: 88,  color: 'var(--blue-soft)' },
   { type: 'lock',         label: 'Seguridad',       defaultW: 70,  defaultH: 90,  color: '#fbbf24' },
-  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64,  color: '#93c5fd' },
-  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84,  color: '#2563eb' },
+  { type: 'storage',      label: 'Almacenamiento',  defaultW: 96,  defaultH: 64,  color: 'var(--blue-light)' },
+  { type: 'queue',        label: 'Queue',           defaultW: 100, defaultH: 84,  color: 'var(--blue)' },
   { type: 'cache',        label: 'Caché',           defaultW: 88,  defaultH: 88,  color: '#22d3ee' },
   { type: 'firewall',     label: 'Firewall',        defaultW: 80,  defaultH: 93,  color: '#f87171' },
 ];
@@ -499,7 +499,7 @@ function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zo
 }
 
 // ─── Shape Editor ─────────────────────────────────────────────────────────────
-const EDITOR_COLORS = ['#F4F5F7','#2563eb','#60a5fa','#93c5fd','#22d3ee','#4ade80','#f87171','#fbbf24','#a3e635','#e879f9','#94a3b8','#000000'];
+const EDITOR_COLORS = ['#F4F5F7','var(--blue)','var(--blue-soft)','var(--blue-light)','#22d3ee','#4ade80','#f87171','#fbbf24','#a3e635','#e879f9','#94a3b8','#000000'];
 
 type DrawTool = 'pen' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'tri' | 'curve' | 'polygon' | 'star' | 'roundrect' | 'polyline' | 'editnode' | 'select';
 export type EStroke = { color: string; sw: number; fill: string } & (
@@ -742,7 +742,7 @@ const TOOL_DEFS: {id: DrawTool; label: string; icon: React.ReactElement}[] = [
 function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; onCancel: () => void }) {
   const [strokes, setStrokes] = useState<EStroke[]>([]);
   const [tool, setTool] = useState<DrawTool>('pen');
-  const [color, setColor] = useState('#2563eb');
+  const [color, setColor] = useState('var(--blue)');
   const [fillColor, setFillColor] = useState<string>('none');
   const [sw, setSw] = useState(2.5);
   const [label, setLabel] = useState('');
@@ -1296,7 +1296,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
   const preview = buildPreview();
 
-  const FILL_COLORS = ['none', '#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#94a3b8', '#000000'];
+  const FILL_COLORS = ['none', '#F4F5F7', 'var(--blue)', 'var(--blue-soft)', 'var(--blue-light)', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#94a3b8', '#000000'];
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(10px)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}
@@ -1338,7 +1338,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 <div key={ri} style={{display:'flex',gap:4}}>
                   {row.map(t=>(
                     <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
-                      style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(37,99,235,0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(37,99,235,0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'#2563eb':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
+                      style={{flex:1,height:30,borderRadius:8,background:tool===t.id?'rgba(var(--blue-rgb),0.25)':'rgba(255,255,255,0.05)',border:`1px solid ${tool===t.id?'rgba(var(--blue-rgb),0.7)':'rgba(255,255,255,0.08)'}`,color:tool===t.id?'var(--blue)':'#8A9099',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}>
                       {t.icon}
                     </button>
                   ))}
@@ -1360,8 +1360,8 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
               <div style={{display:'flex',gap:3}}>
                 {[1.5,2.5,4,7].map(w=>(
                   <button key={w} onClick={()=>setSw(w)} title={`Grosor ${w}`}
-                    style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(37,99,235,0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(37,99,235,0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <div style={{borderRadius:'50%',background:sw===w?'#2563eb':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
+                    style={{width:24,height:24,borderRadius:7,background:sw===w?'rgba(var(--blue-rgb),0.3)':'rgba(255,255,255,0.05)',border:`1px solid ${sw===w?'rgba(var(--blue-rgb),0.6)':'rgba(255,255,255,0.08)'}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <div style={{borderRadius:'50%',background:sw===w?'var(--blue)':'#8A9099',width:Math.min(w*2,13),height:Math.min(w*2,13)}}/>
                   </button>
                 ))}
                 <button onClick={()=>setStrokes(s=>s.slice(0,-1))} title="Deshacer último" disabled={strokes.length===0}
@@ -1400,9 +1400,9 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   {[3,4,5,6,8,10,12].map(n=>(
                     <button key={n} onClick={()=>setSides(n)}
                       style={{width:26,height:22,borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
-                        background:sides===n?'rgba(37,99,235,0.25)':'rgba(255,255,255,0.05)',
-                        border:`1px solid ${sides===n?'rgba(37,99,235,0.7)':'rgba(255,255,255,0.08)'}`,
-                        color:sides===n?'#2563eb':'#8A9099'}}>
+                        background:sides===n?'rgba(var(--blue-rgb),0.25)':'rgba(255,255,255,0.05)',
+                        border:`1px solid ${sides===n?'rgba(var(--blue-rgb),0.7)':'rgba(255,255,255,0.08)'}`,
+                        color:sides===n?'var(--blue)':'#8A9099'}}>
                       {n}
                     </button>
                   ))}
@@ -1478,7 +1478,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 const pd=8, x=bb.minX-pd, y=bb.minY-pd, w=bb.maxX-bb.minX+pd*2, h=bb.maxY-bb.minY+pd*2;
                 const isSel=selectIdx===i;
                 return <rect key={`sh${i}`} x={x} y={y} width={w} height={h}
-                  fill="rgba(0,0,0,0)" stroke={isSel?'rgba(37,99,235,0.5)':'transparent'} strokeWidth={isSel?1.5:0}
+                  fill="rgba(0,0,0,0)" stroke={isSel?'rgba(var(--blue-rgb),0.5)':'transparent'} strokeWidth={isSel?1.5:0}
                   strokeDasharray={isSel?'5,3':undefined} rx={3}
                   style={{cursor:isSel?'grab':'pointer'}}
                   onMouseDown={e=>{
@@ -1502,7 +1502,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                 ];
                 return <>{corners.map(({id,cx,cy,cur})=>(
                   <rect key={id} x={cx-5} y={cy-5} width={10} height={10} rx={2}
-                    fill="#0A0C0F" stroke="#2563eb" strokeWidth={1.8}
+                    fill="#0A0C0F" stroke="var(--blue)" strokeWidth={1.8}
                     style={{cursor:cur}}
                     onMouseDown={e=>{
                       e.preventDefault(); e.stopPropagation();
@@ -1521,7 +1521,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   else d+=` L${s.pts[j+1].x.toFixed(1)},${s.pts[j+1].y.toFixed(1)}`;
                 }
                 const isSelected = editingIdx === i;
-                return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(37,99,235,0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
+                return <path key={`hit${i}`} d={d} stroke={isSelected ? 'rgba(var(--blue-rgb),0.4)' : 'rgba(255,255,255,0.18)'} strokeWidth={isSelected ? 10 : 10} fill="none" strokeLinecap="round" style={{cursor:'pointer'}}
                   onMouseDown={e=>{e.preventDefault();e.stopPropagation();setEditingIdx(i);}}/>;
               })}
               {tool==='pen' && curPts && curPts.length>1 && (
@@ -1562,7 +1562,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                       return <g key={`arc${si}`}>
                         <line x1={a.x} y1={a.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
                         <line x1={b.x} y1={b.y} x2={arc.cp.x} y2={arc.cp.y} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3,3" style={{pointerEvents:'none'}}/>
-                        <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="#2563eb" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
+                        <circle cx={arc.cp.x} cy={arc.cp.y} r={5.5} fill="var(--blue)" stroke="#fff" strokeWidth={1.5} style={{cursor:'move'}}
                           onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'arc',segIdx:si});}}/>
                       </g>;
                     }
@@ -1574,7 +1574,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
                   })}
                   {/* Vertex handles */}
                   {pts.map((p, pi) => (
-                    <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="#2563eb" strokeWidth={2} style={{cursor:'grab'}}
+                    <circle key={`vert${pi}`} cx={p.x} cy={p.y} r={5.5} fill="#0A0C0F" stroke="var(--blue)" strokeWidth={2} style={{cursor:'grab'}}
                       onMouseDown={e=>{e.preventDefault();e.stopPropagation();setHandleDrag({kind:'vertex',segIdx:pi});}}/>
                   ))}
                 </>;
@@ -1687,13 +1687,13 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Nombre de la forma"
             style={{flex:1,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'7px 12px',color:'#F4F5F7',fontSize:13,outline:'none',fontFamily:"'DM Sans',sans-serif"}}
-            onFocus={e=>{e.target.style.borderColor='rgba(37,99,235,0.6)';}}
+            onFocus={e=>{e.target.style.borderColor='rgba(var(--blue-rgb),0.6)';}}
             onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,0.1)';}}/>
           <button onClick={onCancel} style={{padding:'7px 14px',borderRadius:9,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#8A9099',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
           <button onClick={handleSave} disabled={strokes.length===0}
-            style={{padding:'7px 16px',borderRadius:9,background:strokes.length===0?'rgba(37,99,235,0.2)':'#2563eb',border:'none',color:strokes.length===0?'#1e3a8a':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
+            style={{padding:'7px 16px',borderRadius:9,background:strokes.length===0?'rgba(var(--blue-rgb),0.2)':'var(--blue)',border:'none',color:strokes.length===0?'#1e3a8a':'#fff',fontSize:13,fontWeight:700,cursor:strokes.length===0?'default':'pointer',transition:'all 0.15s'}}
             onMouseEnter={e=>{if(strokes.length>0)e.currentTarget.style.background='#1d4ed8';}}
-            onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='#2563eb';}}>
+            onMouseLeave={e=>{if(strokes.length>0)e.currentTarget.style.background='var(--blue)';}}>
             Guardar Forma
           </button>
         </div>
@@ -1743,7 +1743,7 @@ function MyShapesManager({ customTemplates, onDelete, onRename, onClose }: {
 
               {/* Preview */}
               <div style={{ width:44, height:44, background:'rgba(255,255,255,0.04)', borderRadius:10, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,0.06)' }}>
-                <ShapeSvg type={sh.id} color="#60a5fa" width={34} height={34} customTemplates={customTemplates}/>
+                <ShapeSvg type={sh.id} color="var(--blue-soft)" width={34} height={34} customTemplates={customTemplates}/>
               </div>
 
               {/* Nombre editable */}
@@ -1755,7 +1755,7 @@ function MyShapesManager({ customTemplates, onDelete, onRename, onClose }: {
                     onChange={e=>setEditingVal(e.target.value)}
                     onBlur={commitEdit}
                     onKeyDown={e=>{ if(e.key==='Enter') commitEdit(); if(e.key==='Escape') setEditingId(null); }}
-                    style={{ width:'100%', background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.5)', borderRadius:7, padding:'4px 8px', color:'#F4F5F7', fontSize:13, fontWeight:600, outline:'none', fontFamily:"'DM Sans',sans-serif" }}
+                    style={{ width:'100%', background:'rgba(var(--blue-rgb),0.1)', border:'1px solid rgba(var(--blue-rgb),0.5)', borderRadius:7, padding:'4px 8px', color:'#F4F5F7', fontSize:13, fontWeight:600, outline:'none', fontFamily:"'DM Sans',sans-serif" }}
                   />
                 ) : (
                   <button onClick={()=>startEdit(sh)} title="Editar nombre"
@@ -1800,8 +1800,8 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
     )}
     <div style={{ position:'fixed', right: 16, top: 16, zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
       <button onClick={onToggle} title="Formas de desarrollo"
-        style={{ width:42, height:42, borderRadius:13, background: isVisible ? '#2563eb' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'#2563eb':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
-        onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(37,99,235,0.5)'; } }}
+        style={{ width:42, height:42, borderRadius:13, background: isVisible ? 'var(--blue)' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'var(--blue)':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
+        onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.5)'; } }}
         onMouseLeave={e=>{ if (!isVisible) { e.currentTarget.style.color='#8A9099'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'; } }}>
         <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
@@ -1814,9 +1814,9 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
           <div style={{ display:'flex', gap:6 }}>
             <button onClick={onOpenEditor}
               title="Abrir editor de formas"
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(37,99,235,0.12)', border:'1px solid rgba(37,99,235,0.3)', borderRadius:9, cursor:'pointer', color:'#2563eb', fontSize:10, fontWeight:700 }}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(37,99,235,0.22)';}}
-              onMouseLeave={e=>{e.currentTarget.style.background='rgba(37,99,235,0.12)';}}>
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'7px 10px', background:'rgba(var(--blue-rgb),0.12)', border:'1px solid rgba(var(--blue-rgb),0.3)', borderRadius:9, cursor:'pointer', color:'var(--blue)', fontSize:10, fontWeight:700 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(var(--blue-rgb),0.22)';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(var(--blue-rgb),0.12)';}}>
               <svg viewBox="0 0 16 16" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14 L6 10 L14 2 L14 6 L2 14Z"/><path d="M10 4l2 2"/></svg>
               Crear Forma
             </button>
@@ -1973,7 +1973,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
   const pathLiveRotRef = useRef<{angle:number;cx:number;cy:number}|null>(null);
 
-  const colors = ['#F4F5F7', '#2563eb', '#60a5fa', '#93c5fd', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#e879f9'];
+  const colors = ['#F4F5F7', 'var(--blue)', 'var(--blue-soft)', 'var(--blue-light)', '#22d3ee', '#4ade80', '#f87171', '#fbbf24', '#e879f9'];
   const [pencilWidth, setPencilWidth] = useState(2);
   const [textFontFamily, setTextFontFamily] = useState("'Plus Jakarta Sans', sans-serif");
   const [textFontSize, setTextFontSize]     = useState(18);
@@ -3133,7 +3133,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
       {/* Ghost mientras arrastra desde el panel */}
       {panelDrag && (
-        <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(37,99,235,0.4))' }}>
+        <div style={{ position:'fixed', left: panelDrag.clientX - 22, top: panelDrag.clientY - 22, pointerEvents:'none', opacity: 0.75, zIndex: 9999, filter:'drop-shadow(0 4px 12px rgba(var(--blue-rgb),0.4))' }}>
           <ShapeSvg type={panelDrag.type} color={resolveShapeInfo(panelDrag.type)?.color ?? currentColor} width={44} height={44} customTemplates={customShapes}/>
         </div>
       )}
@@ -3147,7 +3147,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             {[{ w:2, r:2 }, { w:5, r:5 }, { w:10, r:7 }, { w:18, r:10 }].map(({ w, r }) => (
               <button key={w} onClick={() => applyWidth(w)}
                 title={`${w}px`}
-                style={{ width:26, height:26, borderRadius:7, background: pencilWidth===w ? 'rgba(37,99,235,0.25)' : 'rgba(255,255,255,0.04)', border: pencilWidth===w ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}>
+                style={{ width:26, height:26, borderRadius:7, background: pencilWidth===w ? 'rgba(var(--blue-rgb),0.25)' : 'rgba(255,255,255,0.04)', border: pencilWidth===w ? '1.5px solid rgba(var(--blue-rgb),0.6)' : '1.5px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}>
                 <div style={{ width:r*2, height:r*2, borderRadius:'50%', background: pencilWidth===w ? currentColor : 'rgba(255,255,255,0.4)', transition:'all 0.15s' }}/>
               </button>
             ))}
@@ -3161,7 +3161,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 {/* Sin fondo — patrón de transparencia tipo damero */}
                 <button onClick={() => applyFill(null)} title="Sin fondo"
                   style={{ width:22, height:22, borderRadius:6, cursor:'pointer', transition:'all 0.15s', flexShrink:0, overflow:'hidden', padding:0,
-                    border: fillColor === null ? '1.5px solid rgba(37,99,235,0.8)' : '1.5px solid rgba(255,255,255,0.12)' }}>
+                    border: fillColor === null ? '1.5px solid rgba(var(--blue-rgb),0.8)' : '1.5px solid rgba(255,255,255,0.12)' }}>
                   <svg viewBox="0 0 10 10" width={20} height={20} xmlns="http://www.w3.org/2000/svg">
                     <rect width="10" height="10" fill="#444"/>
                     <rect x="0" y="0" width="5" height="5" fill="#666"/>
@@ -3202,7 +3202,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 { key:"'Courier New', monospace",        label:'Mono' },
               ] as {key:string;label:string}[]).map(f => (
                 <button key={f.key} onClick={() => { setTextFontFamily(f.key); applyTextProp({ fontFamily: f.key }); }}
-                  style={{ padding:'3px 0', borderRadius:6, background: textFontFamily===f.key ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textFontFamily===f.key ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontFamily===f.key ? '#93c5fd' : 'rgba(255,255,255,0.55)', fontSize:10, fontFamily:f.key, cursor:'pointer', transition:'all 0.15s' }}>
+                  style={{ padding:'3px 0', borderRadius:6, background: textFontFamily===f.key ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.04)', border: textFontFamily===f.key ? '1.5px solid rgba(var(--blue-rgb),0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontFamily===f.key ? 'var(--blue-light)' : 'rgba(255,255,255,0.55)', fontSize:10, fontFamily:f.key, cursor:'pointer', transition:'all 0.15s' }}>
                   {f.label}
                 </button>
               ))}
@@ -3212,7 +3212,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3, marginBottom:5 }}>
               {[14, 18, 28, 42].map(sz => (
                 <button key={sz} onClick={() => { setTextFontSize(sz); applyTextProp({ fontSize: sz }); }}
-                  style={{ padding:'3px 0', borderRadius:6, background: textFontSize===sz ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textFontSize===sz ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontSize===sz ? '#93c5fd' : 'rgba(255,255,255,0.55)', fontSize: sz > 28 ? 12 : 10, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>
+                  style={{ padding:'3px 0', borderRadius:6, background: textFontSize===sz ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.04)', border: textFontSize===sz ? '1.5px solid rgba(var(--blue-rgb),0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textFontSize===sz ? 'var(--blue-light)' : 'rgba(255,255,255,0.55)', fontSize: sz > 28 ? 12 : 10, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>
                   {sz}
                 </button>
               ))}
@@ -3226,12 +3226,12 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 { val:'right',  icon:<svg viewBox="0 0 14 14" width={12} height={12} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="1" y1="3" x2="13" y2="3"/><line x1="5" y1="6" x2="13" y2="6"/><line x1="1" y1="9" x2="13" y2="9"/><line x1="7" y1="12" x2="13" y2="12"/></svg>, label:'der' },
               ] as {val:'left'|'center'|'right'; icon:React.ReactNode; label:string}[]).map(a => (
                 <button key={a.val} onClick={() => { setTextAlign(a.val); applyTextProp({ textAlign: a.val }); }}
-                  style={{ width:26, height:26, borderRadius:6, background: textAlign===a.val ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textAlign===a.val ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textAlign===a.val ? '#93c5fd' : 'rgba(255,255,255,0.45)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
+                  style={{ width:26, height:26, borderRadius:6, background: textAlign===a.val ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.04)', border: textAlign===a.val ? '1.5px solid rgba(var(--blue-rgb),0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textAlign===a.val ? 'var(--blue-light)' : 'rgba(255,255,255,0.45)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
                   {a.icon}
                 </button>
               ))}
               <button onClick={() => { const nb = !textBold; setTextBold(nb); applyTextProp({ fontWeight: nb ? 'bold' : 'normal' }); }}
-                style={{ width:26, height:26, borderRadius:6, background: textBold ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.04)', border: textBold ? '1.5px solid rgba(37,99,235,0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textBold ? '#93c5fd' : 'rgba(255,255,255,0.45)', fontWeight:800, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s', fontFamily:'sans-serif' }}>
+                style={{ width:26, height:26, borderRadius:6, background: textBold ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.04)', border: textBold ? '1.5px solid rgba(var(--blue-rgb),0.6)' : '1.5px solid rgba(255,255,255,0.07)', color: textBold ? 'var(--blue-light)' : 'rgba(255,255,255,0.45)', fontWeight:800, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s', fontFamily:'sans-serif' }}>
                 B
               </button>
             </div>
@@ -3242,7 +3242,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:3 }}>
             {colors.map(c => (
               <button key={c} onClick={() => applyColor(c)}
-                style={{ width:24, height:24, borderRadius:7, background:c, border: currentColor===c ? '2px solid #fff' : '2px solid rgba(255,255,255,0.08)', outline: currentColor===c ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset:1, cursor:'pointer', transition:'all 0.12s', transform: currentColor===c ? 'scale(1.12)' : 'scale(1)', boxShadow: 'none' }}/>
+                style={{ width:24, height:24, borderRadius:7, background:c, border: currentColor===c ? '2px solid #fff' : '2px solid rgba(255,255,255,0.08)', outline: currentColor===c ? '2px solid rgba(var(--blue-rgb),0.5)' : 'none', outlineOffset:1, cursor:'pointer', transition:'all 0.12s', transform: currentColor===c ? 'scale(1.12)' : 'scale(1)', boxShadow: 'none' }}/>
             ))}
           </div>
         </div>
@@ -3278,7 +3278,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
           </div>
-          <button onClick={onAddNote} className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
+          <button onClick={onAddNote} className="bg-[var(--blue)] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
             <Plus size={22}/>
           </button>
         </div>
@@ -3299,7 +3299,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'7px 14px', background:'none', border:'none', color: item.disabled ? 'rgba(255,255,255,0.2)' : '#C8CCDA', fontSize:12, fontWeight:600, cursor: item.disabled ? 'default' : 'pointer', textAlign:'left' }}
               onMouseEnter={e=>{ if(!item.disabled) e.currentTarget.style.background='rgba(255,255,255,0.07)'; }}
               onMouseLeave={e=>e.currentTarget.style.background='none'}>
-              <span style={{ color: item.disabled ? 'rgba(255,255,255,0.15)' : '#6B7280' }}>{item.icon}</span>
+              <span style={{ color: item.disabled ? 'rgba(255,255,255,0.15)' : 'var(--text-3)' }}>{item.icon}</span>
               <span style={{ flex:1 }}>{item.label}</span>
               <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)', fontWeight:500 }}>{item.kbd}</span>
             </button>
@@ -3319,7 +3319,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'7px 14px', background:'none', border:'none', color:'#C8CCDA', fontSize:12, fontWeight:600, cursor:'pointer', textAlign:'left' }}
               onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.07)'}
               onMouseLeave={e=>e.currentTarget.style.background='none'}>
-              <span style={{ color:'#6B7280' }}>{item.icon}</span>
+              <span style={{ color:'var(--text-3)' }}>{item.icon}</span>
               <span style={{ flex:1 }}>{item.label}</span>
             </button>
           ))}
@@ -3427,8 +3427,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             top:  Math.min(marqueeStart.y, marqueeEnd.y) * zoom + offset.y,
             width:  Math.abs(marqueeEnd.x - marqueeStart.x) * zoom,
             height: Math.abs(marqueeEnd.y - marqueeStart.y) * zoom,
-            background: 'rgba(37,99,235,0.08)',
-            border: '1.5px dashed rgba(37,99,235,0.7)',
+            background: 'rgba(var(--blue-rgb),0.08)',
+            border: '1.5px dashed rgba(var(--blue-rgb),0.7)',
             borderRadius: 3,
             pointerEvents: 'none',
             zIndex: 30,
@@ -3487,11 +3487,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           const height = (bbox.h + pad * 2) * zoom;
           const handleStyle = (extra: React.CSSProperties): React.CSSProperties => ({
             position: 'absolute', width: 9, height: 9,
-            background: '#0A0C0F', border: '1.5px solid rgba(37,99,235,0.95)',
+            background: '#0A0C0F', border: '1.5px solid rgba(var(--blue-rgb),0.95)',
             borderRadius: 2, pointerEvents: 'auto', zIndex: 35, ...extra,
           });
           return (
-            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(37,99,235,0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
+            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(var(--blue-rgb),0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
               {/* Esquinas */}
               <div style={handleStyle({ top:-4, left:-4, cursor:'nw-resize' })} onMouseDown={e=>onMultiResizeStart('nw',e)}/>
               <div style={handleStyle({ top:-4, right:-4, cursor:'ne-resize' })} onMouseDown={e=>onMultiResizeStart('ne',e)}/>

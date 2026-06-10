@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -11,7 +11,7 @@ import type { Member, Snippet } from "@/app/dashboard/types";
 const LABELS = ['env', 'código', 'config', 'otro'] as const;
 
 const LABEL_META: Record<string, { bg: string; color: string; lang: string; dot: string }> = {
-  env:    { bg: 'rgba(37,99,235,0.14)',  color: '#60a5fa', lang: 'Shell',      dot: '#60a5fa' },
+  env:    { bg: 'rgba(var(--blue-rgb),0.14)',  color: 'var(--blue-soft)', lang: 'Shell',      dot: 'var(--blue-soft)' },
   código: { bg: 'rgba(34,211,238,0.10)', color: '#22d3ee', lang: 'TypeScript', dot: '#22d3ee' },
   config: { bg: 'rgba(34,197,94,0.12)',  color: '#4ade80', lang: 'JSON',       dot: '#4ade80' },
   otro:   { bg: 'rgba(255,255,255,0.06)',color: '#94a3b8', lang: 'Text',       dot: '#94a3b8' },
@@ -46,12 +46,12 @@ function MiniDropdown({ options, value, onChange, icon }: {
     <div ref={triggerRef} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
-        background: isActive ? 'rgba(37,99,235,0.12)' : open ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${isActive ? 'rgba(37,99,235,0.35)' : open ? 'rgba(37,99,235,0.2)' : 'rgba(255,255,255,0.07)'}`,
+        background: isActive ? 'rgba(var(--blue-rgb),0.12)' : open ? 'rgba(var(--blue-rgb),0.06)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${isActive ? 'rgba(var(--blue-rgb),0.35)' : open ? 'rgba(var(--blue-rgb),0.2)' : 'rgba(255,255,255,0.07)'}`,
         borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
       }}>
-        <span style={{ color: isActive ? '#60a5fa' : '#4a5570', display: 'flex' }}>{icon}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? '#93c5fd' : '#eef0fb' }}>{selected}</span>
+        <span style={{ color: isActive ? 'var(--blue-soft)' : '#4a5570', display: 'flex' }}>{icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? 'var(--blue-light)' : 'var(--text)' }}>{selected}</span>
         <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>
           <path d="M2 3.5L5 6.5L8 3.5" stroke="#4a5570" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -61,7 +61,7 @@ function MiniDropdown({ options, value, onChange, icon }: {
           position: 'fixed', zIndex: 99999,
           top: rect ? rect.bottom + 6 : 0, left: rect ? rect.left : 0,
           minWidth: 170, background: '#0d1020',
-          border: '1px solid rgba(37,99,235,0.25)', borderRadius: 12,
+          border: '1px solid rgba(var(--blue-rgb),0.25)', borderRadius: 12,
           padding: 5, boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
         }}>
           {options.map(opt => {
@@ -71,8 +71,8 @@ function MiniDropdown({ options, value, onChange, icon }: {
                 width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', padding: '7px 10px', borderRadius: 8,
                 border: 'none', cursor: 'pointer',
-                background: active ? 'rgba(37,99,235,0.14)' : 'transparent',
-                color: active ? '#93c5fd' : '#cbd5e1',
+                background: active ? 'rgba(var(--blue-rgb),0.14)' : 'transparent',
+                color: active ? 'var(--blue-light)' : '#cbd5e1',
                 fontSize: 12, fontWeight: active ? 700 : 500,
                 fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all 0.12s',
               }}
@@ -80,7 +80,7 @@ function MiniDropdown({ options, value, onChange, icon }: {
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
               >
                 {opt.label}
-                {active && <Check size={11} color="#60a5fa" />}
+                {active && <Check size={11} color="var(--blue-soft)" />}
               </button>
             );
           })}
@@ -119,7 +119,7 @@ function CodeBlock({ content, lang }: { content: string; lang: string }) {
             <span style={{
               paddingLeft: 10, paddingRight: 14, fontSize: 11, lineHeight: '17px',
               fontFamily: "'JetBrains Mono', monospace",
-              color: '#93c5fd', whiteSpace: 'pre',
+              color: 'var(--blue-light)', whiteSpace: 'pre',
             }}>{line || ' '}</span>
           </div>
         ))}
@@ -148,7 +148,7 @@ function SnippetFullScreen({ s, author, onClose, onCopy, copied }: {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(4,6,14,0.92)',
+        background: 'rgba(var(--base-rgb),0.92)',
         backdropFilter: 'blur(16px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
@@ -185,7 +185,7 @@ function SnippetFullScreen({ s, author, onClose, onCopy, copied }: {
             {author && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>
                 <AvatarImg seed={author.avatarSeed || author.name} name={author.name} color={author.color} size={14} borderRadius={4} />
-                <span style={{ fontSize: 10, color: '#6b7280', fontWeight: 600 }}>{author.name}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>{author.name}</span>
               </div>
             )}
           </div>
@@ -256,7 +256,7 @@ function SnippetFullScreen({ s, author, onClose, onCopy, copied }: {
                 <span style={{
                   paddingLeft: 16, paddingRight: 20, fontSize: 13, lineHeight: '22px',
                   fontFamily: "'JetBrains Mono', monospace",
-                  color: '#93c5fd', whiteSpace: 'pre',
+                  color: 'var(--blue-light)', whiteSpace: 'pre',
                 }}>{line || ' '}</span>
               </div>
             ))}
@@ -300,7 +300,7 @@ function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, onExp
   return (
     <div className="flex flex-col rounded-xl overflow-hidden transition-all" style={{
       background: isCurrentUser ? 'rgba(30,34,45,0.8)' : 'rgba(22,25,31,0.6)',
-      border: `1px solid ${isCurrentUser ? 'rgba(37,99,235,0.25)' : 'rgba(255,255,255,0.06)'}`,
+      border: `1px solid ${isCurrentUser ? 'rgba(var(--blue-rgb),0.25)' : 'rgba(255,255,255,0.06)'}`,
       backdropFilter: 'blur(12px)',
     }}>
       {/* Header */}
@@ -312,14 +312,14 @@ function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, onExp
             fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.08em', flexShrink: 0,
           }}>{s.label}</span>
-          <h3 style={{ color: '#eef0fb', fontWeight: 700, fontSize: 12, letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <h3 style={{ color: 'var(--text)', fontWeight: 700, fontSize: 12, letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {s.title}
           </h3>
         </div>
         <div className="flex gap-0.5 flex-shrink-0">
           <button onClick={() => onExpand(s)} title="Pantalla completa"
             style={{ padding: '5px', borderRadius: 6, border: 'none', cursor: 'pointer', color: '#4a5570', background: 'transparent', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#eef0fb'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4a5570'; }}
           >
             <Maximize2 size={11} />
@@ -330,14 +330,14 @@ function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, onExp
               color: copied ? '#4ade80' : '#4a5570',
               background: copied ? 'rgba(34,197,94,0.1)' : 'transparent',
             }}
-            onMouseEnter={e => { if (!copied) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#eef0fb'; } }}
+            onMouseEnter={e => { if (!copied) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text)'; } }}
             onMouseLeave={e => { if (!copied) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4a5570'; } }}
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
           </button>
           <button onClick={() => onEdit(s)} title="Editar"
             style={{ padding: '5px', borderRadius: 6, border: 'none', cursor: 'pointer', color: '#4a5570', background: 'transparent', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#eef0fb'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4a5570'; }}
           >
             <Pencil size={11} />
@@ -359,10 +359,10 @@ function SnippetCard({ s, author, isCurrentUser, onCopy, onEdit, onDelete, onExp
           {author ? (
             <>
               <AvatarImg seed={author.avatarSeed || author.name} name={author.name} color={author.color} size={15} borderRadius={4} />
-              <span style={{ fontSize: 9, color: '#6b7280', fontWeight: 600 }}>{author.name}</span>
+              <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600 }}>{author.name}</span>
             </>
           ) : (
-            <span style={{ fontSize: 9, color: '#4a5070' }}>Anónimo</span>
+            <span style={{ fontSize: 9, color: 'var(--text-dim)' }}>Anónimo</span>
           )}
         </div>
         <span style={{ fontSize: 9, color: '#374151', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -393,7 +393,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
       {/* Total */}
       <div style={{
         borderRadius: 18, padding: '14px 16px',
-        background: '#2563eb', boxShadow: '0 10px 30px rgba(37,99,235,0.25)',
+        background: 'var(--blue)', boxShadow: '0 10px 30px rgba(var(--blue-rgb),0.25)',
         position: 'relative', overflow: 'hidden', flexShrink: 0,
       }}>
         <div style={{ position: 'absolute', top: -10, right: -10, width: 60, height: 60, background: 'rgba(255,255,255,0.08)', borderRadius: '50%', filter: 'blur(20px)' }} />
@@ -404,7 +404,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
 
       {/* Por categoría */}
       <div style={{ borderRadius: 16, padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: '#4a5070', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 8, paddingLeft: 4 }}>Por Categoría</span>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 8, paddingLeft: 4 }}>Por Categoría</span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {byLabel.map(({ label, count }) => {
             const meta   = lm(label);
@@ -422,7 +422,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.dot, flexShrink: 0,  }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: active ? meta.color : '#8b91b8', textTransform: 'capitalize' }}>{label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: active ? meta.color : 'var(--text-2)', textTransform: 'capitalize' }}>{label}</span>
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: active ? meta.color : '#374151', fontFamily: "'JetBrains Mono', monospace" }}>{count}</span>
               </button>
@@ -434,7 +434,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
       {/* Por miembro */}
       {byMember.length > 0 && (
         <div style={{ borderRadius: 16, padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#4a5070', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 8, paddingLeft: 4 }}>Por Miembro</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 8, paddingLeft: 4 }}>Por Miembro</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {byMember.map(({ member, count }) => {
               const active = filterAuthor === member.id;
@@ -442,8 +442,8 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
                 <button key={member.id} onClick={() => setFilterAuthor(active ? 'all' : member.id)} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '5px 8px', borderRadius: 8, cursor: 'pointer',
-                  background: active ? 'rgba(37,99,235,0.12)' : 'transparent',
-                  border: `1px solid ${active ? 'rgba(37,99,235,0.25)' : 'transparent'}`,
+                  background: active ? 'rgba(var(--blue-rgb),0.12)' : 'transparent',
+                  border: `1px solid ${active ? 'rgba(var(--blue-rgb),0.25)' : 'transparent'}`,
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
@@ -451,9 +451,9 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <AvatarImg seed={member.avatarSeed || member.name} name={member.name} color={member.color} size={16} borderRadius={4} />
-                    <span style={{ fontSize: 10, fontWeight: 600, color: active ? '#93c5fd' : '#8b91b8' }}>{member.name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: active ? 'var(--blue-light)' : 'var(--text-2)' }}>{member.name}</span>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: active ? '#60a5fa' : '#374151', fontFamily: "'JetBrains Mono', monospace" }}>{count}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: active ? 'var(--blue-soft)' : '#374151', fontFamily: "'JetBrains Mono', monospace" }}>{count}</span>
                 </button>
               );
             })}
@@ -534,7 +534,7 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
         <div className="flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Título */}
-            <h2 style={{ color: '#eef0fb', fontWeight: 800, fontSize: 13, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Snippets</h2>
+            <h2 style={{ color: 'var(--text)', fontWeight: 800, fontSize: 13, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Snippets</h2>
             <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.06)' }} />
 
             {/* Buscador inline */}
@@ -549,9 +549,9 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   padding: '5px 10px 5px 26px', borderRadius: 9, fontSize: 11,
-                  background: search ? 'rgba(37,99,235,0.08)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${search ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                  color: '#eef0fb', outline: 'none', width: 140,
+                  background: search ? 'rgba(var(--blue-rgb),0.08)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${search ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.07)'}`,
+                  color: 'var(--text)', outline: 'none', width: 140,
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   transition: 'all 0.15s',
                 }}
@@ -628,15 +628,15 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
             onClick={onAddSnippet}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: '#2563eb', color: '#fff',
+              background: 'var(--blue)', color: '#fff',
               padding: '6px 12px', borderRadius: 9,
               fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
               border: 'none', cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(37,99,235,0.3)',
+              boxShadow: '0 6px 20px rgba(var(--blue-rgb),0.3)',
               transition: 'background 0.15s', flexShrink: 0,
             }}
             onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--blue)')}
           >
             <Plus size={12}/> Nuevo Snippet
           </button>
@@ -667,10 +667,10 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
               border: '2px dashed rgba(255,255,255,0.05)', borderRadius: 20, marginTop: 4,
             }}>
               <Filter size={28} style={{ margin: '0 auto 10px', color: 'rgba(255,255,255,0.08)', display: 'block' }}/>
-              <p style={{ color: '#4a5070', fontSize: 12, fontWeight: 600 }}>Sin resultados para los filtros activos</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600 }}>Sin resultados para los filtros activos</p>
               <button
                 onClick={() => { setFilterLabel('all'); setFilterAuthor('all'); setSearch(''); }}
-                style={{ marginTop: 8, fontSize: 11, color: '#60a5fa', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ marginTop: 8, fontSize: 11, color: 'var(--blue-soft)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Limpiar filtros
               </button>
@@ -687,7 +687,7 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
               <p style={{ color: '#374151', fontSize: 12, fontWeight: 500 }}>No hay snippets guardados</p>
               <button
                 onClick={onAddSnippet}
-                style={{ marginTop: 8, fontSize: 11, color: '#60a5fa', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ marginTop: 8, fontSize: 11, color: 'var(--blue-soft)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 + Crear el primero
               </button>

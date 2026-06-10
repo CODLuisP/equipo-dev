@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { 
@@ -64,17 +64,17 @@ export function SectionBoveda({
     return (
       <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
         <BovedaBackground />
-        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[#2563eb]/15 rounded-3xl p-10 text-center backdrop-blur-sm">
-          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-[#2563eb] to-transparent opacity-60" />
-          <div className="w-20 h-20 bg-[#2563eb]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#2563eb]/25">
-            <Shield size={40} className="text-[#2563eb]" />
+        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[var(--blue)]/15 rounded-3xl p-10 text-center backdrop-blur-sm">
+          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-[var(--blue)] to-transparent opacity-60" />
+          <div className="w-20 h-20 bg-[var(--blue)]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[var(--blue)]/25">
+            <Shield size={40} className="text-[var(--blue)]" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Bóveda de Credenciales</h2>
           <p className="text-gray-500 text-sm mb-8">Esta sección está cifrada. Ingresa la contraseña del equipo para continuar.</p>
           <form onSubmit={handleUnlock} className="flex flex-col gap-4">
             <div className="relative">
               <input type="password" placeholder="Contraseña de acceso" value={pass} onChange={e => { setPass(e.target.value); setError(false); }}
-                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-4 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-[#2563eb]/60`} autoFocus />
+                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-4 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-[var(--blue)]/60`} autoFocus />
             </div>
             <ButtonBase type="submit" className="py-4 text-sm uppercase tracking-widest font-bold">Desbloquear Acceso</ButtonBase>
           </form>
@@ -88,7 +88,7 @@ export function SectionBoveda({
     <div className="flex flex-col h-full gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-           <span className="text-[10px] font-bold text-[#2563eb] uppercase tracking-widest">Almacén Seguro</span>
+           <span className="text-[10px] font-bold text-[var(--blue)] uppercase tracking-widest">Almacén Seguro</span>
            <h2 className="text-white font-bold text-2xl tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
         </div>
         <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ export function SectionBoveda({
                 spellCheck={false}
                 placeholder="Escribe tus credenciales aquí..."
                 className="absolute inset-0 w-full h-full bg-transparent outline-none resize-none overflow-y-auto custom-scrollbar-lg"
-                style={{ padding:'8px 12px', fontSize:13, lineHeight:'1.7', fontFamily:"'JetBrains Mono','Fira Mono',monospace", color:'#d1d5db', whiteSpace:'pre-wrap', wordBreak:'break-all', caretColor:'#2563eb' }}
+                style={{ padding:'8px 12px', fontSize:13, lineHeight:'1.7', fontFamily:"'JetBrains Mono','Fira Mono',monospace", color:'#d1d5db', whiteSpace:'pre-wrap', wordBreak:'break-all', caretColor:'var(--blue)' }}
               />
             </div>
 
@@ -214,7 +214,7 @@ function VaultCard({ project, onEdit, onDelete, onFullscreen }: {
 
       {/* Cuerpo */}
       <div className="px-3 pt-2 pb-2 min-h-27.5 max-h-38.5 overflow-hidden relative">
-        <pre style={{ fontSize:11, lineHeight:'1.6', color:'#6b7280', fontFamily:"'JetBrains Mono','Fira Mono','Courier New',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', margin:0 }}>
+        <pre style={{ fontSize:11, lineHeight:'1.6', color:'var(--text-3)', fontFamily:"'JetBrains Mono','Fira Mono','Courier New',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', margin:0 }}>
           {project.content || <span style={{color:'#374151', fontStyle:'italic', fontFamily:'sans-serif', fontSize:10}}>Sin contenido…</span>}
         </pre>
         <div className="absolute bottom-0 inset-x-0 h-8 pointer-events-none" style={{background:'linear-gradient(transparent,#0F1116)'}}/>
@@ -262,6 +262,6 @@ function highlightMatches(text: string, term: string) {
   if (!term || term.length < 2) return text;
   try {
     const regex = new RegExp(`(${term})`, 'gi');
-    return text.replace(regex, '<mark style="background: #2563eb; color: white; border-radius: 4px; padding: 0 2px;">$1</mark>');
+    return text.replace(regex, '<mark style="background: var(--blue); color: white; border-radius: 4px; padding: 0 2px;">$1</mark>');
   } catch { return text; }
 }

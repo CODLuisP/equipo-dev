@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { UserPlus, Zap, Palette, Code2, Star, Smartphone, Cloud } from "lucide-react";
@@ -6,7 +6,7 @@ import { AVATAR_PRESETS } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 
 const ROLES = [
-  { label: "Full Stack Developer",  icon: Zap,       color: "#60a5fa" },
+  { label: "Full Stack Developer",  icon: Zap,       color: "var(--blue-soft)" },
   { label: "Frontend Developer",    icon: Palette,    color: "#a78bfa" },
   { label: "Backend Developer",     icon: Code2,      color: "#34d399" },
   { label: "UI/UX Designer",        icon: Star,       color: "#f472b6" },
@@ -49,7 +49,7 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
           <AvatarImg seed={avatarSeed} name={name || "?"} color={previewColor} size={86} borderRadius={43} />
           <div style={{ position: "absolute", bottom: 2, right: 2,
             width: 14, height: 14, borderRadius: "50%",
-            background: "#22c55e", border: "2px solid #161929",
+            background: "#22c55e", border: "2px solid var(--bg-surface)",
 }} />
         </div>
         <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.3)" }}>
@@ -148,7 +148,7 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
           padding: "13px 0",
-          background: name.trim() ? "#2563eb" : "rgba(37,99,235,0.2)",
+          background: name.trim() ? "var(--blue)" : "rgba(var(--blue-rgb),0.2)",
           border: "none", borderRadius: 12,
           color: name.trim() ? "#fff" : "rgba(255,255,255,0.25)",
           fontSize: 14, fontWeight: 800, cursor: name.trim() ? "pointer" : "not-allowed",
@@ -156,7 +156,7 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
           letterSpacing: "-0.2px",
         }}
         onMouseEnter={e => { if (name.trim()) { e.currentTarget.style.background = "#3b82f6"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-        onMouseLeave={e => { if (name.trim()) { e.currentTarget.style.background = "#2563eb"; e.currentTarget.style.transform = "none"; } }}
+        onMouseLeave={e => { if (name.trim()) { e.currentTarget.style.background = "var(--blue)"; e.currentTarget.style.transform = "none"; } }}
       >
         <UserPlus size={15} />
         Agregar al equipo

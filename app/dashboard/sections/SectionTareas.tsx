@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -28,16 +28,16 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
       className={`group relative flex flex-col gap-2 rounded-xl ${size === 'lg' ? 'p-4' : 'p-3'}`}
       style={{
         background: isCurrentUser ? 'rgba(30, 34, 45, 0.8)' : 'rgba(22, 25, 31, 0.6)',
-        border: `1px solid ${isCurrentUser ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${isCurrentUser ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.08)'}`,
         backdropFilter: 'blur(12px)',
         transition: 'background 0.2s, border-color 0.2s',
         cursor: 'grab',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(37,99,235,0.10)' : 'rgba(30,33,42,0.85)'; }}
+      onMouseEnter={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(var(--blue-rgb),0.10)' : 'rgba(30,33,42,0.85)'; }}
       onMouseLeave={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(30,34,45,0.8)' : 'rgba(22,25,31,0.6)'; }}
     >
       <div className="z-10 flex-1">
-        <h4 className={`text-white font-bold leading-tight group-hover:text-[#2563eb] transition-colors ${size === 'lg' ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.2px" }}>
+        <h4 className={`text-white font-bold leading-tight group-hover:text-[var(--blue)] transition-colors ${size === 'lg' ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.2px" }}>
           {task.title}
         </h4>
       </div>
@@ -69,14 +69,14 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
           {task.status === 'pendiente' && (
             <button onClick={() => onStart(task.id)}
               className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all"
-              style={{ background: '#2563eb', color: '#fff', boxShadow: '0 3px 10px rgba(37,99,235,0.3)' }}>
+              style={{ background: 'var(--blue)', color: '#fff', boxShadow: '0 3px 10px rgba(var(--blue-rgb),0.3)' }}>
               Iniciar
             </button>
           )}
           {task.status === 'en progreso' && (
             <button onClick={() => onChangeStatus(task.id, 'completada')}
               className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all"
-              style={{ background: '#2563eb', color: '#fff', boxShadow: '0 3px 10px rgba(37,99,235,0.3)' }}>
+              style={{ background: 'var(--blue)', color: '#fff', boxShadow: '0 3px 10px rgba(var(--blue-rgb),0.3)' }}>
               Finalizar
             </button>
           )}
@@ -121,14 +121,14 @@ function FilterDropdown({ value, onChange, members }: {
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '5px 10px',
-          background: open ? 'rgba(37,99,235,0.10)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${open ? 'rgba(37,99,235,0.35)' : 'rgba(255,255,255,0.07)'}`,
+          background: open ? 'rgba(var(--blue-rgb),0.10)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${open ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.07)'}`,
           borderRadius: 10, cursor: 'pointer',
           transition: 'all 0.15s',
         }}
       >
         <Filter size={11} color="#4a5570" />
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#eef0fb', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>
           {selected.label}
         </span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
@@ -142,7 +142,7 @@ function FilterDropdown({ value, onChange, members }: {
           position: 'fixed', zIndex: 99999,
           minWidth: 200,
           background: '#0d1020',
-          border: '1px solid rgba(37,99,235,0.25)',
+          border: '1px solid rgba(var(--blue-rgb),0.25)',
           borderRadius: 14,
           padding: '6px',
           maxHeight: 280,
@@ -161,20 +161,20 @@ function FilterDropdown({ value, onChange, members }: {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '8px 12px',
                   borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: active ? 'rgba(37,99,235,0.14)' : 'transparent',
-                  color: active ? '#93c5fd' : '#cbd5e1',
+                  background: active ? 'rgba(var(--blue-rgb),0.14)' : 'transparent',
+                  color: active ? 'var(--blue-light)' : '#cbd5e1',
                   fontSize: 12, fontWeight: active ? 700 : 500,
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   transition: 'all 0.12s',
                   whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'rgba(37,99,235,0.14)' : 'transparent'; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'rgba(var(--blue-rgb),0.14)' : 'transparent'; }}
               >
                 {opt.label}
                 {active && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M2 6L5 9L10 3" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 6L5 9L10 3" stroke="var(--blue-soft)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
               </button>
@@ -227,7 +227,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
     <div className="flex flex-col h-full gap-3 overflow-hidden relative">
 
       {/* Background glow solo — sin grid global */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#2563eb]/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[var(--blue)]/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* ── Top Control HUD ── */}
       <div className="flex items-center justify-between z-10">
@@ -241,7 +241,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
            />
         </div>
 
-        <button onClick={onAddTask} className="flex items-center gap-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(37,99,235,0.3)]">
+        <button onClick={onAddTask} className="flex items-center gap-1.5 bg-[var(--blue)] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(var(--blue-rgb),0.3)]">
           <Plus size={12}/> Nueva Tarea
         </button>
       </div>
@@ -253,8 +253,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
         <div
           className="col-span-3 row-span-6 flex flex-col gap-2 rounded-[24px] p-3 overflow-hidden"
           style={{
-            background: overPending ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.02)',
-            border: overPending ? '1px solid rgba(37,99,235,0.35)' : '1px solid rgba(255,255,255,0.05)',
+            background: overPending ? 'rgba(var(--blue-rgb),0.06)' : 'rgba(255,255,255,0.02)',
+            border: overPending ? '1px solid rgba(var(--blue-rgb),0.35)' : '1px solid rgba(255,255,255,0.05)',
             transition: 'background 0.2s, border-color 0.2s',
           }}
           onDragOver={e => { e.preventDefault(); if (!overPending) setOverPending(true); }}
@@ -280,8 +280,8 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
         <div
           className="col-span-6 row-span-6 flex flex-col gap-3 rounded-[28px] p-5 overflow-hidden relative"
           style={{
-            background: overProgress ? 'rgba(37,99,235,0.07)' : 'linear-gradient(to bottom, rgba(255,255,255,0.03), transparent)',
-            border: overProgress ? '1px solid rgba(37,99,235,0.40)' : '1px solid rgba(255,255,255,0.05)',
+            background: overProgress ? 'rgba(var(--blue-rgb),0.07)' : 'linear-gradient(to bottom, rgba(255,255,255,0.03), transparent)',
+            border: overProgress ? '1px solid rgba(var(--blue-rgb),0.40)' : '1px solid rgba(255,255,255,0.05)',
             transition: 'background 0.2s, border-color 0.2s',
           }}
           onDragOver={e => { e.preventDefault(); if (!overProgress) setOverProgress(true); }}
@@ -291,9 +291,9 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           {/* Grid cuadriculado solo en este panel */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.04] rounded-[28px] overflow-hidden" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
           <div className="absolute top-0 right-0 p-4">
-             <div className="flex items-center gap-1.5 px-2 py-1 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-full">
-                <div className="w-1 h-1 rounded-full bg-[#2563eb] animate-ping" />
-                <span className="text-[8px] font-bold text-[#2563eb] uppercase tracking-widest">Activo</span>
+             <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--blue)]/10 border border-[var(--blue)]/20 rounded-full">
+                <div className="w-1 h-1 rounded-full bg-[var(--blue)] animate-ping" />
+                <span className="text-[8px] font-bold text-[var(--blue)] uppercase tracking-widest">Activo</span>
              </div>
           </div>
 
@@ -331,7 +331,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
         <div className="col-span-3 row-span-6 flex flex-col gap-3">
 
           {/* Performance Card */}
-          <div className="flex flex-col gap-3 bg-[#2563eb] rounded-[22px] p-4 shadow-[0_12px_32px_rgba(37,99,235,0.2)] relative overflow-hidden">
+          <div className="flex flex-col gap-3 bg-[var(--blue)] rounded-[22px] p-4 shadow-[0_12px_32px_rgba(var(--blue-rgb),0.2)] relative overflow-hidden">
              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl -translate-y-10 translate-x-10" />
              <div className="flex items-center justify-between relative z-10">
                 <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Rendimiento</span>
@@ -349,7 +349,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           {/* Meta del Equipo Card */}
           <div className="bg-[#1C1F26] border border-white/5 rounded-[20px] p-3 flex flex-col gap-2">
              <div className="flex items-center gap-1.5">
-                <div className="p-1 bg-[#2563eb]/10 rounded-md"><Users size={11} className="text-[#2563eb]" /></div>
+                <div className="p-1 bg-[var(--blue)]/10 rounded-md"><Users size={11} className="text-[var(--blue)]" /></div>
                 <h4 className="text-[10px] font-bold text-white uppercase tracking-wider">Meta del Equipo</h4>
              </div>
              <div className="flex items-end justify-between">
@@ -357,10 +357,10 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
                    <p className="text-xl font-bold text-white" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.8px" }}>{done.length}<span className="text-gray-600 text-xs ml-1">/ {metaSemanal}</span></p>
                    <p className="text-[9px] text-gray-500">Tareas esta semana</p>
                 </div>
-                <p className="text-xs font-bold text-[#2563eb]">{metaProgreso}%</p>
+                <p className="text-xs font-bold text-[var(--blue)]">{metaProgreso}%</p>
              </div>
              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#2563eb] to-[#60a5fa] transition-all duration-1000" style={{ width: `${metaProgreso}%` }} />
+                <div className="h-full bg-gradient-to-r from-[var(--blue)] to-[var(--blue-soft)] transition-all duration-1000" style={{ width: `${metaProgreso}%` }} />
              </div>
           </div>
 

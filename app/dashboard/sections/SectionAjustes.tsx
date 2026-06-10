@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { UserPlus, Trash2, Pencil, Check, X, Plus, Shield, Zap, Code2, Palette, Star } from "lucide-react";
@@ -80,7 +80,7 @@ function MemberCard({ member, index, onEdit, onDelete }: {
           <div style={{
             position: 'absolute', bottom: 1, right: 1, zIndex: 2,
             width: 11, height: 11, borderRadius: '50%',
-            background: '#22c55e', border: '2px solid #161929',
+            background: '#22c55e', border: '2px solid var(--bg-surface)',
           }} />
         </div>
 
@@ -139,13 +139,13 @@ function MemberCard({ member, index, onEdit, onDelete }: {
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               padding: '7px 0',
-              background: 'rgba(37,99,235,0.12)',
-              border: '1px solid rgba(37,99,235,0.28)',
-              borderRadius: 9, color: '#60a5fa',
+              background: 'rgba(var(--blue-rgb),0.12)',
+              border: '1px solid rgba(var(--blue-rgb),0.28)',
+              borderRadius: 9, color: 'var(--blue-soft)',
               fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.24)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(37,99,235,0.12)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(var(--blue-rgb),0.24)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(var(--blue-rgb),0.12)'}
           >
             <Pencil size={11} /> Editar
           </button>
@@ -186,8 +186,8 @@ function AddCard({ onClick }: { onClick: () => void }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         minHeight: 270, cursor: 'pointer',
-        background: hovered ? 'rgba(37,99,235,0.05)' : 'rgba(37,99,235,0.015)',
-        border: `1.5px dashed rgba(37,99,235,${hovered ? '0.45' : '0.18'})`,
+        background: hovered ? 'rgba(var(--blue-rgb),0.05)' : 'rgba(var(--blue-rgb),0.015)',
+        border: `1.5px dashed rgba(var(--blue-rgb),${hovered ? '0.45' : '0.18'})`,
         borderRadius: 20,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
         transition: 'all 0.22s',
@@ -197,16 +197,16 @@ function AddCard({ onClick }: { onClick: () => void }) {
     >
       <div style={{
         width: 48, height: 48, borderRadius: 14,
-        background: hovered ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.06)',
-        border: `1px solid rgba(37,99,235,${hovered ? '0.4' : '0.18'})`,
+        background: hovered ? 'rgba(var(--blue-rgb),0.15)' : 'rgba(var(--blue-rgb),0.06)',
+        border: `1px solid rgba(var(--blue-rgb),${hovered ? '0.4' : '0.18'})`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.22s',
       }}>
-        <Plus size={20} color="#2563eb" />
+        <Plus size={20} color="var(--blue)" />
       </div>
       <span style={{
         fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-        color: hovered ? '#60a5fa' : 'rgba(37,99,235,0.5)',
+        color: hovered ? 'var(--blue-soft)' : 'rgba(var(--blue-rgb),0.5)',
         transition: 'color 0.2s',
       }}>
         Nuevo miembro
@@ -239,7 +239,7 @@ function AvatarEditor({ member, onSave, onClose }: {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 9, color: '#60a5fa', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 5 }}>
+            <div style={{ fontSize: 9, color: 'var(--blue-soft)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 5 }}>
               Personalizar
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#f0f4ff', letterSpacing: '-0.3px' }}>
@@ -280,8 +280,8 @@ function AvatarEditor({ member, onSave, onClose }: {
             {AVATAR_PRESETS.map(p => (
               <button key={p} onClick={() => setSeed(p)} style={{
                 padding: 4,
-                background: seed === p ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `1.5px solid ${seed === p ? 'rgba(37,99,235,0.6)' : 'rgba(255,255,255,0.07)'}`,
+                background: seed === p ? 'rgba(var(--blue-rgb),0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${seed === p ? 'rgba(var(--blue-rgb),0.6)' : 'rgba(255,255,255,0.07)'}`,
                 borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
               }}
                 onMouseEnter={e => { if (seed !== p) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
@@ -305,7 +305,7 @@ function AvatarEditor({ member, onSave, onClose }: {
               padding: '9px 13px', color: '#f0f4ff', fontSize: 12, outline: 'none',
               fontFamily: 'inherit', transition: 'border-color 0.15s',
             }}
-            onFocus={e => e.currentTarget.style.borderColor = 'rgba(37,99,235,0.55)'}
+            onFocus={e => e.currentTarget.style.borderColor = 'rgba(var(--blue-rgb),0.55)'}
             onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
             onKeyDown={e => { if (e.key === 'Enter') { onSave(seed); onClose(); } if (e.key === 'Escape') onClose(); }}
           />
@@ -313,13 +313,13 @@ function AvatarEditor({ member, onSave, onClose }: {
             onClick={() => { onSave(seed); onClose(); }}
             style={{
               width: 41, height: 41, flexShrink: 0,
-              background: '#2563eb', border: 'none', borderRadius: 10,
+              background: 'var(--blue)', border: 'none', borderRadius: 10,
               color: '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.background = '#3b82f6'}
-            onMouseLeave={e => e.currentTarget.style.background = '#2563eb'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--blue)'}
           >
             <Check size={16} />
           </button>
@@ -374,7 +374,7 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
             </div>
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: '#f0f4ff', letterSpacing: '-0.7px', lineHeight: 1.1 }}>
               Miembros del{' '}
-              <span style={{ background: 'linear-gradient(90deg, #60a5fa, #93c5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(90deg,var(--blue-soft),var(--blue-light))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Equipo
               </span>
             </h1>
@@ -386,14 +386,14 @@ export default function SectionAjustes({ members, onAddMember, onDeleteMember, o
           <button onClick={onAddMember} style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 20px',
-            background: '#2563eb',
-            border: '1px solid rgba(96,165,250,0.3)',
+            background: 'var(--blue)',
+            border: '1px solid rgba(72,149,239,0.3)',
             borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: 700,
             cursor: 'pointer', flexShrink: 0,
             transition: 'all 0.18s',
           }}
             onMouseEnter={e => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.transform = 'none'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--blue)'; e.currentTarget.style.transform = 'none'; }}
           >
             <UserPlus size={14} /> Agregar Miembro
           </button>

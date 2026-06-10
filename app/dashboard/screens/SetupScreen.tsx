@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Users } from "lucide-react";
 import { Toaster } from "sonner";
@@ -17,7 +17,7 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0d1021',
+      background: 'var(--bg-base)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -29,13 +29,13 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
       <Toaster {...toasterProps} />
 
       {/* Background glows */}
-      <div style={{ position: 'absolute', top: -100, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.11) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -100, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--blue-rgb),0.11) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -100, left: -80, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(29,78,216,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       {/* Dot grid */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(37,99,235,0.08) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(rgba(var(--blue-rgb),0.08) 1px, transparent 1px)',
         backgroundSize: '28px 28px',
         maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
         WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
@@ -45,8 +45,8 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
       {/* Card */}
       <div style={{
         background: '#0f1223',
-        border: '1px solid rgba(37,99,235,0.18)',
-        borderTop: '1px solid rgba(37,99,235,0.32)',
+        border: '1px solid rgba(var(--blue-rgb),0.18)',
+        borderTop: '1px solid rgba(var(--blue-rgb),0.32)',
         borderRadius: 22,
         padding: '40px 36px',
         width: '100%',
@@ -59,28 +59,28 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
         {/* Icon */}
         <div style={{
           width: 64, height: 64, borderRadius: 18,
-          background: 'rgba(37,99,235,0.10)',
-          border: '1px solid rgba(37,99,235,0.28)',
+          background: 'rgba(var(--blue-rgb),0.10)',
+          border: '1px solid rgba(var(--blue-rgb),0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 24px',
         }}>
-          <Users size={28} color="#60a5fa" />
+          <Users size={28} color="var(--blue-soft)" />
         </div>
 
         <h2 style={{
           fontSize: 24, fontWeight: 800,
-          color: '#eef0fb', margin: '0 0 8px',
+          color: 'var(--text)', margin: '0 0 8px',
           letterSpacing: '-0.5px',
           fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}>
           Bienvenido al{' '}
           <span style={{
-            background: 'linear-gradient(135deg, #60a5fa, #93c5fd)',
+            background: 'linear-gradient(135deg,var(--blue-soft),var(--blue-light))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>Equipo Dev</span>
         </h2>
-        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 32, lineHeight: 1.5, fontWeight: 400 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 32, lineHeight: 1.5, fontWeight: 400 }}>
           Agrega los miembros de tu equipo para comenzar.
         </p>
 
@@ -89,11 +89,11 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
         {members.length > 0 && (
           <div style={{
             marginTop: 28, paddingTop: 24,
-            borderTop: '1px solid rgba(37,99,235,0.10)',
+            borderTop: '1px solid rgba(var(--blue-rgb),0.10)',
           }}>
             <p style={{
               fontSize: 10, fontWeight: 600,
-              color: '#4a5070', letterSpacing: '0.12em',
+              color: 'var(--text-dim)', letterSpacing: '0.12em',
               textTransform: 'uppercase', marginBottom: 14,
               fontFamily: "'JetBrains Mono', monospace",
             }}>

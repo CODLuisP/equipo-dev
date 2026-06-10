@@ -1,48 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════
+   🎨  CONFIGURACIÓN DE COLORES — edita aquí para cambiar todo
+   ═══════════════════════════════════════════════════════════ */
 :root {
-  --bg-base:    #0d1021;
-  --bg-surface: #161929;
-  --bg-raised:  #1e2238;
-  --border:    oklch(0.922 0 0);
-  --border-hover:  rgba(37,99,235,0.22);
-  --accent:    oklch(0.97 0 0);
-  --accent-dim:    rgba(37,99,235,0.08);
-  --accent-border: rgba(37,99,235,0.18);
-  --accent-glow:   rgba(37,99,235,0.12);
-  --indigo:    #1d4ed8;
-  --blue-soft: #60a5fa;
-  --green:     #22c55e;
-  --text:   #eef0fb;
-  --text-2: #8b91b8;
-  --text-3: #4a5070;
+  /* Fondos */
+  --bg-base:    #0d1117;   /* fondo principal */
+  --bg-surface: #161b22;   /* cards y paneles */
+  --bg-raised:  #21262d;   /* hover, dropdowns */
+
+  /* Texto */
+  --text:       #f0f6fc;   /* principal */
+  --text-2:     #c9d1d9;   /* secundario */
+  --text-3:     #8b949e;   /* muted */
+  --text-dim:   #6e7681;   /* muy tenue */
+
+  /* Azul principal */
+  --blue:       #4361ee;   /* acento principal                */
+  --blue-soft:  #4895ef;   /* acento medio                   */
+  --blue-light: #74b0ff;   /* acento suave / hover           */
+
+  /* Otros colores de acento */
+  --green:  #22c55e;
+  --red:    #f87171;
+  --red-bg: rgba(239,68,68,0.08);
+
+  /* RGB para usar en rgba() — cambia junto con los hex de arriba */
+  --blue-rgb:    67, 97, 238;   /* rgb de --blue       (#4361ee) */
+  --surface-rgb: 33, 37, 41;   /* rgb de --bg-surface (#212529) */
+  --base-rgb:    52, 58, 64;   /* rgb de --bg-base    (#343a40) */
+  --raised-rgb:  44, 49, 54;   /* rgb de --bg-raised  (#2c3136) */
+
+  /* Tipografía */
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body:    'Plus Jakarta Sans', sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
   /* shadcn tokens — tema oscuro siempre */
-  --background:             oklch(0.115 0.02  264);
-  --foreground:             oklch(0.94  0.02  264);
-  --card:                   oklch(0.155 0.025 264);
-  --card-foreground:        oklch(0.94  0.02  264);
-  --popover:                oklch(0.11  0.015 264);
-  --popover-foreground:     oklch(0.94  0.02  264);
-  --primary:                oklch(0.488 0.243 264.376);
+  --background:             oklch(0.27  0.005 260);
+  --foreground:             oklch(0.97  0     0);
+  --card:                   oklch(0.19  0.005 260);
+  --card-foreground:        oklch(0.97  0     0);
+  --popover:                oklch(0.19  0.005 260);
+  --popover-foreground:     oklch(0.97  0     0);
+  --primary:                oklch(0.50  0.243 264.376);
   --primary-foreground:     oklch(0.985 0     0);
-  --secondary:              oklch(0.17  0.015 264);
-  --secondary-foreground:   oklch(0.94  0     0);
-  --muted:                  oklch(0.17  0.01  264);
-  --muted-foreground:       oklch(0.56  0.03  264);
-  --accent:                 oklch(0.17  0.015 264);
-  --accent-foreground:      oklch(0.94  0     0);
+  --secondary:              oklch(0.23  0.005 260);
+  --secondary-foreground:   oklch(0.97  0     0);
+  --muted:                  oklch(0.23  0.005 260);
+  --muted-foreground:       oklch(0.65  0.01  260);
+  --accent:                 oklch(0.23  0.005 260);
+  --accent-foreground:      oklch(0.97  0     0);
   --destructive:            oklch(0.577 0.245 27.325);
   --border:                 oklch(1     0     0 / 8%);
   --input:                  oklch(1     0     0 / 10%);
-  --ring:                   oklch(0.488 0.243 264.376);
+  --ring:                   oklch(0.50  0.243 264.376);
   --radius:                 0.75rem;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.56  0.03  264);
@@ -60,7 +76,7 @@
 }
 
 body {
-  background: #0d1021;
+  background: #343a40;
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -70,17 +86,17 @@ body {
 * { box-sizing: border-box; }
 
 ::selection {
-  background: rgba(37,99,235,0.25);
+  background: rgba(67,97,238,0.25);
   color: var(--text);
 }
 
 ::-webkit-scrollbar        { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(37,99,235,0.2); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,0.35); }
+::-webkit-scrollbar-thumb  { background: rgba(67,97,238,0.2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(67,97,238,0.35); }
 
 .custom-scrollbar::-webkit-scrollbar       { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.15); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(67,97,238,0.15); border-radius: 4px; }
 
 input::placeholder, textarea::placeholder { color: var(--text-3); }
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -405,16 +405,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const showTaskAlert = (title: string) => {
     toast.custom(() => (
       <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"14px 16px",
-        background:"#161929", border:"1px solid rgba(37,99,235,0.22)", borderRadius:14,
+        background:"var(--bg-surface)", border:"1px solid rgba(var(--blue-rgb),0.22)", borderRadius:14,
         boxShadow:"0 12px 32px rgba(0,0,0,0.5)", minWidth:290, maxWidth:340,
         fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(37,99,235,0.10)",
-          border:"1px solid rgba(37,99,235,0.22)", display:"flex", alignItems:"center",
+        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(var(--blue-rgb),0.10)",
+          border:"1px solid rgba(var(--blue-rgb),0.22)", display:"flex", alignItems:"center",
           justifyContent:"center", flexShrink:0, fontSize:16 }}>🎯</div>
         <div>
-          <p style={{ fontWeight:700, color:"#eef0fb", fontSize:13, margin:0 }}>Nueva tarea asignada</p>
-          <p style={{ color:"#60a5fa", fontSize:12, margin:"3px 0 4px", fontWeight:600 }}>{title}</p>
-          <p style={{ color:"#4a5070", fontSize:11, margin:0 }}>Ver en <span style={{ color:"#8b91b8", fontWeight:600 }}>Tareas</span></p>
+          <p style={{ fontWeight:700, color:"var(--text)", fontSize:13, margin:0 }}>Nueva tarea asignada</p>
+          <p style={{ color:"var(--blue-soft)", fontSize:12, margin:"3px 0 4px", fontWeight:600 }}>{title}</p>
+          <p style={{ color:"var(--text-dim)", fontSize:11, margin:0 }}>Ver en <span style={{ color:"var(--text-2)", fontWeight:600 }}>Tareas</span></p>
         </div>
       </div>
     ), { duration:6000, position:"bottom-left" });
@@ -574,7 +574,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const note: Note = {
       id: crypto.randomUUID(), content, authorId, createdAt: Date.now(),
       x: 80 + Math.random()*300, y: 80 + Math.random()*200,
-      color: member?.color || '#2563eb', type: 'text',
+      color: member?.color || 'var(--blue)', type: 'text',
     };
     saveNotes([note, ...notes]);
     toast.success('Nota agregada'); setOpenNoteModal(false);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -184,7 +184,7 @@ function TeamAlertNotification({ alert, onDismiss }: { alert: PendingAlert; onDi
   return (
     <div style={{
       width: 300,
-      background: 'rgba(22,25,41,0.98)',
+      background: 'rgba(var(--surface-rgb),0.98)',
       borderRadius: 14,
       border: `1px solid rgba(255,255,255,0.07)`,
       borderTop: `1px solid ${color}55`,
@@ -654,7 +654,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
       )}
 
       {/* Panel */}
-      <div style={{ background:'rgba(22,25,41,0.92)', backdropFilter:'blur(16px)', borderRadius:24, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ background:'rgba(var(--surface-rgb),0.92)', backdropFilter:'blur(16px)', borderRadius:24, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
 
         <div style={{ display:'flex', background:'rgba(0,0,0,0.3)' }}>
@@ -780,7 +780,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {(['json','sql','unit','ts'] as const).map(t => {
-                  const tabColors: Record<string,string> = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22', ts:'#2563eb' };
+                  const tabColors: Record<string,string> = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22', ts:'var(--blue)' };
                   const tabLabels: Record<string,string> = { json:'JSON', sql:'SQL', unit:'px↔rem', ts:'Timestamp' };
                   const c = tabColors[t];
                   return (
@@ -808,10 +808,10 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                       value={tsInput}
                       onChange={e => { setTsInput(e.target.value); setTsResult(null); }}
                       onKeyDown={e => e.key === 'Enter' && handleConvertTs()}
-                      style={{ flex:1, background:'rgba(0,0,0,0.35)', border:'1px solid rgba(37,99,235,0.25)', borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12, fontFamily:'monospace', outline:'none', boxSizing:'border-box' }}
+                      style={{ flex:1, background:'rgba(0,0,0,0.35)', border:'1px solid rgba(var(--blue-rgb),0.25)', borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12, fontFamily:'monospace', outline:'none', boxSizing:'border-box' }}
                     />
                     <button onClick={handleConvertTs} style={{
-                      padding:'9px 14px', borderRadius:10, background:'#2563eb', border:'none',
+                      padding:'9px 14px', borderRadius:10, background:'var(--blue)', border:'none',
                       color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer',
                       display:'flex', alignItems:'center', gap:6, flexShrink:0,
                     }}>
@@ -821,7 +821,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
 
                   {/* Botón "Ahora" */}
                   <button onClick={() => { const now = String(Math.floor(Date.now()/1000)); setTsInput(now); setTsResult(null); }}
-                    style={{ alignSelf:'flex-start', padding:'4px 10px', borderRadius:7, background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.25)', color:'#60a5fa', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+                    style={{ alignSelf:'flex-start', padding:'4px 10px', borderRadius:7, background:'rgba(var(--blue-rgb),0.1)', border:'1px solid rgba(var(--blue-rgb),0.25)', color:'var(--blue-soft)', fontSize:10, fontWeight:700, cursor:'pointer' }}>
                     Usar timestamp actual
                   </button>
 
@@ -836,14 +836,14 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
                           padding:'10px 12px',
                           background:'rgba(15,18,28,0.8)', borderRadius:10,
                           border:'1px solid rgba(255,255,255,0.06)',
-                          borderLeft:'3px solid #2563eb',
+                          borderLeft:'3px solid var(--blue)',
                         }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
                             <span style={{ fontSize:9, fontWeight:900, color:'#ffffff', textTransform:'uppercase', letterSpacing:'0.1em' }}>{label}</span>
                             <button onClick={() => { navigator.clipboard.writeText(value); toast.success("Copiado"); }}
-                              style={{ padding:4, background:'rgba(37,99,235,0.1)', border:'1px solid rgba(37,99,235,0.2)', color:'#60a5fa', cursor:'pointer', borderRadius:6, transition:'all 0.15s', display:'flex' }}
-                              onMouseEnter={e => { e.currentTarget.style.background='rgba(37,99,235,0.25)'; e.currentTarget.style.borderColor='rgba(37,99,235,0.5)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background='rgba(37,99,235,0.1)'; e.currentTarget.style.borderColor='rgba(37,99,235,0.2)'; }}>
+                              style={{ padding:4, background:'rgba(var(--blue-rgb),0.1)', border:'1px solid rgba(var(--blue-rgb),0.2)', color:'var(--blue-soft)', cursor:'pointer', borderRadius:6, transition:'all 0.15s', display:'flex' }}
+                              onMouseEnter={e => { e.currentTarget.style.background='rgba(var(--blue-rgb),0.25)'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.5)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background='rgba(var(--blue-rgb),0.1)'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.2)'; }}>
                               <Copy size={10}/>
                             </button>
                           </div>

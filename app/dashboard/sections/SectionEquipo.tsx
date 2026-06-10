@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import {
@@ -14,13 +14,12 @@ import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Progress, ProgressTrack, ProgressIndicator } from "@/components/ui/progress";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function roleColor(role: string) {
   const r = role.toLowerCase();
-  if (r.includes('full') || r.includes('stack'))   return '#60a5fa';
+  if (r.includes('full') || r.includes('stack'))   return 'var(--blue-soft)';
   if (r.includes('front') || r.includes('ui'))     return '#a78bfa';
   if (r.includes('design'))                         return '#f472b6';
   if (r.includes('back') || r.includes('api'))     return '#34d399';
@@ -73,13 +72,20 @@ function AvatarEditor({ member, open, onSave, onClose }: {
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent
-        className="p-0 gap-0 overflow-hidden max-w-[460px]"
-        style={{ background: '#161929', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        className="p-0 overflow-hidden gap-0 outline-none"
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid rgba(var(--blue-rgb),0.18)',
+          borderRadius: 20,
+          maxWidth: 460,
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+        }}
       >
         <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${rc}90, transparent)` }} />
-        <DialogHeader className="px-6 pt-6 pb-0">
+
+        <DialogHeader className="px-6 pt-6 pb-0 space-y-0">
           <p style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 4 }}>Personalizar</p>
-          <DialogTitle style={{ fontSize: 16, fontWeight: 700, color: '#e8eaf5', letterSpacing: '-0.2px' }}>
+          <DialogTitle style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px', margin: 0 }}>
             Avatar · <span style={{ color: member.color }}>{member.name}</span>
           </DialogTitle>
         </DialogHeader>
@@ -114,9 +120,18 @@ function AvatarEditor({ member, open, onSave, onClose }: {
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-5 border-t border-white/5 flex gap-2">
-          <Button variant="ghost" onClick={onClose} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600 }}>Cancelar</Button>
-          <Button onClick={() => { onSave(seed); onClose(); }} className="gap-2 ml-auto" style={{ background: '#2563eb', color: '#fff', fontSize: 13, fontWeight: 700 }}>
+        <DialogFooter className="px-6 py-5 border-t border-white/5 flex gap-2 justify-end">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => { onSave(seed); onClose(); }}
+            style={{ background: 'var(--blue)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}
+          >
             <Check size={13} /> Guardar
           </Button>
         </DialogFooter>
@@ -162,7 +177,7 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
         rotateY: tilt.rotateY,
         transformStyle: 'preserve-3d',
         position: 'relative',
-        background: hovered ? '#1e2238' : '#161929',
+        background: hovered ? 'var(--bg-raised)' : 'var(--bg-surface)',
         borderRadius: 16,
         overflow: 'hidden',
         transition: 'background 0.18s, border-color 0.18s',
@@ -207,12 +222,12 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
             <motion.div
               animate={{ scale: [1, 1.25, 1] }}
               transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-              style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid #161929' }}
+              style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--bg-surface)' }}
             />
           </motion.div>
 
           <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#e8eaf5', margin: 0, letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {member.name}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -235,23 +250,26 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
               key={pct}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ fontSize: 11, fontWeight: 700, color: pct > 0 ? '#e8eaf5' : 'rgba(255,255,255,0.18)' }}
+              style={{ fontSize: 11, fontWeight: 700, color: pct > 0 ? 'var(--text)' : 'rgba(255,255,255,0.18)' }}
             >
               {pct}%
             </motion.span>
           </div>
-          <Progress value={pct} className="h-[2px]">
-            <ProgressTrack className="h-[2px]" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <ProgressIndicator style={{ background: member.color }} />
-            </ProgressTrack>
-          </Progress>
+          <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden', width: '100%' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              style={{ height: '100%', background: member.color, borderRadius: 9999 }}
+            />
+          </div>
         </div>
 
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
           {[
             { icon: <Clock size={9}/>,       v: pend, l: 'Pendiente', c: 'rgba(255,255,255,0.25)' },
-            { icon: <Circle size={9}/>,       v: prog, l: 'En curso',  c: '#60a5fa' },
+            { icon: <Circle size={9}/>,       v: prog, l: 'En curso',  c: 'var(--blue-soft)' },
             { icon: <CheckCircle2 size={9}/>, v: done, l: 'Listas',    c: '#4ade80' },
           ].map((s, i) => (
             <motion.div key={s.l}
@@ -262,7 +280,7 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginBottom: 3, color: s.c }}>
                 {s.icon}
-                <span style={{ fontSize: 13, fontWeight: 800, color: s.v > 0 ? '#e8eaf5' : 'rgba(255,255,255,0.15)' }}>{s.v}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: s.v > 0 ? 'var(--text)' : 'rgba(255,255,255,0.15)' }}>{s.v}</span>
               </div>
               <p style={{ fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{s.l}</p>
             </motion.div>
@@ -276,36 +294,36 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
           style={{ display: 'flex', gap: 6 }}
         >
           <Tooltip>
-            <TooltipTrigger
-              render={(props: React.HTMLAttributes<HTMLButtonElement>) => (
-                <motion.button {...(props as any)}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={e => { e.stopPropagation(); onEdit(); }}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px 0', borderRadius: 8, cursor: 'pointer', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.15)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
-                >
-                  <Pencil size={11}/> Avatar
-                </motion.button>
-              )}
-            />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <TooltipTrigger render={(props: any) => (
+              <motion.button
+                {...props}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px 0', borderRadius: 8, cursor: 'pointer', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: 'var(--blue-soft)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.15)')}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
+              >
+                <Pencil size={11}/> Avatar
+              </motion.button>
+            )} />
             <TooltipContent>Cambiar avatar</TooltipContent>
           </Tooltip>
 
           <Tooltip>
-            <TooltipTrigger
-              render={(props: React.HTMLAttributes<HTMLButtonElement>) => (
-                <motion.button {...(props as any)}
-                  whileTap={{ scale: 0.92 }}
-                  onClick={e => { e.stopPropagation(); onDelete(); }}
-                  style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
-                >
-                  <Trash2 size={12}/>
-                </motion.button>
-              )}
-            />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <TooltipTrigger render={(props: any) => (
+              <motion.button
+                {...props}
+                whileTap={{ scale: 0.92 }}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
+                style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', fontFamily: 'inherit' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
+              >
+                <Trash2 size={12}/>
+              </motion.button>
+            )} />
             <TooltipContent>Eliminar</TooltipContent>
           </Tooltip>
         </motion.div>
