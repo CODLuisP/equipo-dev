@@ -68,13 +68,17 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
               key={p} type="button"
               onClick={() => setAvatarSeed(p)}
               style={{
+                width: 46, height: 46,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
                 padding: 3,
-                background: avatarSeed === p ? `${previewColor}18` : "rgba(255,255,255,0.03)",
-                border: `1.5px solid ${avatarSeed === p ? previewColor + "70" : "rgba(255,255,255,0.07)"}`,
-                borderRadius: 9, cursor: "pointer", transition: "all 0.15s",
+                background: avatarSeed === p ? `${previewColor}22` : "rgba(255,255,255,0.03)",
+                border: `2px solid ${avatarSeed === p ? previewColor : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 9, cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
+                boxSizing: "border-box",
+                outline: avatarSeed === p ? `3px solid ${previewColor}40` : "none",
+                outlineOffset: 1,
               }}
-              onMouseEnter={e => { if (!(avatarSeed === p)) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; } }}
-              onMouseLeave={e => { if (!(avatarSeed === p)) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; } }}
             >
               <AvatarImg seed={p} name={p} color={previewColor} size={38} borderRadius={8} />
             </button>
