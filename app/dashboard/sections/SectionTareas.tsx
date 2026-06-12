@@ -37,7 +37,7 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
       onMouseLeave={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(30,34,45,0.8)' : 'rgba(22,25,31,0.6)'; }}
     >
       <div className="z-10 flex-1">
-        <h4 className={`text-white font-bold leading-tight group-hover:text-[var(--blue)] transition-colors ${size === 'lg' ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.2px" }}>
+        <h4 className={`text-gray-200 leading-tight ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
           {task.title}
         </h4>
       </div>
@@ -46,8 +46,8 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
         <div className="flex items-center gap-1.5">
           {member && <AvatarImg seed={member.avatarSeed || member.name} name={member.name} color={member.color} size={size === 'lg' ? 22 : 18} borderRadius={6} />}
           <div className="flex flex-col">
-            <span className="text-[9px] text-gray-400 font-bold leading-none">{member?.name || 'Sin asignar'}</span>
-            <span className="text-[7px] text-gray-600 font-bold uppercase tracking-wide mt-0.5">Responsable</span>
+            <span className="text-[9px] text-gray-200 font-bold leading-none">{member?.name || 'Sin asignar'}</span>
+            <span className="text-[9px] text-gray-300  mt-0.5">Responsable</span>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -266,7 +266,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
               <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
               <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Pendientes</h3>
             </div>
-            <span className="text-[9px] font-mono text-gray-500">[{pending.length}]</span>
+            <span className="text-[9px] font-mono text-gray-200">[{pending.length}]</span>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-2">
             {pending.map(task => (
@@ -290,15 +290,10 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
         >
           {/* Grid cuadriculado solo en este panel */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.04] rounded-[28px] overflow-hidden" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-          <div className="absolute top-0 right-0 p-4">
-             <div className="flex items-center gap-1.5 px-2 py-1  ">
-                <span className="text-[8px] font-bold text-(--blue) uppercase tracking-widest">Activo</span>
-             </div>
-          </div>
-
+        
           <div className="flex flex-col mb-1">
-             <h3 className="text-[10px] font-bold text-white uppercase" style={{  letterSpacing: "0.12em" }}>Área de Ejecución</h3>
-             <p className="text-gray-200 text-[10px]">Tareas actualmente en desarrollo</p>
+                         <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Tareas en Progreso</h3>
+
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">

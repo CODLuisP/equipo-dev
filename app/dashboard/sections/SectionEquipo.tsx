@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   motion, AnimatePresence, useMotionValue, useTransform, useSpring,
 } from "framer-motion";
@@ -14,6 +14,70 @@ import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import * as THREE from "three";
+
+// ─── Three.js card background ─────────────────────────────────────────────────
+
+function ThreeBg({ color }: { color: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+    camera.position.z = 4;
+
+    const c = new THREE.Color(color);
+
+    // Partículas flotantes
+    const count = 60;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 6;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: c, size: 0.06, transparent: true, opacity: 0.55 });
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
+
+    // Esfera central suave
+    const sphereGeo = new THREE.SphereGeometry(0.7, 32, 32);
+    const sphereMat = new THREE.MeshStandardMaterial({
+      color: c, emissive: c, emissiveIntensity: 0.15,
+      transparent: true, opacity: 0.12, wireframe: false,
+    });
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    scene.add(sphere);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+    const ro = new ResizeObserver(() => {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    });
+    ro.observe(canvas);
+
+    let id: number;
+    const animate = () => {
+      id = requestAnimationFrame(animate);
+      points.rotation.y += 0.0015;
+      points.rotation.x += 0.0008;
+      sphere.rotation.y += 0.003;
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => { cancelAnimationFrame(id); ro.disconnect(); renderer.dispose(); };
+  }, [color]);
+
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -172,145 +236,94 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
       onMouseMove={tilt.onMouseMove}
       onMouseLeave={() => { tilt.onMouseLeave(); setHovered(false); }}
       onMouseEnter={() => setHovered(true)}
+      className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 cursor-default"
       style={{
-        rotateX: tilt.rotateX,
-        rotateY: tilt.rotateY,
-        transformStyle: 'preserve-3d',
-        position: 'relative',
-        background: hovered ? 'var(--bg-raised)' : 'var(--bg-surface)',
-        borderRadius: 16,
-        overflow: 'hidden',
-        transition: 'background 0.18s, border-color 0.18s',
-        display: 'flex', flexDirection: 'column',
-        perspective: 800,
-        willChange: 'transform',
+        rotateX: tilt.rotateX, rotateY: tilt.rotateY,
+        transformStyle: 'preserve-3d', perspective: 800, willChange: 'transform',
+        background: 'transparent',
+        border: 'none',
+        boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.3)',
+        fontFamily: 'Arial, Helvetica, sans-serif',
       }}
     >
-      {/* Shimmer sweep on hover */}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div
-            initial={{ x: '-100%', opacity: 0 }}
-            animate={{ x: '200%', opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.55, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-              background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%)',
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Accent top line */}
-      <motion.div
-        animate={{ opacity: hovered ? 0.9 : 0.35, scaleX: hovered ? 1 : 0.6 }}
-        transition={{ duration: 0.3 }}
-        style={{ height: 2, background: `linear-gradient(90deg, transparent, ${member.color}, transparent)`, transformOrigin: 'center' }}
-      />
-
-      <div style={{ padding: '18px 16px 16px', display: 'flex', flexDirection: 'column', gap: 13, flex: 1, position: 'relative', zIndex: 1 }}>
-
-        {/* Avatar + info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <AvatarImg seed={member.avatarSeed ?? 'aventurero'} name={member.name} color={member.color} size={48} borderRadius={12} />
-            <motion.div
-              animate={{ scale: [1, 1.25, 1] }}
-              transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-              style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--bg-surface)' }}
-            />
+      {/* Avatar centrado con badge online */}
+      <div className="flex flex-col items-center pt-7 pb-4 px-4" style={{ position: 'relative' }}>
+        <ThreeBg color={member.color} />
+        <div className="relative mb-4">
+          <div className="rounded-full p-0.5" style={{ background: `linear-gradient(135deg, ${member.color}, ${member.color}66)` }}>
+            <AvatarImg seed={member.avatarSeed ?? 'aventurero'} name={member.name} color={member.color} size={72} borderRadius={36} />
           </div>
-
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {member.name}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <span style={{ color: rc, display: 'flex' }}><RoleIcon role={member.role} /></span>
-              <p style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {member.role}
-              </p>
-            </div>
-          </div>
+          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2" style={{ ringColor: '#1c1f26', border: '2px solid #1c1f26' }} />
         </div>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
-
-        {/* Progress */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Progreso</span>
-            <motion.span
-              key={pct}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ fontSize: 11, fontWeight: 700, color: pct > 0 ? 'var(--text)' : 'rgba(255,255,255,0.18)' }}
-            >
-              {pct}%
-            </motion.span>
-          </div>
-          <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden', width: '100%' }}>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              style={{ height: '100%', background: member.color, borderRadius: 9999 }}
-            />
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-          {[
-            { icon: <Clock size={9}/>,       v: pend, l: 'Pendiente', c: 'rgba(255,255,255,0.25)' },
-            { icon: <Circle size={9}/>,       v: prog, l: 'En curso',  c: 'var(--blue-soft)' },
-            { icon: <CheckCircle2 size={9}/>, v: done, l: 'Listas',    c: '#4ade80' },
-          ].map((s, i) => (
-            <motion.div key={s.l}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.06 + i * 0.04, type: 'spring', stiffness: 300, damping: 22 }}
-              style={{ padding: '7px 4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 8, textAlign: 'center' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginBottom: 3, color: s.c }}>
-                {s.icon}
-                <span style={{ fontSize: 13, fontWeight: 800, color: s.v > 0 ? 'var(--text)' : 'rgba(255,255,255,0.15)' }}>{s.v}</span>
-              </div>
-              <p style={{ fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{s.l}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Acciones */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px 0', borderRadius: 8, cursor: 'pointer', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: 'var(--blue-soft)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.15)')}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
-          >
-            <Pencil size={11}/> Avatar
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
-            style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', fontFamily: 'inherit' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
-          >
-            <Trash2 size={12}/>
-          </motion.button>
+        {/* Nombre y rol */}
+        <p className="text-[15px] font-bold text-white text-center leading-tight mb-1">{member.name}</p>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span style={{ color: rc }}><RoleIcon role={member.role} /></span>
+          <p className="text-[11px] text-center" style={{ color: '#e9ecef' }}>{member.role}</p>
         </div>
       </div>
 
-      {/* Index */}
-      <span style={{ position: 'absolute', top: 10, right: 12, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.12)', letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums' }}>
-        {String(index + 1).padStart(2, '0')}
-      </span>
+      {/* Divider + todo lo de abajo con fondo */}
+      <div style={{ background: '#1c1f26' }}>
+      <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+      {/* Progress */}
+      <div className="px-4 pt-4 pb-3 space-y-1.5">
+        <div className="flex justify-between items-center">
+          <span className="text-[11px] " style={{ color: '#e9ecef' }}>Progreso</span>
+          <span className="text-[11px] font-bold" style={{ color: pct > 0 ? member.color : 'rgba(255,255,255,0.2)' }}>{pct}%</span>
+        </div>
+        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+          <motion.div
+            className="h-full rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{ background: member.color }}
+          />
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 mx-2 mb-4 rounded-xl overflow-hidden" >
+        {[
+          { v: pend, l: 'Pendiente' },
+          { v: prog, l: 'Curso'  },
+          { v: done, l: 'Listas'    },
+        ].map((s, i) => (
+          <div key={s.l} className="flex flex-col items-center py-2.5" style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+            <span className="text-base font-bold text-white">{s.v}</span>
+            <span className="text-[10px] mt-0.5 font-medium" style={{ color: '#e9ecef' }}>{s.l}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Acciones */}
+      <div className="flex gap-2 px-4 pb-4">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
+          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-[12px] font-bold transition-all duration-150 cursor-pointer"
+          style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ade80' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.2)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.1)')}
+        >
+          <Pencil size={11} /> Avatar
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
+          className="w-9 flex items-center justify-center rounded-md transition-all duration-150 cursor-pointer"
+          style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+        >
+          <Trash2 size={13} />
+        </motion.button>
+      </div>
+      </div>
+
     </motion.div>
   );
 }
@@ -323,12 +336,12 @@ function AddCard({ onClick }: { onClick: () => void }) {
       variants={cardVariants}
       layout
       onClick={onClick}
-      whileHover={{ borderColor: 'rgba(59,130,246,0.4)', backgroundColor: 'rgba(59,130,246,0.04)' }}
+      whileHover={{ borderColor: 'rgba(59,130,246,0.7)', backgroundColor: 'rgba(59,130,246,0.18)' }}
       whileTap={{ scale: 0.97 }}
       style={{
         minHeight: 260, cursor: 'pointer',
-        background: 'transparent',
-        border: '1px dashed rgba(255,255,255,0.08)',
+        background: 'rgba(59,130,246,0.08)',
+        border: '1px dashed rgba(59,130,246,0.4)',
         borderRadius: 16,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
       }}
@@ -336,11 +349,11 @@ function AddCard({ onClick }: { onClick: () => void }) {
       <motion.div
         whileHover={{ scale: 1.12, rotate: 90 }}
         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-        style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)' }}
       >
-        <Plus size={16} color="rgba(255,255,255,0.3)" />
+        <Plus size={16} color="#60a5fa" />
       </motion.div>
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)' }}>
+      <span style={{ fontSize: 12, fontWeight: 500, color: '#fff' }}>
         Nuevo miembro
       </span>
     </motion.div>
