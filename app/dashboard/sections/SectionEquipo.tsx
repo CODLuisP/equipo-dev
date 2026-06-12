@@ -213,18 +213,14 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
 
         {/* Avatar + info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <motion.div
-            whileHover={{ scale: 1.08, rotate: 2 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            style={{ position: 'relative', flexShrink: 0 }}
-          >
+          <div style={{ position: 'relative', flexShrink: 0 }}>
             <AvatarImg seed={member.avatarSeed ?? 'aventurero'} name={member.name} color={member.color} size={48} borderRadius={12} />
             <motion.div
               animate={{ scale: [1, 1.25, 1] }}
               transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
               style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--bg-surface)' }}
             />
-          </motion.div>
+          </div>
 
           <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -288,45 +284,27 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
         </div>
 
         {/* Acciones */}
-        <motion.div
-          animate={{ opacity: hovered ? 1 : 0, y: hovered ? 0 : 6 }}
-          transition={{ duration: 0.15 }}
-          style={{ display: 'flex', gap: 6 }}
-        >
-          <Tooltip>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <TooltipTrigger render={(props: any) => (
-              <motion.button
-                {...props}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px 0', borderRadius: 8, cursor: 'pointer', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: 'var(--blue-soft)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.15)')}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
-              >
-                <Pencil size={11}/> Avatar
-              </motion.button>
-            )} />
-            <TooltipContent>Cambiar avatar</TooltipContent>
-          </Tooltip>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px 0', borderRadius: 8, cursor: 'pointer', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: 'var(--blue-soft)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.15)')}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
+          >
+            <Pencil size={11}/> Avatar
+          </motion.button>
 
-          <Tooltip>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <TooltipTrigger render={(props: any) => (
-              <motion.button
-                {...props}
-                whileTap={{ scale: 0.92 }}
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
-                style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', fontFamily: 'inherit' }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
-              >
-                <Trash2 size={12}/>
-              </motion.button>
-            )} />
-            <TooltipContent>Eliminar</TooltipContent>
-          </Tooltip>
-        </motion.div>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
+            style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', fontFamily: 'inherit' }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
+          >
+            <Trash2 size={12}/>
+          </motion.button>
+        </div>
       </div>
 
       {/* Index */}
