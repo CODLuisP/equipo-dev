@@ -25,21 +25,16 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
         e.dataTransfer.setData('taskStatus', task.status);
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`group relative flex flex-col gap-2 rounded-xl ${size === 'lg' ? 'p-4' : 'p-3'}`}
+      className={`group relative flex flex-col gap-2 rounded-xl bg-[#212529] hover:bg-[#2a2e38] ${size === 'lg' ? 'p-4' : 'p-3'}`}
       style={{
-        background: isCurrentUser ? 'rgba(30, 34, 45, 0.8)' : 'rgba(22, 25, 31, 0.6)',
         border: `1px solid ${isCurrentUser ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.08)'}`,
-        backdropFilter: 'blur(12px)',
-        transition: 'background 0.2s, border-color 0.2s',
         cursor: 'grab',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(var(--blue-rgb),0.10)' : 'rgba(30,33,42,0.85)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = isCurrentUser ? 'rgba(30,34,45,0.8)' : 'rgba(22,25,31,0.6)'; }}
     >
       <div className="z-10 flex-1">
-        <h4 className={`text-gray-200 leading-tight ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
-          {task.title}
-        </h4>
+   <h4 className="text-[12px] text-gray-300 leading-tight" style={{ fontFamily: 'Arial, sans-serif' }}>
+  {task.title}
+</h4>
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-white/5 z-10 mt-auto">
@@ -47,7 +42,7 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
           {member && <AvatarImg seed={member.avatarSeed || member.name} name={member.name} color={member.color} size={size === 'lg' ? 22 : 18} borderRadius={6} />}
           <div className="flex flex-col">
             <span className="text-[9px] text-gray-200 font-bold leading-none">{member?.name || 'Sin asignar'}</span>
-            <span className="text-[9px] text-gray-300  mt-0.5">Responsable</span>
+            <span className="text-[9px] text-blue-300  mt-0.5">Responsable</span>
           </div>
         </div>
         <div className="flex items-center gap-1">
