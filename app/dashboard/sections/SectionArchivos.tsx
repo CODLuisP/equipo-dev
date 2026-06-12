@@ -125,7 +125,7 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
   const { icon, accent, label } = getTypeInfo();
 
   return (
-    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, border:isDragging?`2px solid ${accent}50`:`1px solid ${accent}25`, transition:isDragging?'none':'border-color 0.2s', userSelect:'none' }}
+    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:isDragging?`2px solid ${accent}50`:`1px solid ${accent}25`, transition:isDragging?'none':'border-color 0.2s', userSelect:'none' }}
       onMouseDown={e=>{ if ((e.target as HTMLElement).closest('button')) return; setIsDragging(true); }}>
       <div style={{ background:`linear-gradient(135deg,${accent}20 0%,${accent}07 100%)`, borderBottom:`1px solid ${accent}18`, padding:'14px 14px 10px' }}>
         <div className="flex items-start justify-between mb-2">

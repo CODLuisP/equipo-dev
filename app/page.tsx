@@ -538,10 +538,9 @@ export default function LoginPage() {
                     <img src="/assets/logo.png" alt="Logo" style={{ height: 20, width: "auto", opacity: 0.85 }} />
                     <span style={{
                       fontFamily: "JetBrains Mono, monospace", fontSize: 16, fontWeight: 800,
-                      background: "linear-gradient(135deg, #60a5fa, #93c5fd)",
-                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      color: "#97c0ea",
                       letterSpacing: "-0.5px",
-                    }}>Flux</span>
+                    }}>Codexa</span>
                   </div>
                   <h2 style={{
                     fontFamily: "'Plus Jakarta Sans', sans-serif",
