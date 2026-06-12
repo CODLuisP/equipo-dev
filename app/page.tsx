@@ -155,8 +155,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("equipo_dev_token");
-    if (token) router.replace("/dashboard");
-    else setReady(true);
+    if (!token) { setReady(true); return; }
+    api.getMembers()
+      .then(() => router.replace("/dashboard"))
+      .catch(() => {
+        localStorage.removeItem("equipo_dev_token");
+        router.replace("/register");
+      });
   }, [router]);
 
   /* Three.js — left panel */

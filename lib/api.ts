@@ -1,7 +1,7 @@
 // ─── API Client ───────────────────────────────────────────────────────────────
 // Todas las llamadas al backend de Equipo Dev
 
-export const API_BASE = 'http://localhost:3003';
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3006';
 
 export interface AdminTeam {
   id: string;
