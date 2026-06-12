@@ -68,15 +68,13 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
           )}
           {task.status === 'pendiente' && (
             <button onClick={() => onStart(task.id)}
-              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all"
-              style={{ background: 'var(--blue)', color: '#fff', boxShadow: '0 3px 10px rgba(var(--blue-rgb),0.3)' }}>
+              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all bg-[var(--blue)] text-white shadow-[0_3px_10px_rgba(var(--blue-rgb),0.3)]">
               Iniciar
             </button>
           )}
           {task.status === 'en progreso' && (
             <button onClick={() => onChangeStatus(task.id, 'completada')}
-              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all"
-              style={{ background: 'var(--blue)', color: '#fff', boxShadow: '0 3px 10px rgba(var(--blue-rgb),0.3)' }}>
+              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all bg-[var(--blue)] text-white shadow-[0_3px_10px_rgba(var(--blue-rgb),0.3)]">
               Finalizar
             </button>
           )}
