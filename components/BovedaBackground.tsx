@@ -152,8 +152,8 @@ export default function BovedaBackground() {
     gc.width = gc.height = 256;
     const gctx = gc.getContext("2d")!;
     const gr = gctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    gr.addColorStop(0,   "rgba(var(--blue-rgb),0.12)");
-    gr.addColorStop(0.5, "rgba(var(--blue-rgb),0.04)");
+    gr.addColorStop(0,   "rgba(67,97,238,0.12)");
+    gr.addColorStop(0.5, "rgba(67,97,238,0.04)");
     gr.addColorStop(1,   "rgba(0,0,0,0)");
     gctx.fillStyle = gr; gctx.fillRect(0, 0, 256, 256);
     const glowTex = new THREE.CanvasTexture(gc);

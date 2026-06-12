@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Equipo Dev · Velsat",
-  description: "Panel de gestión interna del equipo de programadores",
+  title: "Flux · Panel de equipo",
+  description: "Gestión de tareas, snippets y colaboración para equipos de desarrollo",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

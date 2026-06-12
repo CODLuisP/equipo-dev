@@ -110,7 +110,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [customShapes,   setCustomShapes]   = useState<CustomShape[]>([]);
   const [archivos,       setArchivos]       = useState<SharedFile[]>([]);
   const [vaultProjects,  setVaultProjects]  = useState<VaultProject[]>([]);
-  const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
+  const [isVaultUnlocked, setIsVaultUnlockedState] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("vault-unlocked") === "1") {
+      setIsVaultUnlockedState(true);
+    }
+  }, []);
+  const setIsVaultUnlocked = (v: boolean) => {
+    setIsVaultUnlockedState(v);
+    if (typeof window !== "undefined") {
+      if (v) sessionStorage.setItem("vault-unlocked", "1");
+      else sessionStorage.removeItem("vault-unlocked");
+    }
+  };
   const [currentUser,    setCurrentUser]    = useState<Member | null>(null);
   const [isLoading,      setIsLoading]      = useState(true);
   const [isSetup,        setIsSetup]        = useState(false);

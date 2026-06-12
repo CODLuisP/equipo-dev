@@ -408,8 +408,9 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
 
         {/* Member cards */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(152px, 1fr))",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
           gap: 12,
         }}>
           {members.map((member, i) => (

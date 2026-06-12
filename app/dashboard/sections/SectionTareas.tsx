@@ -291,15 +291,14 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           {/* Grid cuadriculado solo en este panel */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.04] rounded-[28px] overflow-hidden" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
           <div className="absolute top-0 right-0 p-4">
-             <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--blue)]/10 border border-[var(--blue)]/20 rounded-full">
-                <div className="w-1 h-1 rounded-full bg-[var(--blue)] animate-ping" />
-                <span className="text-[8px] font-bold text-[var(--blue)] uppercase tracking-widest">Activo</span>
+             <div className="flex items-center gap-1.5 px-2 py-1  ">
+                <span className="text-[8px] font-bold text-(--blue) uppercase tracking-widest">Activo</span>
              </div>
           </div>
 
           <div className="flex flex-col mb-1">
-             <h3 className="text-[10px] font-bold text-white uppercase" style={{ fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", letterSpacing: "0.12em" }}>Área de Ejecución</h3>
-             <p className="text-gray-500 text-[10px]">Tareas actualmente en desarrollo</p>
+             <h3 className="text-[10px] font-bold text-white uppercase" style={{  letterSpacing: "0.12em" }}>Área de Ejecución</h3>
+             <p className="text-gray-200 text-[10px]">Tareas actualmente en desarrollo</p>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">

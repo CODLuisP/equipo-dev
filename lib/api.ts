@@ -3,6 +3,19 @@
 
 export const API_BASE = 'http://localhost:3003';
 
+export interface AdminTeam {
+  id: string;
+  name: string;
+  createdAt: number | null;
+  legacy: boolean;
+  disabled?: boolean;
+  members: number;
+  tasks: number;
+  snippets: number;
+  vault: number;
+  memberNames: string[];
+}
+
 export function getToken(): string {
   if (typeof window === 'undefined') return '';
   return localStorage.getItem('equipo_dev_token') || '';
@@ -26,7 +39,31 @@ async function req<T = any>(method: string, path: string, body?: unknown): Promi
 
 export const api = {
   // ── Auth ────────────────────────────────────────────────────────────────────
-  login: (password: string) => req<{ token: string }>('POST', '/auth/login', { password }),
+  login: (password: string) => req<{ token: string; teamName?: string }>('POST', '/auth/login', { password }),
+  register: (teamName: string, password: string, vaultPassword: string) =>
+    req<{ ok: boolean; teamId: string; teamName: string }>('POST', '/auth/register', { teamName, password, vaultPassword }),
+  verifyVault: (password: string) => req<{ ok: boolean }>('POST', '/auth/vault', { password }),
+
+  // ── Admin (clave de administrador, no token) ────────────────────────────────
+  adminGetTeams: async (adminKey: string) => {
+    const res = await fetch(`${API_BASE}/admin/teams`, { headers: { 'x-admin-key': adminKey } });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<AdminTeam[]>;
+  },
+  adminDeleteTeam: async (adminKey: string, id: string) => {
+    const res = await fetch(`${API_BASE}/admin/teams/${id}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  adminUpdateTeam: async (adminKey: string, id: string, patch: { password?: string; vaultPassword?: string; disabled?: boolean }) => {
+    const res = await fetch(`${API_BASE}/admin/teams/${id}`, {
+      method: 'PATCH',
+      headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
 
   // ── Members ─────────────────────────────────────────────────────────────────
   getMembers:    ()                      => req('GET',    '/members'),

@@ -17,7 +17,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
       style={{
         position: "fixed", inset: 0, zIndex: 50,
         display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(var(--base-rgb),0.88)", backdropFilter: "blur(8px)",
+        background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)",
         fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}

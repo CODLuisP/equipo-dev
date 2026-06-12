@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users, CheckSquare, Code, StickyNote, FolderOpen,
-  Shield, LogOut, Sparkles
+  Shield, LogOut, Sparkles, CheckCircle2, AlertTriangle, AlertOctagon, Info, Bell
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { DashboardProvider, useDashboard } from "@/app/dashboard/DashboardContext";
@@ -36,15 +36,28 @@ const NAV = [
   { href: "/dashboard/boveda",   icon: <Shield size={12}/>,      label: "Bóveda"   },
 ];
 
+const customIcons = {
+  success: <CheckCircle2 className="w-4 h-4 text-white" />,
+  error: <AlertTriangle className="w-4 h-4 text-white" />,
+  warning: <AlertOctagon className="w-4 h-4 text-white" />,
+  info: <Bell className="w-4 h-4 text-white" />
+};
+
 const toasterProps = {
-  position: "bottom-right" as const,
-  theme: "dark" as const,
+  position: "bottom-left" as const,
+  icons: customIcons,
   toastOptions: {
-    style: {
-      background: "var(--bg-surface)", color: "var(--text)",
-      border: "1px solid rgba(var(--blue-rgb),0.18)",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      borderRadius: 12,
+    unstyled: true,
+    classNames: {
+      toast: "flex items-center gap-3 px-3 py-2.5 w-full max-w-[300px] rounded-[16px] shadow-[0_15px_30px_-10px_rgba(0,0,0,0.8)] font-sans transition-all",
+      success: "bg-gradient-to-br from-[#064e3b] to-[#022c22] text-white [&_[data-icon]]:bg-[#059669]",
+      error: "bg-gradient-to-br from-[#7f1d1d] to-[#450a0a] text-white [&_[data-icon]]:bg-[#dc2626]",
+      warning: "bg-gradient-to-br from-[#7c2d12] to-[#431407] text-white [&_[data-icon]]:bg-[#ea580c]",
+      info: "bg-gradient-to-br from-[#1e3a8a] to-[#172554] text-white [&_[data-icon]]:bg-[#2563eb]",
+      default: "bg-gradient-to-br from-[#1e293b] to-[#0f172a] text-white [&_[data-icon]]:bg-[#475569]",
+      title: "text-[13px] font-bold tracking-tight mb-[1px]",
+      description: "text-[11.5px] font-medium text-white/70",
+      icon: "w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-inner",
     }
   }
 };
@@ -98,48 +111,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     <div style={{
       display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden",
       background: "var(--bg-base)", fontFamily: "'Plus Jakarta Sans', sans-serif",
-      padding: isPizarra ? "0" : "16px 22px 22px",
+      padding: isPizarra ? 0 : "16px 22px 22px", position: "relative",
     }}>
       <Toaster {...toasterProps} />
 
       {/* ── Header ── */}
-      {isPizarra ? (
-        <header className="fixed top-4 right-4 z-[1000]">
-          <div
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-2xl"
-            style={{ background: "rgba(var(--surface-rgb),0.92)", backdropFilter: "blur(16px)", border: "1px solid rgba(var(--blue-rgb),0.20)" }}
-          >
-            {currentUser && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowWhoAreYou(true)}
-                className="h-7 gap-1.5 px-2 text-[var(--blue-light)] hover:text-[var(--blue-light)] hover:bg-[rgba(var(--blue-rgb),0.12)] rounded-lg"
-                style={{ border: "1px solid rgba(var(--blue-rgb),0.18)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              >
-                <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={18} borderRadius={5} />
-                <span className="text-[11px] font-semibold">{currentUser.name}</span>
-              </Button>
-            )}
-            <Tabs value={activeHref} onValueChange={val => router.push(val as string)}>
-              <TabsList className="h-8 gap-0.5 p-1 rounded-xl" style={{ border: "none" }}>
-                {NAV.map(({ href, icon }) => (
-                  <TabsTrigger
-                    key={href} value={href}
-                    className="h-6 gap-1 px-2 text-[11px] font-medium rounded-lg [&]:text-[var(--text-3)] [&]:bg-transparent [&]:border-transparent [&]:shadow-none data-active:text-white data-active:bg-[rgba(var(--blue-rgb),0.16)] data-active:border-[rgba(var(--blue-rgb),0.28)] [&_svg]:size-3!"
-                  >
-                    {icon}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-        </header>
-      ) : (
-        <header className="mb-4 shrink-0">
+      <header
+        className={isPizarra ? "shrink-0" : "mb-4 shrink-0"}
+        style={isPizarra ? { position: "absolute", top: 22, left: 22, right: 22, zIndex: 100 } : undefined}
+      >
           <div className="flex items-center justify-between gap-3">
 
-            <div className="hidden md:block shrink-0">
+            {!isPizarra && <div className="hidden md:block shrink-0">
               <h1 style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", margin: 0, letterSpacing: "-0.4px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 Equipo de{" "}
                 <span style={{ background: "linear-gradient(135deg,var(--blue),var(--blue-soft))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
@@ -149,7 +132,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
               <p style={{ fontSize: 11, color: "var(--text-3)", margin: 0, marginTop: 2 }}>
                 Gestión de tareas, snippets y colaboración
               </p>
-            </div>
+            </div>}
 
             <div className="flex items-center gap-2 ml-auto">
 
@@ -158,25 +141,23 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowWhoAreYou(true)}
-                  className="h-8 gap-2 px-2 text-[var(--blue-light)] hover:text-[var(--blue-light)] hover:bg-[rgba(var(--blue-rgb),0.10)] rounded-[9px]"
-                  style={{ border: "1px solid rgba(var(--blue-rgb),0.18)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  className="h-8 gap-2 px-2 text-(--blue-light) hover:text-(--blue-light) hover:bg-[rgba(var(--blue-rgb),0.10)] rounded-[9px]"
                 >
                   <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={22} borderRadius={6} />
                   <span className="text-xs font-semibold">{currentUser.name}</span>
                 </Button>
               )}
 
-              <Separator orientation="vertical" className="h-5 !bg-[rgba(var(--blue-rgb),0.18)]" />
+              <Separator orientation="vertical" className="h-5 bg-[rgba(var(--blue-rgb),0.18)]!" />
 
               <Tabs value={activeHref} onValueChange={val => router.push(val as string)}>
                 <TabsList
-                  className="h-9 gap-0.5 p-1 rounded-[11px]"
-                  style={{ background: "rgba(var(--surface-rgb),0.9)", border: "1px solid rgba(var(--blue-rgb),0.14)" }}
+                  className="h-9 gap-0.5  rounded-[11px]"
                 >
                   {NAV.map(({ href, icon, label }) => (
                     <TabsTrigger
                       key={href} value={href}
-                      className="h-7 gap-1.5 px-3 text-xs font-medium rounded-lg transition-all [&]:text-[var(--text-3)] [&]:bg-transparent [&]:border-transparent [&]:shadow-none [&:hover]:text-[var(--blue-light)] [&[data-active]]:!text-white [&[data-active]]:!bg-[rgba(var(--blue-rgb),0.16)] [&[data-active]]:!border-[rgba(var(--blue-rgb),0.32)] [&[data-active]]:!shadow-none [&_svg]:!size-3"
+                      className="h-7 gap-1.5 px-3 text-xs font-medium rounded-lg transition-all [&]:text-(--text-3) [&]:bg-transparent [&]:border-transparent [&]:shadow-none [&:hover]:text-(--blue-light) data-active:text-white! data-active:bg-[rgba(var(--blue-rgb),0.16)]! data-active:border-[rgba(var(--blue-rgb),0.32)]! data-active:shadow-none! [&_svg]:size-3!"
                     >
                       {icon}
                       <span className="hidden sm:inline">{label}</span>
@@ -185,12 +166,12 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 </TabsList>
               </Tabs>
 
-              <Separator orientation="vertical" className="h-5 !bg-[rgba(var(--blue-rgb),0.18)]" />
+              <Separator orientation="vertical" className="h-5 bg-[rgba(var(--blue-rgb),0.18)]!" />
 
               <Button
                 variant="ghost" size="icon"
                 onClick={() => setIsToolkitVisible(!isToolkitVisible)}
-                className={["h-8 w-8 rounded-[9px] transition-all", isToolkitVisible ? "text-[var(--blue-soft)] !bg-[rgba(var(--blue-rgb),0.12)] !border-[rgba(var(--blue-rgb),0.30)]" : "text-[var(--text-dim)] hover:text-[var(--blue-light)] !border-[rgba(var(--blue-rgb),0.12)]"].join(" ")}
+                className={["h-8 w-8 rounded-[9px] transition-all", isToolkitVisible ? "text-(--blue-soft) !bg-[rgba(var(--blue-rgb),0.12)] !border-[rgba(var(--blue-rgb),0.30)]" : "text-[var(--text-dim)] hover:text-[var(--blue-light)] !border-[rgba(var(--blue-rgb),0.12)]"].join(" ")}
                 style={{ border: "1px solid" }}
               >
                 <Sparkles size={14} />
@@ -207,14 +188,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
             </div>
           </div>
-        </header>
-      )}
+      </header>
 
       {/* ── Content + Toolkit ── */}
       <div className={`flex-1 overflow-hidden ${isPizarra ? "" : "flex flex-col lg:flex-row gap-5"}`}>
         <div className="flex-1 h-full overflow-hidden">{children}</div>
-        {!isPizarra && isToolkitVisible && (
-          <div className="w-full lg:w-[400px] flex-shrink-0 animate-in slide-in-from-right duration-300 h-full">
+        {isToolkitVisible && !isPizarra && (
+          <div className="w-full lg:w-80 shrink-0 animate-in slide-in-from-right duration-300 h-full">
             <div className="h-full"><DevToolkit members={members} currentUser={currentUser} /></div>
           </div>
         )}

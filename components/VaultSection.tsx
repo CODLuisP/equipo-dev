@@ -5,6 +5,7 @@ import {
   Shield, Plus, LogOut, Archive, Settings, Trash2, Maximize, Copy, X, Filter 
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import ButtonBase from "@/components/ui/ButtonBase";
 import InputBase1 from "@/components/ui/InputBase1";
 import BovedaBackground from "@/components/BovedaBackground";
@@ -49,13 +50,13 @@ export function SectionBoveda({
 
   const vaultTextareaRef = useRef<HTMLTextAreaElement>(null);
   const vaultHighlightRef = useRef<HTMLDivElement>(null);
-  const SHARED_PASS = "dev123";
 
-  const handleUnlock = (e: React.FormEvent) => {
+  const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pass.toLowerCase() === SHARED_PASS.toLowerCase()) {
+    try {
+      await api.verifyVault(pass);
       onUnlock(true); setError(false); setPass(''); toast.success("Bóveda desbloqueada");
-    } else {
+    } catch {
       setError(true); toast.error("Contraseña incorrecta");
     }
   };
@@ -64,17 +65,17 @@ export function SectionBoveda({
     return (
       <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
         <BovedaBackground />
-        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-[var(--blue)]/15 rounded-3xl p-10 text-center backdrop-blur-sm">
-          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-[var(--blue)] to-transparent opacity-60" />
-          <div className="w-20 h-20 bg-[var(--blue)]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[var(--blue)]/25">
-            <Shield size={40} className="text-[var(--blue)]" />
+        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-(--blue)/15 rounded-3xl p-10 text-center backdrop-blur-sm">
+          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-(--blue) to-transparent opacity-60" />
+          <div className="w-20 h-20 bg-(--blue)/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-(--blue)/25">
+            <Shield size={40} className="text-(--blue)" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Bóveda de Credenciales</h2>
+          <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Bóveda de Credenciales</h2>
           <p className="text-gray-500 text-sm mb-8">Esta sección está cifrada. Ingresa la contraseña del equipo para continuar.</p>
           <form onSubmit={handleUnlock} className="flex flex-col gap-4">
             <div className="relative">
               <input type="password" placeholder="Contraseña de acceso" value={pass} onChange={e => { setPass(e.target.value); setError(false); }}
-                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-4 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-[var(--blue)]/60`} autoFocus />
+                className={`w-full bg-black/40 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-2 px-5 text-white outline-none text-center font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans transition-all focus:border-(--blue)/60`} autoFocus />
             </div>
             <ButtonBase type="submit" className="py-4 text-sm uppercase tracking-widest font-bold">Desbloquear Acceso</ButtonBase>
           </form>

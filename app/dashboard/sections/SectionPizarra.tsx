@@ -1798,12 +1798,12 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         onClose={()=>setShowManager(false)}
       />
     )}
-    <div style={{ position:'fixed', right: 16, top: 16, zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
+    <div style={{ position:'fixed', right: 16, bottom: 16, zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
       <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? 'var(--blue)' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'var(--blue)':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
         onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.5)'; } }}
         onMouseLeave={e=>{ if (!isVisible) { e.currentTarget.style.color='#8A9099'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'; } }}>
-        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
       </button>
@@ -3381,9 +3381,26 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 return (
                   <svg key={`path-${idx}`} style={{ position:'absolute', inset:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:stackIdx + 1 }} xmlns="http://www.w3.org/2000/svg">
                     <g transform={transforms || undefined}>
-                      <path d={d} stroke={p.color} strokeWidth={p.width} fill={p.fill || 'none'} strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d={d} stroke={p.color} strokeWidth={p.width} fill={p.fill || 'none'} strokeLinecap="round" strokeLinejoin="round"
+                        style={{ pointerEvents: tool === 'select' ? 'visiblePainted' : 'none', cursor: tool === 'select' ? 'grab' : undefined }}
+                        onMouseDown={e => {
+                          if (tool !== 'select') return;
+                          e.stopPropagation();
+                          setSelectedPathIndices(new Set([idx]));
+                          setSelectedIds(new Set());
+                          setSelectedId(null);
+                          onMultiDragStart();
+                        }}
+                        onContextMenu={e => {
+                          if (tool !== 'select') return;
+                          e.preventDefault(); e.stopPropagation();
+                          setSelectedPathIndices(new Set([idx]));
+                          setSelectedIds(new Set());
+                          setSelectedId(null);
+                        }}
+                      />
                       {isSel && (
-                        <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`}/>
+                        <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`} style={{ pointerEvents: 'none' }}/>
                       )}
                     </g>
                   </svg>

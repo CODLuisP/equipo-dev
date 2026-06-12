@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
 import * as THREE from "three";
 import { api } from "@/lib/api";
 
 /* ─────────────────────────────────────────────
-   Three.js helpers (same as WhoAreYouScreen)
+   Three.js helpers
 ───────────────────────────────────────────── */
 function symTexture(text: string, color: string) {
   const c = document.createElement("canvas");
@@ -129,28 +129,40 @@ function buildProgrammer(scene: THREE.Scene, posX: number, type: 0 | 1 | 2) {
 /* ─────────────────────────────────────────────
    Login Page
 ───────────────────────────────────────────── */
+const BADGES = [
+  { label: "React 19",    symbol: "⚛",  color: "#61dafb", top: "37%", left: "4%",   delay: "0s",    dur: "3.8s" },
+  { label: "TypeScript",  symbol: "TS", color: "#4895ef", top: "18%", right: "9%",  delay: "0.6s",  dur: "4.2s" },
+  { label: "Next.js 15",  symbol: "▲",  color: "#e2e8f0", top: "70%", left: "5%",   delay: "1.2s",  dur: "3.5s" },
+  { label: "Node.js",     symbol: "⬡",  color: "#68a063", top: "76%", right: "8%",  delay: "1.8s",  dur: "4.6s" },
+  { label: "Git",         symbol: "⎇",  color: "#f97316", top: "52%", left: "3%",   delay: "2.4s",  dur: "3.2s" },
+  { label: "VS Code",     symbol: "⧉",  color: "#0078d4", top: "46%", right: "5%",  delay: "3s",    dur: "4.0s" },
+];
+
+const STATS = [
+  { value: "100%", label: "Equipo activo" },
+  { value: "∞",    label: "Snippets"      },
+  { value: "24/7", label: "Disponible"    },
+];
+
 export default function LoginPage() {
-  const router        = useRouter();
-  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const router          = useRouter();
+  const canvasRef       = useRef<HTMLCanvasElement>(null);
   const [password, setPassword]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]               = useState("");
   const [loading, setLoading]           = useState(false);
-  const [ready, setReady]               = useState(false); // true solo si NO hay sesión
+  const [ready, setReady]               = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("equipo_dev_token");
-    if (token) {
-      router.replace("/dashboard"); // redirige sin mostrar nada
-    } else {
-      setReady(true); // sin sesión → mostrar login
-    }
+    if (token) router.replace("/dashboard");
+    else setReady(true);
   }, [router]);
 
-  /* Three.js scene — right panel */
+  /* Three.js — left panel */
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !ready) return;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -250,139 +262,419 @@ export default function LoginPage() {
 
   if (!ready) return null;
 
-  const inputStyle = (hasError: boolean): React.CSSProperties => ({
-    background: "rgba(8,10,20,0.75)",
-    border: `1px solid ${hasError ? "rgba(239,68,68,0.35)" : "rgba(37,99,235,0.18)"}`,
-    borderRadius: 10, padding: "11px 14px", fontSize: 14,
-    color: "#eef0fb", outline: "none", width: "100%",
-    transition: "border-color 0.2s, box-shadow 0.2s",
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
-  });
-
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeUp  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes sweep   { 0% { top:-4px; } 100% { top:100%; } }
-        @keyframes float   { 0%,100% { transform:translate(-50%,-52%); } 50% { transform:translate(-50%,-55%); } }
-        .fade-up  { animation: fadeUp 0.55s ease both; }
-        .delay-1  { animation-delay: 0.12s; }
-        .login-input:focus {
-          border-color: rgba(37,99,235,0.5) !important;
-          box-shadow: 0 0 0 3px rgba(37,99,235,0.10) !important;
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        @keyframes spin     { to { transform: rotate(360deg); } }
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes sweep    { 0% { top:-3px; opacity:.7; } 85% { opacity:.7; } 100% { top:101%; opacity:0; } }
+        @keyframes badgeFloat {
+          0%, 100% { transform: translateY(0px) rotate(-0.5deg); }
+          50%       { transform: translateY(-8px) rotate(0.5deg); }
         }
+        @keyframes shake {
+          0%,100% { transform:translateX(0); }
+          20%,60% { transform:translateX(-5px); }
+          40%,80% { transform:translateX(5px); }
+        }
+        @keyframes pulseGlow {
+          0%,100% { opacity:.5; transform:scale(1); }
+          50%      { opacity:1; transform:scale(1.04); }
+        }
+        @keyframes scanline {
+          0%   { opacity:0; transform:translateY(-100%); }
+          10%  { opacity:1; }
+          90%  { opacity:1; }
+          100% { opacity:0; transform:translateY(200%); }
+        }
+
+        .login-input::placeholder { color: rgba(255,255,255,0.18); }
+        .login-input:focus {
+          border-color: rgba(37,99,235,0.55) !important;
+          box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
+          outline: none !important;
+        }
+        .submit-btn { transition: background 0.18s, transform 0.15s, box-shadow 0.18s !important; }
+        .submit-btn:hover:not(:disabled) {
+          background: #1d4ed8 !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 12px 36px rgba(37,99,235,0.55) !important;
+        }
+        .submit-btn:active:not(:disabled) { transform: translateY(0) !important; }
+
         @media (max-width: 1023px) {
-          .login-card-back-1, .login-card-back-2 { display: none !important; }
-          .login-card-main {
+          .form-card-inner {
             background: transparent !important;
-            border: none !important; box-shadow: none !important;
-            padding: 8px 0 !important; border-radius: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+            box-shadow: none !important;
           }
+          .form-card-accent { display: none !important; }
+          .form-card-inner > div { padding: 8px 4px !important; }
+        }
+
+        .form-card-entry { animation: fadeUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+        .branding-entry  { animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+        .stats-entry     { animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
+        .badge-entry     { animation: fadeIn 0.5s ease both; }
+
+        .field-row-1 { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.3s both; }
+        .field-row-2 { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.42s both; }
+        .field-row-3 { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.54s both; }
+
+        .error-shake { animation: shake 0.4s ease; }
+
+        .eye-btn:hover { color: rgba(96,165,250,0.9) !important; }
+
+        @media (max-width: 1023px) {
+          .left-panel { display: none !important; }
+          .right-panel { flex: none !important; width: 100% !important; }
         }
       `}</style>
 
-      <div style={{ minHeight:"100vh", background:"#080a14", display:"flex", fontFamily:"'Plus Jakarta Sans',sans-serif", overflow:"hidden" }}>
+      <div style={{
+        display: "flex", minHeight: "100vh",
+        background: "#080a14",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        overflow: "hidden",
+      }}>
 
-        {/* ── Left panel — image ── */}
-        <div className="hidden lg:flex" style={{
-          flex:"0 0 52%", position:"relative", overflow:"hidden", background:"#07091a",
+        {/* ══════════════════════════════════════
+            LEFT PANEL — Three.js + Branding
+        ══════════════════════════════════════ */}
+        <div className="left-panel" style={{
+          flex: "0 0 56%", position: "relative", overflow: "hidden", background: "#07091a",
+          display: "flex", flexDirection: "column",
         }}>
-          <img src="/assets/equipodev.png" alt="Equipo Dev" style={{
-            position:"absolute", top:"50%", left:"50%",
-            width:"68%", height:"auto", objectFit:"contain", zIndex:2,
-            filter:"drop-shadow(0 16px 52px rgba(37,99,235,0.32))",
-            pointerEvents:"none",
-            animation:"float 6s ease-in-out infinite",
+
+          {/* Three.js canvas */}
+          <canvas ref={canvasRef} style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 1,
           }} />
-          <div style={{ position:"absolute", top:"38%", left:"50%", transform:"translate(-50%,-50%)", width:"65%", height:"50%", background:"radial-gradient(ellipse at center, rgba(37,99,235,0.16) 0%, transparent 70%)", filter:"blur(32px)", pointerEvents:"none", zIndex:1 }} />
-          <div style={{ position:"absolute", inset:0, zIndex:1, backgroundImage:"radial-gradient(rgba(37,99,235,0.07) 1px, transparent 1px)", backgroundSize:"28px 28px", pointerEvents:"none" }} />
-          <div style={{ position:"absolute", top:0, left:0, right:0, height:"30%", zIndex:3, background:"linear-gradient(to bottom, #07091a 15%, rgba(7,9,26,0.6) 60%, transparent 100%)", pointerEvents:"none" }} />
-          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"35%", zIndex:3, background:"linear-gradient(to top, #07091a 20%, rgba(7,9,26,0.6) 60%, transparent 100%)", pointerEvents:"none" }} />
-          <div style={{ position:"absolute", left:0, right:0, height:2, zIndex:4, background:"linear-gradient(90deg, transparent, rgba(37,99,235,0.14) 40%, rgba(96,165,250,0.22) 50%, rgba(37,99,235,0.14) 60%, transparent)", animation:"sweep 8s linear infinite", pointerEvents:"none" }} />
-          <div className="fade-up" style={{ position:"absolute", top:42, left:52, right:52, zIndex:5 }}>
-            <h1 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:38, fontWeight:800, color:"#eef0fb", margin:0, lineHeight:1.12, letterSpacing:"-0.8px" }}>
-              Equipo{" "}
-              <span style={{ background:"linear-gradient(135deg,#60a5fa,#93c5fd)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Dev.</span>
+
+          {/* Dot grid overlay */}
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none",
+            backgroundImage: "radial-gradient(rgba(37,99,235,0.06) 1px, transparent 1px)",
+            backgroundSize: "30px 30px",
+          }} />
+
+          {/* Top gradient */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, height: "38%", zIndex: 3, pointerEvents: "none",
+            background: "linear-gradient(to bottom, #07091a 12%, rgba(7,9,26,0.75) 55%, transparent)",
+          }} />
+
+          {/* Bottom gradient */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, height: "38%", zIndex: 3, pointerEvents: "none",
+            background: "linear-gradient(to top, #07091a 15%, rgba(7,9,26,0.7) 55%, transparent)",
+          }} />
+
+          {/* Right edge blend into form panel */}
+          <div style={{
+            position: "absolute", top: 0, right: 0, bottom: 0, width: "18%", zIndex: 4, pointerEvents: "none",
+            background: "linear-gradient(to left, #080a14 0%, rgba(8,10,20,0.5) 50%, transparent 100%)",
+          }} />
+
+          {/* Animated scan line */}
+          <div style={{
+            position: "absolute", left: 0, right: 0, height: 1, zIndex: 5, pointerEvents: "none",
+            background: "linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.12) 20%, rgba(96,165,250,0.35) 50%, rgba(37,99,235,0.12) 80%, transparent 100%)",
+            animation: "scanline 10s linear infinite",
+          }} />
+
+          {/* Floating tech badges */}
+          {BADGES.map((b, i) => (
+            <div key={b.label} className="badge-entry" style={{
+              position: "absolute", zIndex: 6, pointerEvents: "none",
+              top: b.top,
+              ...(b.left  ? { left:  b.left  } : {}),
+              ...(b.right ? { right: b.right } : {}),
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(7,9,26,0.82)",
+              border: `1px solid ${b.color}28`,
+              borderRadius: 20, padding: "5px 11px 5px 8px",
+              backdropFilter: "blur(10px)",
+              animation: `badgeFloat ${b.dur} ease-in-out infinite, fadeIn 0.5s ${b.delay} ease both`,
+              animationDelay: b.delay,
+              fontSize: 11, fontWeight: 700, color: b.color,
+              letterSpacing: "0.02em",
+              boxShadow: `0 0 16px ${b.color}12`,
+            }}>
+              <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, lineHeight: 1 }}>{b.symbol}</span>
+              {b.label}
+            </div>
+          ))}
+
+          {/* ─── Branding top ─── */}
+          <div className="branding-entry" style={{
+            position: "absolute", top: 40, left: 48, right: 60, zIndex: 7,
+          }}>
+            <h1 style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 40, fontWeight: 800, margin: 0,
+              color: "#eef0fb", lineHeight: 1.1, letterSpacing: "-1px",
+            }}>
+              Donde el código<br />
+              <span style={{
+                background: "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>cobra vida.</span>
             </h1>
-            <p style={{ fontSize:13, color:"#8b91b8", marginTop:10, lineHeight:1.6, fontWeight:400 }}>Panel de gestión interna para el equipo de programadores.</p>
+            <p style={{
+              fontSize: 13, color: "rgba(139,145,184,0.65)",
+              margin: "12px 0 0", lineHeight: 1.65, fontWeight: 400, maxWidth: 340,
+            }}>
+              Panel de gestión interna para el equipo<br />de programadores.
+            </p>
           </div>
-          <div className="fade-up delay-1" style={{ position:"absolute", bottom:36, left:52, right:52, zIndex:5, display:"flex", alignItems:"center" }}>
-            {[{value:"100%",label:"Equipo activo"},{value:"∞",label:"Snippets"},{value:"24/7",label:"Disponible"}].map((s,i)=>(
-              <div key={s.label} style={{ display:"flex", alignItems:"center" }}>
-                {i>0 && <div style={{ width:1, height:28, background:"rgba(37,99,235,0.2)", margin:"0 20px" }} />}
+
+          {/* ─── Stats bottom ─── */}
+          <div className="stats-entry" style={{
+            position: "absolute", bottom: 36, left: 48, right: 60, zIndex: 7,
+            display: "flex", alignItems: "center", gap: 0,
+          }}>
+            {STATS.map((s, i) => (
+              <div key={s.label} style={{ display: "flex", alignItems: "center" }}>
+                {i > 0 && (
+                  <div style={{
+                    width: 1, height: 30, background: "rgba(37,99,235,0.18)", margin: "0 22px",
+                  }} />
+                )}
                 <div>
-                  <div style={{ fontSize:17, fontWeight:800, color:"#eef0fb", letterSpacing:"-0.4px" }}>{s.value}</div>
-                  <div style={{ fontSize:9, color:"#3a4060", marginTop:2, letterSpacing:"0.1em", fontFamily:"'JetBrains Mono',monospace", textTransform:"uppercase" }}>{s.label}</div>
+                  <div style={{
+                    fontSize: 20, fontWeight: 800, color: "#eef0fb", letterSpacing: "-0.5px",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}>{s.value}</div>
+                  <div style={{
+                    fontSize: 9, color: "rgba(58,64,96,0.9)", marginTop: 3,
+                    letterSpacing: "0.14em", fontFamily: "JetBrains Mono, monospace",
+                    textTransform: "uppercase", fontWeight: 500,
+                  }}>{s.label}</div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Right panel — Three.js + form ── */}
-        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 24px", position:"relative", background:"#080a14" }}>
+        {/* ══════════════════════════════════════
+            RIGHT PANEL — Login form
+        ══════════════════════════════════════ */}
+        <div className="right-panel" style={{
+          flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "40px 32px", position: "relative", background: "#080a14", overflow: "hidden",
+        }}>
 
-          {/* Three.js canvas — fondo completo del panel derecho */}
-          <canvas ref={canvasRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:0 }} />
+          {/* Subtle dot grid */}
+          <div style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            backgroundImage: "radial-gradient(rgba(37,99,235,0.05) 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+          }} />
 
-          {/* Gradiente para que el form sea legible sobre los personajes */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 80% 80% at 50% 50%, rgba(8,10,20,0.55) 0%, rgba(8,10,20,0.82) 100%)", pointerEvents:"none", zIndex:1 }} />
+          {/* Radial ambient glow behind the card */}
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 500, height: 500, pointerEvents: "none",
+            background: "radial-gradient(ellipse, rgba(37,99,235,0.09) 0%, transparent 68%)",
+          }} />
 
-          {/* Fade izquierdo que une con el panel izquierdo */}
-          <div style={{ position:"absolute", top:0, left:0, bottom:0, width:"35%", background:"linear-gradient(to right, #07091a 0%, rgba(8,10,20,0.5) 55%, transparent 100%)", pointerEvents:"none", zIndex:2 }} />
+          {/* Decorative code text — top right */}
+          <div style={{
+            position: "absolute", top: 28, right: 28,
+            fontFamily: "JetBrains Mono, monospace", fontSize: 100, fontWeight: 800, lineHeight: 1,
+            color: "rgba(37,99,235,0.035)", userSelect: "none", pointerEvents: "none",
+            animation: "pulseGlow 5s ease-in-out infinite",
+          }}>{"{ }"}</div>
 
-          {/* Form */}
-          <div  style={{ width:"100%", maxWidth:360, position:"relative", zIndex:3 }}>
-            <div className="fade-up delay-1" style={{ position:"relative" }}>
+          {/* Decorative bracket — bottom left */}
+          <div style={{
+            position: "absolute", bottom: 20, left: 24,
+            fontFamily: "JetBrains Mono, monospace", fontSize: 64, fontWeight: 800, lineHeight: 1,
+            color: "rgba(37,99,235,0.03)", userSelect: "none", pointerEvents: "none",
+          }}>{"</>"}</div>
 
-              {/* Capas inclinadas */}
-              <div className="login-card-back-2" style={{ position:"absolute", inset:0, borderRadius:22, background:"rgba(29,78,216,0.28)", border:"1px solid rgba(37,99,235,0.18)", transform:"rotate(4deg) translate(8px,6px)", transformOrigin:"bottom center", zIndex:0 }} />
-              <div className="login-card-back-1" style={{ position:"absolute", inset:0, borderRadius:22, background:"rgba(37,99,235,0.42)", border:"1px solid rgba(37,99,235,0.32)", transform:"rotate(2deg) translate(4px,3px)", transformOrigin:"bottom center", zIndex:1 }} />
+          {/* ─── Form card ─── */}
+          <div className="form-card-entry" style={{
+            width: "100%", maxWidth: 372,
+            position: "relative", zIndex: 1,
+          }}>
+            {/* Glow behind card */}
+            <div style={{
+              position: "absolute", inset: -20,
+              background: "radial-gradient(ellipse at center, rgba(37,99,235,0.12) 0%, transparent 70%)",
+              borderRadius: 32, pointerEvents: "none",
+              animation: "pulseGlow 4s ease-in-out infinite",
+            }} />
 
-              {/* Card principal */}
-              <div className="login-card-main " style={{ position:"relative", zIndex:2, background:"rgba(10,13,28,0.92)", border:"1px solid rgba(37,99,235,0.22)", borderRadius:22, padding:"36px 32px 32px", backdropFilter:"blur(20px)" }}>
+            <div className="form-card-inner" style={{
+              position: "relative",
+              background: "rgba(7,9,26,0.96)",
+              border: "1px solid rgba(37,99,235,0.14)",
+              borderRadius: 22,
+              backdropFilter: "blur(24px)",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(37,99,235,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+              overflow: "hidden",
+            }}>
 
-                <div style={{ marginBottom:28 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                    <img src="/assets/logo.png" alt="Logo" style={{ height:26, width:"auto" }} />
-                    <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:22, fontWeight:800, color:"#eef0fb", margin:0, letterSpacing:"-0.5px" }}>Acceso al equipo</h2>
+              {/* Top accent bar */}
+              <div className="form-card-accent" style={{
+                height: 2,
+                background: "linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.5) 30%, rgba(96,165,250,0.65) 50%, rgba(37,99,235,0.5) 70%, transparent 100%)",
+              }} />
+
+              <div style={{ padding: "36px 36px 32px" }}>
+
+                {/* Title block */}
+                <div className="field-row-1" style={{ marginBottom: 30 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+                    <img src="/assets/logo.png" alt="Logo" style={{ height: 20, width: "auto", opacity: 0.85 }} />
+                    <span style={{
+                      fontFamily: "JetBrains Mono, monospace", fontSize: 16, fontWeight: 800,
+                      background: "linear-gradient(135deg, #60a5fa, #93c5fd)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      letterSpacing: "-0.5px",
+                    }}>Flux</span>
                   </div>
-                  <p style={{ fontSize:12, color:"#4a5570", margin:0 }}>Ingresa la contraseña compartida del equipo</p>
+                  <h2 style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: 20, fontWeight: 800, color: "#eef0fb",
+                    margin: 0, letterSpacing: "-0.5px", lineHeight: 1.2,
+                  }}>
+                    Acceso al equipo
+                  </h2>
+                  <p style={{
+                    fontSize: 13, color: "rgba(139,145,184,0.8)",
+                    margin: "7px 0 0", lineHeight: 1.55,
+                  }}>
+                    Ingresa la contraseña compartida del equipo
+                  </p>
                 </div>
 
-                <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:16 }}>
-                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    <label style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:"#8b91b8" }}>Contraseña del equipo</label>
-                    <div style={{ position:"relative" }}>
-                      <input className="login-input" type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" style={{ ...inputStyle(!!error), padding:"11px 42px 11px 14px" }} />
-                      <button type="button" onClick={()=>setShowPassword(!showPassword)}
-                        style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#4a5070", display:"flex", padding:0, transition:"color 0.15s" }}
-                        onMouseEnter={e=>{e.currentTarget.style.color="#60a5fa";}}
-                        onMouseLeave={e=>{e.currentTarget.style.color="#4a5070";}}>
-                        {showPassword ? <EyeOff size={15}/> : <Eye size={15}/>}
+                {/* ─── Form ─── */}
+                <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+                  {/* Password field */}
+                  <div className="field-row-2" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <label style={{
+                      fontSize: 10, fontWeight: 700, color: "rgba(139,145,184,0.9)",
+                      letterSpacing: "0.16em", textTransform: "uppercase",
+                    }}>
+                      Contraseña del equipo
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      {/* Lock icon */}
+                      <div style={{
+                        position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)",
+                        color: "rgba(37,99,235,0.45)", display: "flex", pointerEvents: "none",
+                      }}>
+                        <Lock size={14} />
+                      </div>
+                      <input
+                        className="login-input"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={e => { setPassword(e.target.value); if (error) setError(""); }}
+                        placeholder="••••••••"
+                        required
+                        autoComplete="current-password"
+                        style={{
+                          display: "block", width: "100%",
+                          background: "rgba(8,10,20,0.8)",
+                          border: `1px solid ${error ? "rgba(239,68,68,0.32)" : "rgba(37,99,235,0.14)"}`,
+                          borderRadius: 11, padding: "11px 40px 11px 38px",
+                          fontSize: 14, color: "#eef0fb",
+                          fontFamily: "'Plus Jakarta Sans', sans-serif",
+                          transition: "border-color 0.2s, box-shadow 0.2s",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="eye-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "rgba(139,145,184,0.4)", display: "flex", padding: 0,
+                          transition: "color 0.15s",
+                        }}
+                      >
+                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                   </div>
 
+                  {/* Error */}
                   {error && (
-                    <div style={{ background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:10, padding:"10px 13px", fontSize:12, color:"#f87171", display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ width:5, height:5, borderRadius:"50%", background:"#ef4444", flexShrink:0 }} />{error}
+                    <div className="error-shake" style={{
+                      background: "rgba(239,68,68,0.06)",
+                      border: "1px solid rgba(239,68,68,0.18)",
+                      borderRadius: 10, padding: "10px 13px",
+                      fontSize: 12, color: "#f87171",
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", flexShrink: 0 }} />
+                      {error}
                     </div>
                   )}
 
-                  <button type="submit" disabled={loading}
-                    style={{ marginTop:6, background:loading?"rgba(37,99,235,0.35)":"#2563eb", border:"none", borderRadius:12, padding:"13px 20px", color:"#fff", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"background 0.15s, transform 0.15s, box-shadow 0.15s", width:"100%", fontFamily:"'Plus Jakarta Sans',sans-serif" }}
-                    onMouseEnter={e=>{if(!loading){e.currentTarget.style.background="#1d4ed8";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(37,99,235,0.55)";}}}
-                    onMouseLeave={e=>{e.currentTarget.style.background=loading?"rgba(37,99,235,0.35)":"#2563eb";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 20px rgba(37,99,235,0.35)";}}
-                    onMouseDown={e=>{if(!loading)e.currentTarget.style.transform="translateY(0)";}}>
-                    {loading
-                      ? <><span style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.25)", borderTopColor:"#fff", borderRadius:"50%", display:"inline-block", animation:"spin 0.7s linear infinite" }} />Verificando…</>
-                      : <>Acceder <ArrowRight size={15} strokeWidth={2.5}/></>}
-                  </button>
+                  {/* Submit */}
+                  <div className="field-row-3">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="submit-btn"
+                      style={{
+                        width: "100%", marginTop: 6,
+                        background: loading ? "rgba(37,99,235,0.35)" : "#2563eb",
+                        border: "none", borderRadius: 12,
+                        padding: "13px 20px",
+                        color: "#fff", fontSize: 14, fontWeight: 700,
+                        cursor: loading ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        letterSpacing: "0.01em",
+                        boxShadow: loading ? "none" : "0 4px 20px rgba(37,99,235,0.35)",
+                      }}
+                    >
+                      {loading ? (
+                        <>
+                          <span style={{
+                            width: 14, height: 14,
+                            border: "2px solid rgba(255,255,255,0.25)",
+                            borderTopColor: "#fff", borderRadius: "50%",
+                            display: "inline-block",
+                            animation: "spin 0.7s linear infinite",
+                          }} />
+                          Verificando…
+                        </>
+                      ) : (
+                        <>
+                          Acceder
+                          <ArrowRight size={15} strokeWidth={2.5} />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
+
+                {/* Footer hint */}
+                <p style={{
+                  marginTop: 22, fontSize: 11,
+                  color: "rgba(74,80,112,1)",
+                  textAlign: "center", lineHeight: 1.5,
+                  letterSpacing: "0.04em",
+                }}>
+                  Acceso restringido - solo equipo interno
+                </p>
               </div>
             </div>
           </div>
