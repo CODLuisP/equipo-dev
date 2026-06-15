@@ -332,7 +332,7 @@ function AFKTimer({ timestamp, color }: { timestamp: number; color: string }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DevToolkit({ members = [], currentUser = null }: { members?: any[], currentUser?: any }) {
+export default function DevToolkit({ members = [], currentUser = null, borderRadius }: { members?: any[], currentUser?: any, borderRadius?: string | number }) {
   const [activeTab, setActiveTab] = useState<'radar' | 'tools' | 'staging'>('radar');
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -616,7 +616,7 @@ export default function DevToolkit({ members = [], currentUser = null }: { membe
       )}
 
       {/* Panel */}
-      <div style={{ background:'rgba(var(--surface-rgb),0.92)', backdropFilter:'blur(16px)', borderRadius:24, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ background:'rgba(var(--surface-rgb),0.92)', backdropFilter:'blur(16px)', borderRadius: borderRadius ?? 24, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
 
         <div style={{ display:'flex', background:'rgba(0,0,0,0.3)' }}>

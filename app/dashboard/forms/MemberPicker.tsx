@@ -9,7 +9,7 @@ import type { Member } from "@/app/dashboard/types";
 export default function MemberPicker({ members, value, currentUser, onChange }: { members: Member[]; value: string; currentUser: Member|null; onChange: (id: string) => void; }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-      <label style={{ fontSize:11, fontWeight:700, color:'#5A6270', textTransform:'uppercase', letterSpacing:'0.1em' }}>Asignar a</label>
+      <label className="text-gray-300" style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em' }}>Asignar a</label>
       <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(members.length, 4)}, 1fr)`, gap:8 }}>
         {members.map(m => {
           const selected = value === m.id;

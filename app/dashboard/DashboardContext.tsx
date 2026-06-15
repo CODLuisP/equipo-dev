@@ -127,7 +127,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [isLoading,      setIsLoading]      = useState(true);
   const [isSetup,        setIsSetup]        = useState(false);
   const [showWhoAreYou,  setShowWhoAreYou]  = useState(false);
-  const [isToolkitVisible, setIsToolkitVisible] = useState(true);
+  const [isToolkitVisible, setIsToolkitVisible] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1320 : false);
   const [clipboard,      setClipboard]      = useState<unknown>(null);
   const [taskFilterMember, setTaskFilterMember] = useState("all");
   const [snippetSearch,    setSnippetSearch]    = useState("");
@@ -212,7 +212,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
     // Tasks
     socket.on('task:added',   (t: Task)   => setTasks(prev => [t, ...prev]));
-    socket.on('task:updated', (t: Task)   => setTasks(prev => prev.map(x => x.id === t.id ? t : x)));
+    socket.on('task:updated', (t: Task)   => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...t } : x)));
     socket.on('task:deleted', ({ id }: { id: string }) => setTasks(prev => prev.filter(x => x.id !== id)));
 
     // Snippets
@@ -412,26 +412,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     toast.success(`Bienvenido, ${member.name} 👋`);
   };
 
-  // ── Task alert toast ────────────────────────────────────────────────────────
-
-  const showTaskAlert = (title: string) => {
-    toast.custom(() => (
-      <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"14px 16px",
-        background:"var(--bg-surface)", border:"1px solid rgba(var(--blue-rgb),0.22)", borderRadius:14,
-        boxShadow:"0 12px 32px rgba(0,0,0,0.5)", minWidth:290, maxWidth:340,
-        fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(var(--blue-rgb),0.10)",
-          border:"1px solid rgba(var(--blue-rgb),0.22)", display:"flex", alignItems:"center",
-          justifyContent:"center", flexShrink:0, fontSize:16 }}>🎯</div>
-        <div>
-          <p style={{ fontWeight:700, color:"var(--text)", fontSize:13, margin:0 }}>Nueva tarea asignada</p>
-          <p style={{ color:"var(--blue-soft)", fontSize:12, margin:"3px 0 4px", fontWeight:600 }}>{title}</p>
-          <p style={{ color:"var(--text-dim)", fontSize:11, margin:0 }}>Ver en <span style={{ color:"var(--text-2)", fontWeight:600 }}>Tareas</span></p>
-        </div>
-      </div>
-    ), { duration:6000, position:"bottom-left" });
-  };
-
   // ── Members ─────────────────────────────────────────────────────────────────
 
   const handleAddMember = async (name: string, role: string, avatarSeed?: string) => {
@@ -472,9 +452,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         toast.success(`${payload.length} tarea${payload.length > 1 ? 's' : ''} agregada${payload.length > 1 ? 's' : ''}`);
       } else if (editingTask) {
         await api.updateTask(editingTask.id, payload);
-        if (currentUserRef.current && payload.assignedTo === currentUserRef.current.id && editingTask.assignedTo !== currentUserRef.current.id) {
-          showTaskAlert(payload.title || editingTask.title || '');
-        }
         toast.success('Tarea actualizada');
       }
     } catch { toast.error('Error al guardar tarea'); }
@@ -493,7 +470,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     if (task.assignedTo) {
       try {
         await api.updateTask(id, { status: 'en progreso' });
-        if (currentUserRef.current?.id === task.assignedTo) showTaskAlert(task.title);
         toast.success('Tarea iniciada');
       } catch { toast.error('Error'); }
     } else {
@@ -506,7 +482,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const task = tasks.find(t => t.id === assignModal.taskId);
     try {
       await api.updateTask(assignModal.taskId, { status: 'en progreso', assignedTo: memberId });
-      if (currentUserRef.current?.id === memberId && task) showTaskAlert(task.title);
       toast.success('Tarea iniciada');
     } catch { toast.error('Error'); }
     setAssignModal(null);

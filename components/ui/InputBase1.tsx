@@ -27,12 +27,11 @@ export default function InputBase1({
     <div style={{ display: "flex", flexDirection: "column", gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {label && (
         <label style={{
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: 600,
           letterSpacing: "0.10em",
           textTransform: "uppercase",
-          color: "var(--text-dim)",
-          fontFamily: "'JetBrains Mono', monospace",
+          color: "#d1d5db",
         }}>
           {label}
         </label>

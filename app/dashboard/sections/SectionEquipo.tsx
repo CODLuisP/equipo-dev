@@ -381,9 +381,6 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, overflowY: 'auto', paddingBottom: 24 }} className="custom-scrollbar">
         <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
           style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}
         >
           <AnimatePresence mode="popLayout">

@@ -1,10 +1,28 @@
 // ─── Interfaces compartidas ───────────────────────────────────────────────────
 
 export interface Member { id: string; name: string; role: string; color: string; avatarSeed?: string; }
+export interface TaskAttachment {
+  id: string;
+  type: 'image' | 'video';
+  name: string;
+  url: string;
+}
+
+export interface TaskBlock {
+  id: string;
+  type: 'text' | 'image';
+  content?: string;
+  url?: string;
+  name?: string;
+}
+
 export interface Task {
   id: string; title: string;
   status: 'pendiente' | 'en progreso' | 'completada';
   assignedTo: string; createdAt: number;
+  description?: string;
+  attachments?: TaskAttachment[];
+  blocks?: TaskBlock[];
 }
 export interface Snippet { id: string; title: string; content: string; label: 'env' | 'código' | 'config' | 'otro'; authorId: string; createdAt: number; }
 export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; width?: number; rotation?: number; fontFamily?: string; textAlign?: 'left' | 'center' | 'right'; fontWeight?: 'normal' | 'bold'; }

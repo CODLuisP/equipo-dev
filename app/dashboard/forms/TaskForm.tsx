@@ -1,12 +1,24 @@
 ﻿"use client";
 
-import { useState, useRef } from "react";
-import { Trash2, Mic, MicOff, Plus, CheckSquare } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Trash2, Mic, MicOff, Plus, CheckSquare, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import MemberPicker from "@/app/dashboard/forms/MemberPicker";
 import InputBase1 from "@/components/ui/InputBase1";
 import ButtonBase from "@/components/ui/ButtonBase";
-import type { Member, Task } from "@/app/dashboard/types";
+import type { Member, Task, TaskBlock } from "@/app/dashboard/types";
+
+function initBlocks(data?: Task): TaskBlock[] {
+  if (data?.blocks && data.blocks.length > 0) return data.blocks;
+  const result: TaskBlock[] = [{ id: crypto.randomUUID(), type: 'text', content: data?.description || '' }];
+  for (const att of (data?.attachments ?? [])) {
+    if (att.type === 'image') {
+      result.push({ id: att.id, type: 'image', url: att.url, name: att.name });
+      result.push({ id: crypto.randomUUID(), type: 'text', content: '' });
+    }
+  }
+  return result;
+}
 
 export default function TaskForm({ members, initialData, currentUser, onSave, onCancel }: {
   members: Member[];
@@ -17,12 +29,74 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
 }) {
   const [title,      setTitle]      = useState(initialData?.title || '');
   const [assignedTo, setAssignedTo] = useState(initialData?.assignedTo || '');
+  const [blocks,     setBlocks]     = useState<TaskBlock[]>(() => initBlocks(initialData));
   const [list,       setList]       = useState<string[]>([]);
   const [input,      setInput]      = useState('');
   const [listening,  setListening]  = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingVal, setEditingVal] = useState('');
-  const recogRef = useRef<any>(null);
+  const recogRef     = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const focusedIdRef = useRef<string | null>(null);
+
+  const updateBlockText = (id: string, content: string) =>
+    setBlocks(prev => prev.map(b => b.id === id ? { ...b, content } : b));
+
+  const removeBlock = (id: string) =>
+    setBlocks(prev => {
+      const next = prev.filter(b => b.id !== id);
+      return next.length > 0 ? next : [{ id: crypto.randomUUID(), type: 'text', content: '' }];
+    });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} demasiado grande (máx 5 MB)`); continue; }
+      const url = await new Promise<string>(res => {
+        const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file);
+      });
+      const imgBlock: TaskBlock = { id: crypto.randomUUID(), type: 'image', url, name: file.name };
+      const textBlock: TaskBlock = { id: crypto.randomUUID(), type: 'text', content: '' };
+      setBlocks(prev => {
+        const focusedIdx = focusedIdRef.current ? prev.findIndex(b => b.id === focusedIdRef.current) : -1;
+        const insertAt = focusedIdx >= 0 ? focusedIdx + 1 : prev.length;
+        const next = [...prev];
+        if (focusedIdx >= 0 && next[focusedIdx].type === 'text') {
+          next[focusedIdx] = { ...next[focusedIdx], content: (next[focusedIdx].content || '').trimEnd() };
+        }
+        next.splice(insertAt, 0, imgBlock, textBlock);
+        return next;
+      });
+      setTimeout(() => document.getElementById(`block-${textBlock.id}`)?.focus(), 50);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find(i => i.type.startsWith('image/'));
+    if (!imageItem) return;
+    e.preventDefault();
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Imagen demasiado grande (máx 5 MB)'); return; }
+    const url = await new Promise<string>(res => {
+      const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file);
+    });
+    const imgBlock: TaskBlock = { id: crypto.randomUUID(), type: 'image', url, name: `imagen-${Date.now()}.png` };
+    const textBlock: TaskBlock = { id: crypto.randomUUID(), type: 'text', content: '' };
+    setBlocks(prev => {
+      const focusedIdx = focusedIdRef.current ? prev.findIndex(b => b.id === focusedIdRef.current) : -1;
+      const insertAt = focusedIdx >= 0 ? focusedIdx + 1 : prev.length;
+      const next = [...prev];
+      if (focusedIdx >= 0 && next[focusedIdx].type === 'text') {
+        next[focusedIdx] = { ...next[focusedIdx], content: (next[focusedIdx].content || '').trimEnd() };
+      }
+      next.splice(insertAt, 0, imgBlock, textBlock);
+      return next;
+    });
+    setTimeout(() => document.getElementById(`block-${textBlock.id}`)?.focus(), 50);
+  };
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -57,13 +131,81 @@ export default function TaskForm({ members, initialData, currentUser, onSave, on
 
   /* ── Modo edición ─────────────────────────────────────────────── */
   if (initialData) {
+    const imgCount = blocks.filter(b => b.type === 'image').length;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         <InputBase1 label="Nombre de la tarea" value={title} onChange={e => setTitle(e.target.value)} />
         <MemberPicker members={members} value={assignedTo} currentUser={currentUser} onChange={setAssignedTo} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+
+        {/* Editor de bloques */}
+        <input ref={fileInputRef} type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+        <div style={{
+          background: 'rgba(0,0,0,0.25)',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderRadius: 12,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 340,
+        }}>
+          {/* Bloques scrollables */}
+          <div onPaste={handlePaste} style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '10px 12px 8px' }} className="custom-scrollbar">
+            {blocks.map((block, idx) => block.type === 'text' ? (
+              <textarea
+                key={block.id}
+                id={`block-${block.id}`}
+                value={block.content || ''}
+                ref={el => {
+                  if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+                }}
+                onChange={e => {
+                  updateBlockText(block.id, e.target.value);
+                  const el = e.target;
+                  el.style.height = 'auto';
+                  el.style.height = el.scrollHeight + 'px';
+                }}
+                onFocus={() => { focusedIdRef.current = block.id; }}
+                placeholder=""
+                rows={1}
+                style={{
+                  width: '100%', boxSizing: 'border-box', resize: 'none',
+                  background: 'transparent', border: 'none', outline: 'none',
+                  padding: 0,
+                  color: '#e2e8f0', fontSize: 13, lineHeight: 1.6,
+                  fontFamily: 'Arial, sans-serif',
+                  display: 'block',
+                  overflow: 'hidden',
+                  margin: 0,
+                }}
+              />
+            ) : (
+              <div key={block.id} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', background: '#000', marginBottom: 8 }}>
+                <img src={block.url} alt={block.name} style={{ width: '100%', display: 'block', maxHeight: 220, objectFit: 'contain' }} />
+                <button type="button" onClick={() => removeBlock(block.id)}
+                  style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Barra inferior fija */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 600, padding: '2px 4px', fontFamily: 'inherit', transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#60a5fa'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+              <ImagePlus size={13} /> Imagen
+            </button>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>
+              {imgCount > 0 ? `${imgCount} imagen${imgCount > 1 ? 'es' : ''}` : ''}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           <ButtonBase variant="secondary" onClick={onCancel}>Cancelar</ButtonBase>
-          <ButtonBase onClick={() => onSave({ title, assignedTo })}>Actualizar</ButtonBase>
+          <ButtonBase onClick={() => onSave({ title, assignedTo, blocks })}>Actualizar</ButtonBase>
         </div>
       </div>
     );

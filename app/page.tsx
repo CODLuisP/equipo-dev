@@ -426,17 +426,16 @@ export default function LoginPage() {
               fontSize: 40, fontWeight: 800, margin: 0,
               color: "#eef0fb", lineHeight: 1.1, letterSpacing: "-1px",
             }}>
-              Donde el código<br />
-              <span style={{
+              Donde el código <span style={{
                 background: "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)",
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
               }}>cobra vida.</span>
             </h1>
             <p style={{
-              fontSize: 13, color: "rgba(139,145,184,0.65)",
-              margin: "12px 0 0", lineHeight: 1.65, fontWeight: 400, maxWidth: 340,
+              fontSize: 13, color: "#e5e7eb",
+              margin: "12px 0 0", lineHeight: 1.65, fontWeight: 400, whiteSpace: 'nowrap',
             }}>
-              Panel de gestión interna para el equipo<br />de programadores.
+              Panel de gestión interna para el equipo de programadores.
             </p>
           </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users, CheckSquare, Code, StickyNote, FolderOpen,
@@ -68,6 +69,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
   const isPizarra = pathname === "/dashboard/pizarra";
+  const [isWide, setIsWide] = useState(false);
 
   const activeHref = NAV.find(n => pathname.startsWith(n.href))?.href ?? "";
 
@@ -91,6 +93,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     isVaultUnlocked, setIsVaultUnlocked,
   } = useDashboard();
 
+  useEffect(() => {
+    const check = () => {
+      const wide = window.innerWidth >= 1320;
+      setIsWide(wide);
+      if (!wide) setIsToolkitVisible(false);
+      else setIsToolkitVisible(true);
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [setIsToolkitVisible]);
+
   if (isLoading) return null;
 
   if (isSetup) return (
@@ -108,33 +122,26 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden",
-      background: "var(--bg-base)", fontFamily: "'Plus Jakarta Sans', sans-serif",
-      padding: isPizarra ? 0 : "16px 22px 22px", position: "relative",
-    }}>
+    <div className={`flex flex-col h-screen overflow-hidden bg-(--bg-base) relative ${isPizarra ? '' : 'p-3 sm:p-4 lg:px-5.5 lg:py-4'}`}
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
       <Toaster {...toasterProps} />
 
       {/* ── Header ── */}
       <header
         className={isPizarra ? "shrink-0" : "mb-4 shrink-0"}
-        style={isPizarra ? { position: "absolute", top: 22, left: 22, right: 22, zIndex: 100 } : undefined}
+        style={isPizarra ? { position: "absolute", top: 16, left: 22, right: 22, zIndex: 100 } : undefined}
       >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
 
             {!isPizarra && <div className="hidden md:block shrink-0">
-              <h1 style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", margin: 0, letterSpacing: "-0.4px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Equipo de{" "}
-                <span style={{ background: "linear-gradient(135deg,var(--blue),var(--blue-soft))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  Programadores
-                </span>
-              </h1>
-              <p style={{ fontSize: 11, color: "var(--text-3)", margin: 0, marginTop: 2 }}>
-                Gestión de tareas, snippets y colaboración
-              </p>
+  <h1 style={{ fontSize: 18, fontWeight: 800, color: "#97c0ea", margin: 0, letterSpacing: "-0.5px", fontFamily: "JetBrains Mono, monospace" }}>
+  CODEXA
+</h1>
+             
             </div>}
 
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto min-w-0 overflow-x-auto overflow-y-hidden">
 
               {currentUser && (
                 <Button
@@ -191,12 +198,30 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* ── Content + Toolkit ── */}
-      <div className={`flex-1 overflow-hidden ${isPizarra ? "" : "flex flex-col lg:flex-row gap-5"}`}>
-        <div className="flex-1 h-full overflow-hidden">{children}</div>
+      <div className={`flex-1 min-h-0 overflow-hidden relative ${isPizarra ? "" : "flex flex-col wide:flex-row gap-3 wide:gap-5"}`}>
+        <div className={`min-w-0 overflow-hidden ${isPizarra ? 'h-full' : 'flex-1 min-h-0'}`}>{children}</div>
+
         {isToolkitVisible && !isPizarra && (
-          <div className="w-full lg:w-80 shrink-0 animate-in slide-in-from-right duration-300 h-full">
-            <div className="h-full"><DevToolkit members={members} currentUser={currentUser} /></div>
-          </div>
+          <>
+            {/* Overlay backdrop — solo en < 1320px */}
+            <div
+              className="wide:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+              onClick={() => setIsToolkitVisible(false)}
+            />
+            {/* Sidebar — inline en wide, overlay en móvil/tablet */}
+            <div className={`
+              ${isWide ? 'relative block w-80 h-full shrink-0' : 'fixed top-0 right-0 h-full w-80 max-w-[90vw] z-50'}
+              animate-in slide-in-from-right duration-300
+            `}>
+              <div className="h-full">
+                <DevToolkit
+                  members={members}
+                  currentUser={currentUser}
+                  borderRadius={isWide ? 24 : '24px 0 0 24px'}
+                />
+              </div>
+            </div>
+          </>
         )}
       </div>
 
