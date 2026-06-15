@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import {
@@ -125,6 +125,15 @@ function useTilt() {
   return { ref, rotateX, rotateY, onMouseMove, onMouseLeave };
 }
 
+// ─── Avatar groups ─────────────────────────────────────────────────────────────
+
+const AVATAR_GROUPS = [
+  { label: '🎮 Clásicos',  seeds: AVATAR_PRESETS.slice(0, 10)  },
+  { label: '⚔️ Guerreros', seeds: AVATAR_PRESETS.slice(10, 20) },
+  { label: '👤 Nombres',   seeds: AVATAR_PRESETS.slice(20, 30) },
+  { label: '✨ Nuevos',    seeds: AVATAR_PRESETS.slice(30, 40) },
+];
+
 // ─── Avatar Editor ────────────────────────────────────────────────────────────
 
 function AvatarEditor({ member, open, onSave, onClose }: {
@@ -132,6 +141,7 @@ function AvatarEditor({ member, open, onSave, onClose }: {
 }) {
   const [seed, setSeed] = useState(member.avatarSeed || AVATAR_PRESETS[0]);
   const rc = roleColor(member.role);
+  const seedLabel = seed.charAt(0).toUpperCase() + seed.slice(1);
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
@@ -141,68 +151,114 @@ function AvatarEditor({ member, open, onSave, onClose }: {
           background: 'var(--bg-surface)',
           border: '1px solid rgba(var(--blue-rgb),0.18)',
           borderRadius: 20,
-          maxWidth: 460,
+          maxWidth: 500,
           fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
         <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${rc}90, transparent)` }} />
 
-        <DialogHeader className="px-6 pt-6 pb-0 space-y-0">
-          <p style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 4 }}>Personalizar</p>
-          <DialogTitle style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px', margin: 0 }}>
+        <DialogHeader className="px-6 pt-5 pb-0 space-y-0">
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 3 }}>Personalizar</p>
+          <DialogTitle style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px', margin: 0 }}>
             Avatar · <span style={{ color: member.color }}>{member.name}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pt-5 pb-2 flex flex-col gap-5">
-          <div className="flex justify-center items-center py-5 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <motion.div className="relative" whileHover={{ scale: 1.06 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
-              <div className="absolute inset-0 rounded-full" style={{ outline: `2px solid ${member.color}30`, outlineOffset: 5 }} />
-              <AvatarImg seed={seed} name={member.name} color={member.color} size={80} borderRadius={40} />
+        <div style={{ maxHeight: '68vh', overflowY: 'auto', padding: '16px 24px 8px' }}>
+
+          {/* Preview */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+            padding: '16px 0', marginBottom: 14,
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: 14,
+          }}>
+            <motion.div style={{ position: 'relative' }} whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
+              <div style={{
+                position: 'absolute', inset: -5, borderRadius: '50%',
+                border: `2px solid ${member.color}50`,
+                boxShadow: `0 0 16px ${member.color}35`,
+              }} />
+              <AvatarImg seed={seed} name={member.name} color={member.color} size={78} borderRadius={39} />
             </motion.div>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
+              {seedLabel}
+            </p>
           </div>
 
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Elige un avatar</p>
-            <div className="flex flex-wrap gap-1.5">
-              {AVATAR_PRESETS.map((p, i) => (
-                <motion.button key={p} type="button" onClick={() => setSeed(p)}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.015, type: 'spring', stiffness: 400, damping: 25 }}
-                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-                  className="rounded-lg p-0.5 cursor-pointer"
-                  style={{
-                    background: seed === p ? 'rgba(59,130,246,0.12)' : 'transparent',
-                    border: `1px solid ${seed === p ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                  }}>
-                  <AvatarImg seed={p} name={p} color={member.color} size={38} borderRadius={7} />
-                </motion.button>
-              ))}
-            </div>
+          {/* Grupos de avatares */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {AVATAR_GROUPS.map(group => (
+              <div key={group.label}>
+                <p style={{ fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '0 0 6px' }}>
+                  {group.label}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4 }}>
+                  {group.seeds.map((p, i) => {
+                    const isSelected = seed === p;
+                    return (
+                      <motion.button
+                        key={p} type="button"
+                        onClick={() => setSeed(p)}
+                        title={p}
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.012, type: 'spring', stiffness: 400, damping: 25 }}
+                        whileHover={{ scale: 1.1, y: -1 }}
+                        whileTap={{ scale: 0.93 }}
+                        style={{
+                          position: 'relative',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 2, aspectRatio: '1',
+                          background: isSelected ? `${member.color}18` : 'rgba(255,255,255,0.03)',
+                          border: `1.5px solid ${isSelected ? member.color + '65' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius: 8, cursor: 'pointer',
+                          boxShadow: isSelected ? `0 0 10px ${member.color}28` : 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        <AvatarImg seed={p} name={p} color={member.color} size={34} borderRadius={5} />
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute', top: -4, right: -4,
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: member.color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: '1.5px solid var(--bg-surface)',
+                          }}>
+                            <Check size={6} color="#fff" strokeWidth={3} />
+                          </div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-5 border-t border-white/5 flex gap-2 justify-end">
+        <DialogFooter className="px-6 py-4 border-t border-white/5 flex gap-2 justify-end">
           <Button
             variant="ghost"
             onClick={onClose}
-            style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             Cancelar
           </Button>
           <Button
             onClick={() => { onSave(seed); onClose(); }}
-            style={{ background: 'var(--blue)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ background: 'var(--blue)', color: '#fff', fontSize: 12, fontWeight: 700, border: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 5 }}
           >
-            <Check size={13} /> Guardar
+            <Check size={12} /> Guardar
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 // ─── Member Card ──────────────────────────────────────────────────────────────
 

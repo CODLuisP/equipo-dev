@@ -39,10 +39,12 @@ export type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'b
 export const STATUSES: Task['status'][] = ['pendiente', 'en progreso', 'completada'];
 export const MEMBER_COLORS = ['#E85D2F','#3498DB','#2ECC71','#F1C40F','#9B59B6','#E74C3C','#1ABC9C','#F39C12','#D35400','#27AE60'];
 export const AVATAR_PRESETS = [
-  // fila 1 - originales
+  // Fila 1 — originales
   'aventurero','creativo','tecnico','disenador','ninja','heroe','mago','explorador','lider','builder',
-  // fila 2 - más masculinos
+  // Fila 2 — masculinos
   'guerrero','capitan','vikingo','samurai','guardian','cazador','titan','caballero','dragoon','pirata',
-  // fila 3 - más masculinos
+  // Fila 3 — nombres masculinos
   'felipe','marcos','andres','carlos','miguel','jorge','diego','roberto','sergio','manuel',
+  // Fila 4 — nuevos (10 más)
+  'rafael','alejandro','gabriel','antonio','hector','ivan','oscar','ruben','victor','david',
 ];

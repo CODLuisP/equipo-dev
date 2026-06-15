@@ -4,7 +4,12 @@ import { createAvatar } from "@dicebear/core";
 import { adventurer } from "@dicebear/collection";
 
 function makeSrc(seed: string): string {
-  try { return createAvatar(adventurer, { seed }).toDataUri(); }
+  try {
+    return createAvatar(adventurer, {
+      seed,
+      backgroundColor: ['transparent'],
+    }).toDataUri();
+  }
   catch { return ''; }
 }
 
@@ -12,7 +17,6 @@ export default function AvatarImg({ seed, name = '?', color = '#E85D2F', size = 
   seed: string; name?: string; color?: string; size?: number;
   borderRadius?: string | number; style?: React.CSSProperties;
 }) {
-  // síncrono: no useEffect, no flash de letra
   const src = makeSrc(seed);
 
   return (
