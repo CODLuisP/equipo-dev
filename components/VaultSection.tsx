@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { 
-  Shield, Plus, LogOut, Archive, Settings, Trash2, Maximize, Copy, X, Filter 
+  Shield, Plus, Lock, Archive, Settings, Trash2, Maximize, Copy, X, Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -37,16 +37,8 @@ export function SectionBoveda({
   const [error, setError] = useState(false);
   const [fullViewProject, setFullViewProject] = useState<VaultProject | null>(null);
   const [vaultSearchTerm, setVaultSearchTerm] = useState('');
-
-  // Sincronizar fullViewProject con los cambios en projects
-  useEffect(() => {
-    if (fullViewProject) {
-      const updated = projects.find(p => p.id === fullViewProject.id);
-      if (updated && updated.content !== fullViewProject.content) {
-        setFullViewProject(updated);
-      }
-    }
-  }, [projects]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<{ id: string; content: string } | null>(null);
 
   const vaultTextareaRef = useRef<HTMLTextAreaElement>(null);
   const vaultHighlightRef = useRef<HTMLDivElement>(null);
@@ -90,12 +82,11 @@ export function SectionBoveda({
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"><BovedaBackground /></div>
       <div className="flex items-center justify-between relative z-10">
         <div className="flex flex-col">
-           <span className="text-[10px] font-bold text-[var(--blue)] uppercase tracking-widest">Almacén Seguro</span>
-           <h2 className="text-white font-bold text-2xl tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
+           <h2 className="text-white font-bold text-sm tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
         </div>
         <div className="flex items-center gap-3">
-           <button onClick={() => onUnlock(false)} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-xl text-xs font-bold transition-all border border-white/5 flex items-center gap-2">
-             <LogOut size={14} /> Bloquear
+           <button onClick={() => onUnlock(false)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-xl transition-all border border-white/5 flex items-center" title="Bloquear">
+             <Lock size={14} />
            </button>
            <ButtonBase onClick={onAddProject} className="flex items-center gap-2"><Plus size={16}/> Nuevo Proyecto</ButtonBase>
         </div>
@@ -114,35 +105,39 @@ export function SectionBoveda({
       </div>
 
       {fullViewProject && (
-        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
+        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8" onClick={e => { if (e.target === e.currentTarget) { setFullViewProject(null); setVaultSearchTerm(''); } }}>
           <div style={{ background:'#0C0E13', border:'1px solid rgba(255,255,255,0.08)' }} className="max-w-5xl w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
             {/* Header compacto — una sola barra */}
-            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex items-center gap-3 px-4 py-2 shrink-0">
-              <span className="text-white font-semibold text-sm shrink-0">{fullViewProject.name}</span>
-              {fullViewProject.description && <span className="text-gray-600 text-xs truncate">— {fullViewProject.description}</span>}
-
-              {/* Buscador inline */}
-              <div className="relative ml-auto shrink-0">
-                <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600"/>
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={vaultSearchTerm}
-                  onChange={e => setVaultSearchTerm(e.target.value)}
-                  style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:7, padding:'4px 10px 4px 26px', fontSize:12, color:'#d1d5db', outline:'none', width:160 }}
-                />
+            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex flex-col px-4 py-2 shrink-0 gap-1">
+              {/* Fila título + acciones */}
+              <div className="flex items-center gap-3">
+                <span className="text-white font-semibold text-sm shrink-0">{fullViewProject.name}</span>
+                {/* Buscador inline */}
+                <div className="relative ml-auto shrink-0">
+                  <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600"/>
+                  <input
+                    type="text"
+                    placeholder="Buscar..."
+                    value={vaultSearchTerm}
+                    onChange={e => setVaultSearchTerm(e.target.value)}
+                    style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:7, padding:'4px 10px 4px 26px', fontSize:12, color:'#d1d5db', outline:'none', width:160 }}
+                  />
+                </div>
+                <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Copiado"); }}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors shrink-0"
+                  style={{ fontSize:11, padding:'4px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:7 }}>
+                  <Copy size={11}/> Copiar
+                </button>
+                <button onClick={() => { setFullViewProject(null); setVaultSearchTerm(''); }}
+                  className="text-gray-600 hover:text-red-400 transition-colors shrink-0 p-1 rounded">
+                  <X size={16}/>
+                </button>
               </div>
-
-              <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Copiado"); }}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors shrink-0"
-                style={{ fontSize:11, padding:'4px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:7 }}>
-                <Copy size={11}/> Copiar
-              </button>
-              <button onClick={() => { setFullViewProject(null); setVaultSearchTerm(''); }}
-                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 p-1 rounded">
-                <X size={16}/>
-              </button>
+              {/* Descripción en línea aparte */}
+              {fullViewProject.description && (
+                <span className="text-gray-300 text-xs">{fullViewProject.description}</span>
+              )}
             </div>
 
             {/* Editor */}
@@ -154,14 +149,25 @@ export function SectionBoveda({
                 style={{ padding:'8px 12px', fontSize:13, lineHeight:'1.7', fontFamily:"'JetBrains Mono','Fira Mono',monospace", whiteSpace:'pre-wrap', wordBreak:'break-all', color:'transparent' }}
                 dangerouslySetInnerHTML={{ __html: highlightMatches(fullViewProject.content + '\n', vaultSearchTerm) }}
               />
-              {/* Textarea editable */}
+              {/* Textarea editable — no controlado para evitar lag */}
               <textarea
+                key={fullViewProject.id}
                 ref={vaultTextareaRef}
-                value={fullViewProject.content}
-                onChange={e => {
-                  const v = e.target.value;
-                  setFullViewProject({ ...fullViewProject, content: v });
-                  onSaveVault(projects.map(p => p.id === fullViewProject.id ? { ...p, content: v } : p));
+                defaultValue={fullViewProject.content}
+                onInput={e => {
+                  const v = (e.target as HTMLTextAreaElement).value;
+                  // Actualizar highlight sin tocar el estado principal
+                  if (vaultHighlightRef.current) {
+                    vaultHighlightRef.current.innerHTML = highlightMatches(v + '\n', vaultSearchTerm);
+                  }
+                  pendingSaveRef.current = { id: fullViewProject.id, content: v };
+                  if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+                  saveTimerRef.current = setTimeout(() => {
+                    const pending = pendingSaveRef.current;
+                    if (!pending) return;
+                    setFullViewProject(prev => prev ? { ...prev, content: pending.content } : null);
+                    onSaveVault(projects.map(p => p.id === pending.id ? { ...p, content: pending.content } : p));
+                  }, 600);
                 }}
                 onScroll={e => { if (vaultHighlightRef.current) vaultHighlightRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }}
                 spellCheck={false}
@@ -173,8 +179,8 @@ export function SectionBoveda({
 
             {/* Footer mínimo */}
             <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)' }} className="flex items-center justify-between px-4 py-1.5 shrink-0">
-              <span className="text-[10px] text-gray-800 font-mono">cifrado · equipo dev</span>
-              <div className="flex items-center gap-3 text-[10px] text-gray-700 font-mono">
+              <span className="text-[10px] text-gray-300 font-mono">cifrado · codexa</span>
+              <div className="flex items-center gap-3 text-[10px] text-gray-300 font-mono">
                 <span>{fullViewProject.content.length} chars</span>
                 <span>{fullViewProject.content.split('\n').length} líneas</span>
               </div>
@@ -204,8 +210,7 @@ function VaultCard({ project, onEdit, onDelete, onFullscreen }: {
       {/* Header compacto */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-white font-semibold text-xs truncate">{project.name}</span>
-          {project.description && <span className="text-gray-600 text-[10px] truncate hidden sm:block">— {project.description}</span>}
+          <span className="text-white font-semibold text-xs">{project.name}</span>
         </div>
         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0" onClick={e=>e.stopPropagation()}>
           <button onClick={onEdit}   className="p-1 text-gray-600 hover:text-white transition-colors rounded"><Settings size={12}/></button>
@@ -264,6 +269,7 @@ function highlightMatches(text: string, term: string) {
   if (!term || term.length < 2) return text;
   try {
     const regex = new RegExp(`(${term})`, 'gi');
-    return text.replace(regex, '<mark style="background: var(--blue); color: white; border-radius: 4px; padding: 0 2px;">$1</mark>');
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return escaped.replace(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark style="background:rgba(var(--blue-rgb),0.45);color:inherit;border-radius:2px;">$1</mark>');
   } catch { return text; }
 }
