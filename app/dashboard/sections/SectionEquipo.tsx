@@ -1,89 +1,188 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import {
-  motion, AnimatePresence, useMotionValue, useTransform, useSpring,
-} from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
   Trash2, Pencil, Check, Plus, Shield, Zap, Code2,
-  Palette, Star, Smartphone, Cloud, CheckCircle2, Circle, Clock,
+  Palette, Star, Smartphone, Cloud, ChevronRight,
 } from "lucide-react";
 import type { Member, Task } from "@/app/dashboard/types";
 import { AVATAR_PRESETS } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import * as THREE from "three";
 
-// ─── Three.js card background ─────────────────────────────────────────────────
+// ─── Three.js background component ───────────────────────────────────────────
 
-function ThreeBg({ color }: { color: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+function ThreeBackground() {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0);
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "absolute";
+    canvas.style.inset = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    container.appendChild(canvas);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-    camera.position.z = 4;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const c = new THREE.Color(color);
+    let width = (canvas.width = container.clientWidth);
+    let height = (canvas.height = container.clientHeight);
 
-    // Partículas flotantes
-    const count = 60;
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 6;
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ color: c, size: 0.06, transparent: true, opacity: 0.55 });
-    const points = new THREE.Points(geo, mat);
-    scene.add(points);
+    // Ultra-soft glowing orbs (monochrome greyscale for obsidian look)
+    const orbs = [
+      {
+        x: width * 0.2,
+        y: height * 0.3,
+        targetX: width * 0.2,
+        targetY: height * 0.3,
+        vx: 0.05,
+        vy: 0.03,
+        radius: Math.min(width, height) * 0.45,
+        colorStart: "rgba(255, 255, 255, 0.035)",
+        colorMid: "rgba(255, 255, 255, 0.01)",
+      },
+      {
+        x: width * 0.8,
+        y: height * 0.7,
+        targetX: width * 0.8,
+        targetY: height * 0.7,
+        vx: -0.04,
+        vy: -0.05,
+        radius: Math.min(width, height) * 0.5,
+        colorStart: "rgba(255, 255, 255, 0.025)",
+        colorMid: "rgba(255, 255, 255, 0.008)",
+      },
+      {
+        x: width * 0.5,
+        y: height * 0.5,
+        targetX: width * 0.5,
+        targetY: height * 0.5,
+        vx: 0.03,
+        vy: -0.03,
+        radius: Math.min(width, height) * 0.4,
+        colorStart: "rgba(255, 255, 255, 0.015)",
+        colorMid: "rgba(255, 255, 255, 0.004)",
+      },
+    ];
 
-    // Esfera central suave
-    const sphereGeo = new THREE.SphereGeometry(0.7, 32, 32);
-    const sphereMat = new THREE.MeshStandardMaterial({
-      color: c, emissive: c, emissiveIntensity: 0.15,
-      transparent: true, opacity: 0.12, wireframe: false,
-    });
-    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-    scene.add(sphere);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    let targetMouseX = width / 2;
+    let targetMouseY = height / 2;
+    let mouseX = width / 2;
+    let mouseY = height / 2;
 
-    const ro = new ResizeObserver(() => {
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    });
-    ro.observe(canvas);
-
-    let id: number;
-    const animate = () => {
-      id = requestAnimationFrame(animate);
-      points.rotation.y += 0.0015;
-      points.rotation.x += 0.0008;
-      sphere.rotation.y += 0.003;
-      renderer.render(scene, camera);
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      targetMouseX = e.clientX - rect.left;
+      targetMouseY = e.clientY - rect.top;
     };
-    animate();
+    window.addEventListener("mousemove", handleMouseMove);
 
-    return () => { cancelAnimationFrame(id); ro.disconnect(); renderer.dispose(); };
-  }, [color]);
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        width = canvas.width = entry.contentRect.width;
+        height = canvas.height = entry.contentRect.height;
+        orbs[0].radius = Math.min(width, height) * 0.45;
+        orbs[1].radius = Math.min(width, height) * 0.5;
+        orbs[2].radius = Math.min(width, height) * 0.4;
+      }
+    });
+    resizeObserver.observe(container);
 
-  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
+    let animId: number;
+    const draw = () => {
+      animId = requestAnimationFrame(draw);
+      ctx.clearRect(0, 0, width, height);
+
+      // Interpolate mouse movement with high damping for extreme calmness
+      mouseX += (targetMouseX - mouseX) * 0.015;
+      mouseY += (targetMouseY - mouseY) * 0.015;
+
+      orbs.forEach((orb) => {
+        // Drifting movement
+        orb.targetX += orb.vx;
+        orb.targetY += orb.vy;
+
+        // Wrap-around logic
+        if (orb.targetX < -orb.radius) orb.targetX = width + orb.radius;
+        if (orb.targetX > width + orb.radius) orb.targetX = -orb.radius;
+        if (orb.targetY < -orb.radius) orb.targetY = height + orb.radius;
+        if (orb.targetY > height + orb.radius) orb.targetY = -orb.radius;
+
+        // Faint attraction to cursor
+        const dx = mouseX - orb.targetX;
+        const dy = mouseY - orb.targetY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Gentle cursor influence
+        let pullX = 0;
+        let pullY = 0;
+        if (dist < 600) {
+          const force = (600 - dist) * 0.04;
+          pullX = (dx / dist) * force;
+          pullY = (dy / dist) * force;
+        }
+
+        // Apply smooth interpolation for positions
+        orb.x += (orb.targetX + pullX - orb.x) * 0.05;
+        orb.y += (orb.targetY + pullY - orb.y) * 0.05;
+
+        // Render ambient radial gradient glow
+        const grad = ctx.createRadialGradient(
+          orb.x, orb.y, 0,
+          orb.x, orb.y, orb.radius
+        );
+        grad.addColorStop(0, orb.colorStart);
+        grad.addColorStop(0.5, orb.colorMid);
+        grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("mousemove", handleMouseMove);
+      resizeObserver.disconnect();
+      if (container.contains(canvas)) {
+        container.removeChild(canvas);
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 1,
+        pointerEvents: "none",
+        opacity: 0.95,
+      }}
+    />
+  );
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function roleColor(role: string) {
+function roleColor(role: string): string {
   const r = role.toLowerCase();
-  if (r.includes('full') || r.includes('stack'))   return 'var(--blue-soft)';
+  if (r.includes('full') || r.includes('stack'))   return '#60a5fa';
   if (r.includes('front') || r.includes('ui'))     return '#a78bfa';
   if (r.includes('design'))                         return '#f472b6';
   if (r.includes('back') || r.includes('api'))     return '#34d399';
@@ -92,46 +191,44 @@ function roleColor(role: string) {
   return '#94a3b8';
 }
 
-function RoleIcon({ role }: { role: string }) {
-  const r = role.toLowerCase(); const s = 10;
-  if (r.includes('full') || r.includes('stack'))                    return <Zap size={s}/>;
-  if (r.includes('front') || r.includes('ui') || r.includes('design')) return <Palette size={s}/>;
-  if (r.includes('back') || r.includes('api'))                      return <Code2 size={s}/>;
-  if (r.includes('lead') || r.includes('senior'))                   return <Shield size={s}/>;
-  if (r.includes('mobile'))                                          return <Smartphone size={s}/>;
-  if (r.includes('devops') || r.includes('cloud'))                  return <Cloud size={s}/>;
-  return <Star size={s}/>;
+function RoleIcon({ role, size = 11 }: { role: string; size?: number }) {
+  const r = role.toLowerCase();
+  if (r.includes('full') || r.includes('stack'))                       return <Zap size={size} />;
+  if (r.includes('front') || r.includes('ui') || r.includes('design')) return <Palette size={size} />;
+  if (r.includes('back') || r.includes('api'))                         return <Code2 size={size} />;
+  if (r.includes('lead') || r.includes('senior'))                      return <Shield size={size} />;
+  if (r.includes('mobile'))                                             return <Smartphone size={size} />;
+  if (r.includes('devops') || r.includes('cloud'))                     return <Cloud size={size} />;
+  return <Star size={size} />;
 }
 
-// ─── Tilt card hook ───────────────────────────────────────────────────────────
+// ─── Tilt hook ────────────────────────────────────────────────────────────────
 
 function useTilt() {
   const ref = useRef<HTMLDivElement>(null);
   const rawX = useMotionValue(0);
   const rawY = useMotionValue(0);
-  const springX = useSpring(rawX, { stiffness: 300, damping: 30 });
-  const springY = useSpring(rawY, { stiffness: 300, damping: 30 });
-  const rotateX = useTransform(springY, [-0.5, 0.5], ['4deg', '-4deg']);
-  const rotateY = useTransform(springX, [-0.5, 0.5], ['-4deg', '4deg']);
-
+  const sx = useSpring(rawX, { stiffness: 280, damping: 28 });
+  const sy = useSpring(rawY, { stiffness: 280, damping: 28 });
+  const rotateX = useTransform(sy, [-0.5, 0.5], ['5deg', '-5deg']);
+  const rotateY = useTransform(sx, [-0.5, 0.5], ['-5deg', '5deg']);
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     rawX.set((e.clientX - rect.left) / rect.width - 0.5);
-    rawY.set((e.clientY - rect.top)  / rect.height - 0.5);
+    rawY.set((e.clientY - rect.top) / rect.height - 0.5);
   };
   const onMouseLeave = () => { rawX.set(0); rawY.set(0); };
-
   return { ref, rotateX, rotateY, onMouseMove, onMouseLeave };
 }
 
-// ─── Avatar groups ─────────────────────────────────────────────────────────────
+// ─── Avatar Groups ────────────────────────────────────────────────────────────
 
 const AVATAR_GROUPS = [
-  { label: '🎮 Clásicos',  seeds: AVATAR_PRESETS.slice(0, 10)  },
-  { label: '⚔️ Guerreros', seeds: AVATAR_PRESETS.slice(10, 20) },
-  { label: '👤 Nombres',   seeds: AVATAR_PRESETS.slice(20, 30) },
-  { label: '✨ Nuevos',    seeds: AVATAR_PRESETS.slice(30, 40) },
+  { label: 'Clásicos',  seeds: AVATAR_PRESETS.slice(0, 10)  },
+  { label: 'Guerreros', seeds: AVATAR_PRESETS.slice(10, 20) },
+  { label: 'Nombres',   seeds: AVATAR_PRESETS.slice(20, 30) },
+  { label: 'Nuevos',    seeds: AVATAR_PRESETS.slice(30, 40) },
 ];
 
 // ─── Avatar Editor ────────────────────────────────────────────────────────────
@@ -140,149 +237,255 @@ function AvatarEditor({ member, open, onSave, onClose }: {
   member: Member; open: boolean; onSave: (seed: string) => void; onClose: () => void;
 }) {
   const [seed, setSeed] = useState(member.avatarSeed || AVATAR_PRESETS[0]);
+  const [activeTab, setActiveTab] = useState(0);
   const rc = roleColor(member.role);
   const seedLabel = seed.charAt(0).toUpperCase() + seed.slice(1);
 
+  // Tabs matching AVATAR_GROUPS
+  const tabs = ['🎮 Clásicos', '⚔️ Guerreros', '👤 Nombres', '✨ Nuevos'];
+
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent
-        className="p-0 overflow-hidden gap-0 outline-none"
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid rgba(var(--blue-rgb),0.18)',
-          borderRadius: 20,
-          maxWidth: 500,
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-        }}
-      >
-        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${rc}90, transparent)` }} />
+      <DialogContent className="p-0 overflow-hidden gap-0 outline-none" style={{
+        background: 'rgba(10, 12, 18, 0.88)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 20,
+        maxWidth: 440,
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}>
 
-        <DialogHeader className="px-6 pt-5 pb-0 space-y-0">
-          <p style={{ fontSize: 9, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 3 }}>Personalizar</p>
-          <DialogTitle style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px', margin: 0 }}>
-            Avatar · <span style={{ color: member.color }}>{member.name}</span>
+        {/* Header */}
+        <div style={{ padding: '24px 24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <p style={{ fontSize: 9, fontWeight: 800, color: rc, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 6 }}>
+            Personalizar Perfil
+          </p>
+          <DialogTitle style={{ fontSize: 16, fontWeight: 800, color: '#f0f6fc', letterSpacing: '-0.3px', margin: 0 }}>
+            {member.name}
           </DialogTitle>
-        </DialogHeader>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>
+            {member.role}
+          </p>
+        </div>
 
-        <div style={{ maxHeight: '68vh', overflowY: 'auto', padding: '16px 24px 8px' }}>
-
-          {/* Preview */}
+        <div style={{ padding: '0 24px 24px' }}>
+          {/* Large Preview & Ring */}
           <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-            padding: '16px 0', marginBottom: 14,
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: 14,
+            display: 'flex', justifyContent: 'center', marginBottom: 24, position: 'relative'
           }}>
-            <motion.div style={{ position: 'relative' }} whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
+            <div style={{ position: 'relative', width: 92, height: 92 }}>
+              {/* Spinning Glow Ring */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+                style={{
+                  position: 'absolute', inset: -5, borderRadius: '50%',
+                  border: `2px dashed ${rc}50`,
+                  boxShadow: `0 0 20px ${rc}25`,
+                }}
+              />
               <div style={{
-                position: 'absolute', inset: -5, borderRadius: '50%',
-                border: `2px solid ${member.color}50`,
-                boxShadow: `0 0 16px ${member.color}35`,
+                position: 'absolute', inset: -2, borderRadius: '50%',
+                border: `2px solid ${rc}`,
+                boxShadow: `0 0 15px ${rc}40`,
               }} />
-              <AvatarImg seed={seed} name={member.name} color={member.color} size={78} borderRadius={39} />
-            </motion.div>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
+              <div style={{ borderRadius: '50%', overflow: 'hidden', width: 92, height: 92, background: 'rgba(255,255,255,0.03)' }}>
+                <AvatarImg seed={seed} name={member.name} color={rc} size={92} borderRadius={46} />
+              </div>
+            </div>
+          </div>
+
+          {/* Sliding Tabs Segment Control */}
+          <div style={{
+            display: 'flex',
+            padding: 3,
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 10,
+            border: '1px solid rgba(255,255,255,0.05)',
+            marginBottom: 20,
+            position: 'relative',
+          }}>
+            {tabs.map((t, idx) => {
+              const isActive = activeTab === idx;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setActiveTab(idx)}
+                  style={{
+                    flex: 1,
+                    position: 'relative',
+                    padding: '8px 0',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 7,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    transition: 'color 0.2s',
+                    zIndex: 2,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabPill"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(255,255,255,0.07)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 7,
+                        zIndex: -1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  {t.split(' ')[1]}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Category Label */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Colección {tabs[activeTab]}
+            </p>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: rc }}>
               {seedLabel}
             </p>
           </div>
 
-          {/* Grupos de avatares */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {AVATAR_GROUPS.map(group => (
-              <div key={group.label}>
-                <p style={{ fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '0 0 6px' }}>
-                  {group.label}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4 }}>
-                  {group.seeds.map((p, i) => {
-                    const isSelected = seed === p;
-                    return (
-                      <motion.button
-                        key={p} type="button"
-                        onClick={() => setSeed(p)}
-                        title={p}
-                        initial={{ opacity: 0, scale: 0.85 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.012, type: 'spring', stiffness: 400, damping: 25 }}
-                        whileHover={{ scale: 1.1, y: -1 }}
-                        whileTap={{ scale: 0.93 }}
-                        style={{
-                          position: 'relative',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          padding: 2, aspectRatio: '1',
-                          background: isSelected ? `${member.color}18` : 'rgba(255,255,255,0.03)',
-                          border: `1.5px solid ${isSelected ? member.color + '65' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius: 8, cursor: 'pointer',
-                          boxShadow: isSelected ? `0 0 10px ${member.color}28` : 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        <AvatarImg seed={p} name={p} color={member.color} size={34} borderRadius={5} />
-                        {isSelected && (
-                          <div style={{
-                            position: 'absolute', top: -4, right: -4,
-                            width: 12, height: 12, borderRadius: '50%',
-                            background: member.color,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1.5px solid var(--bg-surface)',
-                          }}>
-                            <Check size={6} color="#fff" strokeWidth={3} />
-                          </div>
-                        )}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+          {/* Roomy 5x2 Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+            <AnimatePresence mode="popLayout">
+              {AVATAR_GROUPS[activeTab].seeds.map((p) => {
+                const sel = seed === p;
+                return (
+                  <motion.button
+                    key={p}
+                    type="button"
+                    onClick={() => setSeed(p)}
+                    title={p}
+                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      position: 'relative',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      aspectRatio: '1',
+                      padding: 4,
+                      background: sel ? `${rc}25` : 'rgba(255,255,255,0.02)',
+                      border: `1.5px solid ${sel ? rc : 'rgba(255,255,255,0.05)'}`,
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      boxShadow: 'none',
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.2s, background-color 0.2s',
+                    }}
+                  >
+                    <AvatarImg seed={p} name={p} color={rc} size={50} borderRadius={8} />
+                    {sel && (
+                      <div style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: rc,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '1.5px solid #0f1117',
+                        boxShadow: 'none',
+                      }}>
+                        <Check size={8} color="#fff" strokeWidth={4} />
+                      </div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-white/5 flex gap-2 justify-end">
-          <Button
-            variant="ghost"
+        {/* Footer */}
+        <div style={{
+          display: 'flex',
+          gap: 10,
+          justifyContent: 'flex-end',
+          padding: '16px 24px 22px',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          background: 'rgba(255,255,255,0.01)'
+        }}>
+          <button
+            type="button"
             onClick={onClose}
-            style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              transition: 'color 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
           >
             Cancelar
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={() => { onSave(seed); onClose(); }}
-            style={{ background: 'var(--blue)', color: '#fff', fontSize: 12, fontWeight: 700, border: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{
+              background: rc,
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 9,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <Check size={12} /> Guardar
-          </Button>
-        </DialogFooter>
+            <Check size={12} strokeWidth={2.5} /> Guardar
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-
-// ─── Member Card ──────────────────────────────────────────────────────────────
+// ─── Member Card — diseño horizontal compacto ─────────────────────────────────
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.96 },
-  show:   { opacity: 1, y: 0,  scale: 1,
-    transition: { type: 'spring' as const, stiffness: 260, damping: 24 } },
-  exit:   { opacity: 0, scale: 0.88, y: -8,
-    transition: { duration: 0.2, ease: [0.4, 0, 1, 1] as const } },
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  show:   { opacity: 1, y: 0,  scale: 1, transition: { type: 'spring' as const, stiffness: 300, damping: 26 } },
+  exit:   { opacity: 0, scale: 0.92, y: -8, transition: { duration: 0.18 } },
 };
 
-function MemberCard({ member, index, tasks, onEdit, onDelete }: {
-  member: Member; index: number; tasks: Task[];
+function MemberCard({ member, tasks, onEdit, onDelete }: {
+  member: Member; tasks: Task[];
   onEdit: () => void; onDelete: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const tilt = useTilt();
-  const rc    = roleColor(member.role);
-  const mt    = tasks.filter(t => t.assignedTo === member.id);
-  const done  = mt.filter(t => t.status === 'completada').length;
-  const prog  = mt.filter(t => t.status === 'en progreso').length;
-  const pend  = mt.filter(t => t.status === 'pendiente').length;
-  const total = mt.length;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const rc  = roleColor(member.role);
+  const mt  = tasks.filter(t => t.assignedTo === member.id);
+  const done = mt.filter(t => t.status === 'completada').length;
+  const prog = mt.filter(t => t.status === 'en progreso').length;
+  const pend = mt.filter(t => t.status === 'pendiente').length;
+  const pct  = mt.length > 0 ? Math.round((done / mt.length) * 100) : 0;
 
   return (
     <motion.div
@@ -292,94 +495,163 @@ function MemberCard({ member, index, tasks, onEdit, onDelete }: {
       onMouseMove={tilt.onMouseMove}
       onMouseLeave={() => { tilt.onMouseLeave(); setHovered(false); }}
       onMouseEnter={() => setHovered(true)}
-      className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 cursor-default"
       style={{
-        rotateX: tilt.rotateX, rotateY: tilt.rotateY,
-        transformStyle: 'preserve-3d', perspective: 800, willChange: 'transform',
-        background: 'transparent',
+        rotateX: tilt.rotateX,
+        rotateY: tilt.rotateY,
+        transformStyle: 'preserve-3d',
+        perspective: 900,
+        position: 'relative',
+        borderRadius: 14,
+        overflow: 'hidden',
+        background: hovered
+          ? `linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 42%, rgba(26, 31, 46, 0.9) 42%)`
+          : `linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 42%, rgba(22, 27, 34, 0.82) 42%)`,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         border: 'none',
-        boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.3)',
-        fontFamily: 'Arial, Helvetica, sans-serif',
+        boxShadow: hovered
+          ? `0 12px 32px rgba(0,0,0,0.5)`
+          : '0 4px 20px rgba(0,0,0,0.2)',
+        transition: 'box-shadow 0.2s, background 0.2s',
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        cursor: 'default',
       }}
     >
-      {/* Avatar centrado con badge online */}
-      <div className="flex flex-col items-center pt-7 pb-4 px-4" style={{ position: 'relative' }}>
-        <ThreeBg color={member.color} />
-        <div className="relative mb-4">
-          <div className="rounded-full p-0.5" style={{ background: `linear-gradient(135deg, ${member.color}, ${member.color}66)` }}>
-            <AvatarImg seed={member.avatarSeed ?? 'aventurero'} name={member.name} color={member.color} size={72} borderRadius={36} />
+
+      {/* Glow ambiental */}
+      <div style={{
+        position: 'absolute', top: -20, left: -10, width: 100, height: 100,
+        background: `radial-gradient(circle, ${rc}15 0%, transparent 70%)`,
+        pointerEvents: 'none',
+        opacity: hovered ? 1 : 0,
+        transition: 'opacity 0.3s',
+      }} />
+
+      <div style={{ padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* Fila 1: Avatar + Info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+          {/* Avatar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{
+              padding: 2, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${rc}80, ${rc}20)`,
+            }}>
+              <AvatarImg
+                seed={member.avatarSeed ?? 'aventurero'}
+                name={member.name}
+                color={rc}
+                size={46}
+                borderRadius={23}
+              />
+            </div>
           </div>
-          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2" style={{ ringColor: '#1c1f26', border: '2px solid #1c1f26' }} />
-        </div>
 
-        {/* Nombre y rol */}
-        <p className="text-[15px] font-bold text-white text-center leading-tight mb-1">{member.name}</p>
-        <div className="flex items-center gap-1.5 mb-1">
-          <span style={{ color: rc }}><RoleIcon role={member.role} /></span>
-          <p className="text-[11px] text-center" style={{ color: '#e9ecef' }}>{member.role}</p>
-        </div>
-      </div>
-
-      {/* Divider + todo lo de abajo con fondo */}
-      <div style={{ background: '#1c1f26' }}>
-      <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-
-      {/* Progress */}
-      <div className="px-4 pt-4 pb-3 space-y-1.5">
-        <div className="flex justify-between items-center">
-          <span className="text-[11px] " style={{ color: '#e9ecef' }}>Progreso</span>
-          <span className="text-[11px] font-bold" style={{ color: pct > 0 ? member.color : 'rgba(255,255,255,0.2)' }}>{pct}%</span>
-        </div>
-        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <motion.div
-            className="h-full rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            style={{ background: member.color }}
-          />
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 mx-2 mb-4 rounded-xl overflow-hidden" >
-        {[
-          { v: pend, l: 'Pendiente' },
-          { v: prog, l: 'Curso'  },
-          { v: done, l: 'Listas'    },
-        ].map((s, i) => (
-          <div key={s.l} className="flex flex-col items-center py-2.5" style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
-            <span className="text-base font-bold text-white">{s.v}</span>
-            <span className="text-[10px] mt-0.5 font-medium" style={{ color: '#e9ecef' }}>{s.l}</span>
+          {/* Nombre + rol */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              margin: 0, fontSize: 13, fontWeight: 700,
+              color: '#f0f6fc', letterSpacing: '-0.2px',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {member.name}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <span style={{ color: rc, display: 'flex', alignItems: 'center' }}>
+                <RoleIcon role={member.role} size={9} />
+              </span>
+              <p style={{
+                margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 500,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {member.role}
+              </p>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Acciones */}
-      <div className="flex gap-2 px-4 pb-4">
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEdit(); }}
-          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-[12px] font-bold transition-all duration-150 cursor-pointer"
-          style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ade80' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.2)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.1)')}
-        >
-          <Pencil size={11} /> Avatar
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(); }}
-          className="w-9 flex items-center justify-center rounded-md transition-all duration-150 cursor-pointer"
-          style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
-        >
-          <Trash2 size={13} />
-        </motion.button>
-      </div>
-      </div>
+        {/* Fila 3: Stats */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          borderRadius: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: 'none',
+          overflow: 'hidden',
+        }}>
+          {[
+            { v: pend, l: 'Pendiente', c: 'rgba(255,255,255,0.95)' },
+            { v: prog, l: 'En curso',  c: 'rgba(255,255,255,0.95)' },
+            { v: done, l: 'Listas',    c: 'rgba(255,255,255,0.95)' },
+          ].map((s, i) => (
+            <div key={s.l} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '7px 4px',
+              borderRight: 'none',
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: s.c, lineHeight: 1 }}>{s.v}</span>
+              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', marginTop: 2, fontWeight: 500 }}>{s.l}</span>
+            </div>
+          ))}
+        </div>
 
+        {/* Fila 4: Acciones */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={e => { e.stopPropagation(); onEdit(); }}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              padding: '6px 0',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8, cursor: 'pointer',
+              fontSize: 11, fontWeight: 600,
+              color: 'rgba(255,255,255,0.55)',
+              transition: 'all 0.15s',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              outline: 'none',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${rc}18`;
+              e.currentTarget.style.borderColor = `${rc}50`;
+              e.currentTarget.style.color = rc;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.55)';
+            }}
+          >
+            <Pencil size={10} /> Avatar
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            style={{
+              width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8, cursor: 'pointer',
+              color: 'rgba(255,255,255,0.3)',
+              transition: 'all 0.15s',
+              outline: 'none',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+              e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
+              e.currentTarget.style.color = '#f87171';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.3)';
+            }}
+          >
+            <Trash2 size={11} />
+          </motion.button>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -392,36 +664,46 @@ function AddCard({ onClick }: { onClick: () => void }) {
       variants={cardVariants}
       layout
       onClick={onClick}
-      whileHover={{ borderColor: 'rgba(59,130,246,0.7)', backgroundColor: 'rgba(59,130,246,0.18)' }}
       whileTap={{ scale: 0.97 }}
       style={{
-        minHeight: 260, cursor: 'pointer',
-        background: 'rgba(59,130,246,0.08)',
-        border: '1px dashed rgba(59,130,246,0.4)',
-        borderRadius: 16,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+        borderRadius: 14,
+        cursor: 'pointer',
+        background: 'rgba(67,97,238,0.03)',
+        border: '1.5px dashed rgba(67,97,238,0.2)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: 8, minHeight: 180,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        transition: 'all 0.2s',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.background = 'rgba(67,97,238,0.08)';
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(67,97,238,0.45)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.background = 'rgba(67,97,238,0.03)';
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(67,97,238,0.2)';
       }}
     >
       <motion.div
-        whileHover={{ scale: 1.12, rotate: 90 }}
+        whileHover={{ rotate: 90, scale: 1.1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-        style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)' }}
+        style={{
+          width: 32, height: 32, borderRadius: 9,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(67,97,238,0.12)',
+          border: '1px solid rgba(67,97,238,0.3)',
+        }}
       >
-        <Plus size={16} color="#60a5fa" />
+        <Plus size={14} color="#60a5fa" />
       </motion.div>
-      <span style={{ fontSize: 12, fontWeight: 500, color: '#fff' }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.02em' }}>
         Nuevo miembro
       </span>
     </motion.div>
   );
 }
-
-// ─── Container variants ───────────────────────────────────────────────────────
-
-const containerVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
-};
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -434,14 +716,29 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, overflowY: 'auto', paddingBottom: 24 }} className="custom-scrollbar">
+    <div style={{
+      position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+    }}>
+      <ThreeBackground />
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, overflowY: 'auto', padding: '0 2px 24px' }} className="custom-scrollbar">
+
+
         <motion.div
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}
+          initial="hidden"
+          animate="show"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
+            gap: 10,
+          }}
         >
           <AnimatePresence mode="popLayout">
-            {members.map((m, i) => (
-              <MemberCard key={m.id} member={m} index={i} tasks={tasks}
+            {members.map(m => (
+              <MemberCard
+                key={m.id}
+                member={m}
+                tasks={tasks}
                 onEdit={() => setEditingMember(m)}
                 onDelete={() => onDeleteMember(m)}
               />
@@ -453,7 +750,8 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
 
       {editingMember && (
         <AvatarEditor
-          member={editingMember} open={!!editingMember}
+          member={editingMember}
+          open={!!editingMember}
           onSave={seed => onChangeAvatar(editingMember.id, seed)}
           onClose={() => setEditingMember(null)}
         />

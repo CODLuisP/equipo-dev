@@ -272,14 +272,12 @@ function TeamMemberRow({
   const afkPreset  = AFK_PRESETS.find(p => p.iconKey === radarEntry?.iconKey);
   const afkColor   = afkPreset?.color ?? '#E74C3C';
 
-  // Tiempo relativo de última conexión
-
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '8px 12px', borderRadius: 12,
       background: 'transparent',
-      transition: 'background 0.2s',
+      transition: 'background 0.2s ease',
     }}
     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
@@ -289,20 +287,20 @@ function TeamMemberRow({
           <AvatarImg seed={member.avatarSeed || member.name} name={member.name} color={member.color} size={32} borderRadius={10} />
           <div style={{
             position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%',
-            background: isAFK ? afkColor : isOnline ? '#10b981' : '#475569',
+            background: isAFK ? afkColor : isOnline ? '#22c55e' : '#4b5563',
             border: '2px solid #161b22',
           }}/>
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f6fc', display: 'flex', alignItems: 'center', gap: 6 }}>
             {member.name}
-            {isMe && <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase' }}>Tú</span>}
+            {isMe && <span style={{ fontSize: 8.5, fontWeight: 800, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Tú</span>}
           </div>
-          <div style={{ fontSize: 11.5, marginTop: 2, fontWeight: 500, color: isAFK ? afkColor : isOnline ? '#34d399' : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 11, marginTop: 2, fontWeight: 500, color: isAFK ? afkColor : isOnline ? '#22c55e' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {isAFK ? (
               <>
-                <StatusIcon iconKey={radarEntry!.iconKey} size={12} color={afkColor} strokeWidth={2.5}/>
+                <StatusIcon iconKey={radarEntry!.iconKey} size={11} color={afkColor} strokeWidth={2.4}/>
                 {radarEntry!.statusText}
               </>
             ) : isOnline ? 'Trabajando' : 'Desconectado'}
@@ -312,8 +310,8 @@ function TeamMemberRow({
 
       {isAFK && radarEntry!.timestamp > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)' }}>Hace</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: afkColor, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ausente</span>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: afkColor, fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
             <AFKTimer timestamp={radarEntry!.timestamp} color={afkColor}/>
           </span>
         </div>
@@ -340,7 +338,7 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
   // DevTools
   const [toolInput, setToolInput]   = useState('');
   const [toolOutput, setToolOutput] = useState('');
-  const [toolType, setToolType]     = useState<'json' | 'sql' | 'unit' | 'ts'>('json');
+  const [toolType, setToolType]     = useState<'json' | 'sql' | 'unit' | 'ts'>('ts');
 
   // Timestamp converter
   const [tsInput, setTsInput]   = useState('');
@@ -634,33 +632,32 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
               {/* My status card */}
               {currentUser && (
                 <div style={{
-                  background: isAFK ? `${currentUser.color}10` : 'rgba(var(--blue-rgb),0.08)',
-                  border: `1px solid ${isAFK ? `${currentUser.color}30` : 'rgba(var(--blue-rgb),0.22)'}`,
-                  backdropFilter: !isAFK ? 'blur(12px)' : undefined,
-                  borderRadius:16, overflow:'hidden',
-                  display:'flex', alignItems:'stretch', justifyContent:'space-between',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: 16, overflow: 'hidden',
+                  display: 'flex', alignItems: 'stretch', justifyContent: 'space-between',
                 }}>
-                  <div style={{ display:'flex', alignItems:'center', flex:1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     {isAFK ? (
-                      <div style={{ padding:'13px 0 13px 15px', flexShrink:0 }}>
+                      <div style={{ padding: '13px 0 13px 15px', flexShrink: 0 }}>
                         <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={36} borderRadius={10} />
                       </div>
                     ) : (
                       <img src="/assets/trabajando.png" alt="Trabajando"
-                        style={{ width:56, alignSelf:'stretch', objectFit:'cover', flexShrink:0 }} />
+                        style={{ width: 56, alignSelf: 'stretch', objectFit: 'cover', flexShrink: 0 }} />
                     )}
-                    <div style={{ padding:'13px 15px' }}>
-                      <div style={{ fontSize:12, fontWeight:800, color:'#F4F5F7' }}>{currentUser.name}</div>
-                      <div style={{ fontSize:11, color: isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60', fontWeight:700, marginTop:2, display:'flex', alignItems:'center', gap:5 }}>
-                        <StatusIcon iconKey={isAFK ? (myStatus!.iconKey) : 'online'} size={11} color={isAFK ? (myPreset?.color ?? '#E74C3C') : '#27AE60'} strokeWidth={2.2} />
+                    <div style={{ padding: '13px 15px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#f0f6fc' }}>{currentUser.name}</div>
+                      <div style={{ fontSize: 11, color: isAFK ? (myPreset?.color ?? '#E74C3C') : '#22c55e', fontWeight: 700, marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <StatusIcon iconKey={isAFK ? (myStatus!.iconKey) : 'online'} size={11} color={isAFK ? (myPreset?.color ?? '#E74C3C') : '#22c55e'} strokeWidth={2.2} />
                         {isAFK ? myStatus!.statusText : 'Trabajando'}
                       </div>
                     </div>
                   </div>
                   {isAFK && (
-                    <div style={{ padding:'13px 15px', display:'flex', alignItems:'center', gap:6 }}>
-                      <div style={{ width:7, height:7, borderRadius:'50%', background: myPreset?.color ?? '#E74C3C' }} />
-                      <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>ausente</span>
+                    <div style={{ padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: myPreset?.color ?? '#E74C3C' }} />
+                      <span style={{ fontSize: 9.5, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>ausente</span>
                     </div>
                   )}
                 </div>
@@ -668,56 +665,67 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
 
               {/* AFK preset buttons */}
               <div>
-                <p style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.5)', margin:'0 0 10px' }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', margin: '0 0 8px' }}>
                   Avisar que me voy a…
                 </p>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                   {AFK_PRESETS.map(p => (
                     <button
                       key={p.text}
                       onClick={() => goAFK(p)}
                       style={{
-                        padding:'14px 6px', borderRadius:14,
-                        background:p.bg, border:`1px solid ${p.border}`,
-                        color:p.color, display:'flex', flexDirection:'column',
-                        alignItems:'center', gap:8, cursor:'pointer',
-                        transition:'all 0.15s', fontFamily:'inherit',
+                        padding: '12px 6px', borderRadius: 14,
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        color: 'rgba(255, 255, 255, 0.65)',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 6, cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        fontFamily: 'inherit',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform='none'; }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.65)';
+                      }}
                     >
-                      <StatusIcon iconKey={p.iconKey} size={22} color={p.color} strokeWidth={1.75} />
-                      <span style={{ fontSize:10, fontWeight:800, textAlign:'center', lineHeight:1.2 }}>{p.text}</span>
+                      <StatusIcon iconKey={p.iconKey} size={18} color={p.color} strokeWidth={2.0} />
+                      <span style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', lineHeight: 1.2 }}>{p.text}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div style={{ height:1, background:'rgba(255,255,255,0.05)' }} />
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
 
               {/* Team list */}
               <div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-                  <p style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.5)', margin:'0 0 10px' }}>Estado del equipo</p>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:10, fontWeight:700, color:'#27AE60'}}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', margin: '0' }}>Estado del equipo</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#22c55e' }}>
                       {onlineCount} en línea
                     </span>
                     {teamList.filter(t=>t.isAFK).length > 0 && (
-                      <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.2)', fontFamily:'monospace' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>
                         · {teamList.filter(t=>t.isAFK).length} ausente{teamList.filter(t=>t.isAFK).length!==1?'s':''}
                       </span>
                     )}
                   </div>
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {teamMembers.length === 0 && (
-                    <div style={{ textAlign:'center', padding:'24px 16px', border:'1px dashed rgba(255,255,255,0.07)', borderRadius:14 }}>
-                      <div style={{ display:'flex', justifyContent:'center', marginBottom:8, color:'rgba(255,255,255,0.15)' }}>
+                    <div style={{ textAlign: 'center', padding: '24px 16px', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, color: 'rgba(255,255,255,0.15)' }}>
                         <Users size={24} />
                       </div>
-                      <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>Eres el único en el equipo</p>
-                      <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>Invita a más miembros en Ajustes</p>
+                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: 0, fontWeight: 600 }}>Eres el único en el equipo</p>
+                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', margin: '4px 0 0', fontWeight: 500 }}>Invita a más miembros en Ajustes</p>
                     </div>
                   )}
                   {teamMembers.map((member: any) => (
@@ -733,25 +741,33 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
                 </div>
               </div>
 
-              {/* AFK Members Badges (Reemplazo del marquee) */}
+              {/* AFK Members Badges */}
               {teamList.some(t=>t.isAFK) && (
-                <div style={{ position: 'relative', marginTop: 4, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ position: 'relative', marginTop: 4, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ position: 'relative', zIndex: 10 }}>
-                    <p style={{ fontSize:10, fontWeight:800, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', margin:'0 0 10px 0' }}>Actualmente ausentes</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', margin: '0 0 10px 0' }}>Actualmente ausentes</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {teamList.filter(t=>t.isAFK).map(t => {
-                        const afkColor = AFK_PRESETS.find(p => p.iconKey === t.iconKey)?.color ?? '#E74C3C';
+                        const afkPreset = AFK_PRESETS.find(p => p.iconKey === t.iconKey);
+                        const afkColor = afkPreset?.color ?? '#E74C3C';
                         return (
                           <div key={t.userId} style={{
                             display: 'flex', alignItems: 'center', gap: 12,
                             width: '100%',
+                            padding: '8px 12px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            borderRadius: 14,
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 68, height: 68 }}>
-                              <ThreeAFKIcon iconKey={t.iconKey} colorHex={afkColor} size={76} />
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, background: 'rgba(0,0,0,0.15)', borderRadius: 10 }}>
+                              <ThreeAFKIcon iconKey={t.iconKey} colorHex={afkColor} size={54} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ fontSize: 15, fontWeight: 800, color: '#f0f4ff', letterSpacing: '-0.3px' }}>{t.name}</span>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: afkColor, opacity: 0.9 }}>{t.statusText}</span>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: '#f0f6fc', letterSpacing: '-0.2px' }}>{t.name}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: afkColor, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <StatusIcon iconKey={t.iconKey} size={11} color={afkColor} strokeWidth={2.4}/>
+                                {t.statusText}
+                              </span>
                             </div>
                           </div>
                         );
@@ -767,18 +783,37 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
           {activeTab === 'tools' && (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {(['json','sql','unit','ts'] as const).map(t => {
-                  const tabColors: Record<string,string> = { json:'#3498DB', sql:'#27AE60', unit:'#E67E22', ts:'var(--blue)' };
-                  const tabLabels: Record<string,string> = { json:'JSON', sql:'SQL', unit:'px↔rem', ts:'Timestamp' };
-                  const c = tabColors[t];
+                {(['ts', 'json', 'sql', 'unit'] as const).map(t => {
+                  const tabLabels: Record<string,string> = { ts:'Timestamp', json:'JSON', sql:'SQL', unit:'px↔rem' };
+                  const isSelected = toolType === t;
                   return (
-                    <button key={t} onClick={() => setToolType(t)} style={{
-                      padding:'6px 10px', borderRadius:8, border:'1px solid',
-                      borderColor: toolType===t ? c : 'rgba(255,255,255,0.1)',
-                      background: toolType===t ? `${c}18` : 'transparent',
-                      color: toolType===t ? c : 'rgba(255,255,255,0.45)',
-                      fontSize:10, fontWeight:700, cursor:'pointer', transition:'all 0.15s',
-                    }}>{tabLabels[t]}</button>
+                    <button
+                      key={t}
+                      onClick={() => setToolType(t)}
+                      style={{
+                        padding: '6px 10px', borderRadius: 8,
+                        border: '1px solid',
+                        borderColor: isSelected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                        background: isSelected ? 'rgba(255,255,255,0.08)' : 'transparent',
+                        color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                        fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={e => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                        }
+                      }}
+                    >
+                      {tabLabels[t]}
+                    </button>
                   );
                 })}
               </div>
@@ -786,7 +821,7 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
               {/* Timestamp converter */}
               {toolType === 'ts' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                  <p style={{ margin:0, fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.1em' }}>
+                  <p style={{ margin:0, fontSize:11, fontWeight:600, color:'rgba(255,255,255,0.6)' }}>
                     UNIX Timestamp → Fecha
                   </p>
                   <div style={{ display:'flex', gap:8 }}>
@@ -796,20 +831,64 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
                       value={tsInput}
                       onChange={e => { setTsInput(e.target.value); setTsResult(null); }}
                       onKeyDown={e => e.key === 'Enter' && handleConvertTs()}
-                      style={{ flex:1, background:'rgba(0,0,0,0.35)', border:'1px solid rgba(var(--blue-rgb),0.25)', borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12, fontFamily:'monospace', outline:'none', boxSizing:'border-box' }}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(0,0,0,0.25)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 10,
+                        padding: '9px 12px',
+                        color: '#fff',
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                      onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                     />
                     <button onClick={handleConvertTs} style={{
-                      padding:'9px 14px', borderRadius:10, background:'var(--blue)', border:'none',
-                      color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer',
-                      display:'flex', alignItems:'center', gap:6, flexShrink:0,
-                    }}>
+                      padding: '9px 14px', borderRadius: 10,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                    }}
+                    >
                       <Zap size={13}/> Convertir
                     </button>
                   </div>
 
                   {/* Botón "Ahora" */}
-                  <button onClick={() => { const now = String(Math.floor(Date.now()/1000)); setTsInput(now); setTsResult(null); }}
-                    style={{ alignSelf:'flex-start', padding:'4px 10px', borderRadius:7, background:'rgba(var(--blue-rgb),0.1)', border:'1px solid rgba(var(--blue-rgb),0.25)', color:'var(--blue-soft)', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+                  <button
+                    onClick={() => { const now = String(Math.floor(Date.now()/1000)); setTsInput(now); setTsResult(null); }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      padding: '5px 10px',
+                      borderRadius: 8,
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      color: 'rgba(255,255,255,0.65)',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.65)';
+                    }}
+                  >
                     Usar timestamp actual
                   </button>
 
@@ -821,21 +900,30 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
                         { label:'RFC 2822', value: tsResult.rfc },
                       ].map(({ label, value }) => (
                         <div key={label} style={{
-                          padding:'10px 12px',
-                          background:'rgba(15,18,28,0.8)', borderRadius:10,
-                          border:'1px solid rgba(255,255,255,0.06)',
-                          borderLeft:'3px solid var(--blue)',
+                          padding: '10px 12px',
+                          background: 'rgba(0,0,0,0.2)',
+                          borderRadius: 10,
+                          border: '1px solid rgba(255,255,255,0.05)',
                         }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
-                            <span style={{ fontSize:9, fontWeight:900, color:'#ffffff', textTransform:'uppercase', letterSpacing:'0.1em' }}>{label}</span>
+                            <span style={{ fontSize:10.5, fontWeight:700, color:'var(--blue-light)', fontFamily:'var(--font-mono)' }}>{label}</span>
                             <button onClick={() => { navigator.clipboard.writeText(value); toast.success("Copiado"); }}
-                              style={{ padding:4, background:'rgba(var(--blue-rgb),0.1)', border:'1px solid rgba(var(--blue-rgb),0.2)', color:'var(--blue-soft)', cursor:'pointer', borderRadius:6, transition:'all 0.15s', display:'flex' }}
-                              onMouseEnter={e => { e.currentTarget.style.background='rgba(var(--blue-rgb),0.25)'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.5)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background='rgba(var(--blue-rgb),0.1)'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.2)'; }}>
+                              style={{
+                                padding: 4,
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                color: 'rgba(255,255,255,0.5)',
+                                cursor: 'pointer',
+                                borderRadius: 6,
+                                transition: 'all 0.15s ease',
+                                display: 'flex'
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.06)'; e.currentTarget.style.color='#fff'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='rgba(255,255,255,0.5)'; }}>
                               <Copy size={10}/>
                             </button>
                           </div>
-                          <span style={{ fontSize:13, fontWeight:600, color:'#e2e8f0', fontFamily:'monospace', wordBreak:'break-all', lineHeight:1.4 }}>{value}</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#ffffff', fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.4 }}>{value}</span>
                         </div>
                       ))}
                     </div>
@@ -847,14 +935,31 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
               {toolType !== 'ts' && (
                 <>
                   <textarea placeholder="Pega aquí tu código…" value={toolInput} onChange={e => setToolInput(e.target.value)}
-                    style={{ width:'100%', height:100, background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, padding:12, color:'#fff', fontSize:11, fontFamily:'monospace', resize:'none', outline:'none', boxSizing:'border-box' }} />
+                    style={{ width:'100%', height:100, background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:12, color:'#fff', fontSize:11, fontFamily:'monospace', resize:'none', outline:'none', boxSizing:'border-box' }} />
                   <button onClick={toolType==='json'?handleFormatJSON:toolType==='sql'?handleFormatSQL:handleUnitConvert}
-                    style={{ padding:10, borderRadius:12, background:'#3498DB', border:'none', color:'#fff', fontWeight:700, fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                    style={{
+                      padding: 10,
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
+                    onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.08)'}
+                  >
                     <Zap size={14}/> Procesar {toolType.toUpperCase()}
                   </button>
                   {toolOutput && (
                     <div style={{ position:'relative' }}>
-                      <pre style={{ margin:0, padding:12, background:'rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, color:'#27AE60', fontSize:10, overflowX:'auto', maxHeight:150 }}>{toolOutput}</pre>
+                      <pre style={{ margin:0, padding:12, background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, color:'#10b981', fontSize:10, overflowX:'auto', maxHeight:150 }}>{toolOutput}</pre>
                       <button onClick={copyOutput} style={{ position:'absolute', top:8, right:8, padding:5, background:'rgba(255,255,255,0.05)', border:'none', borderRadius:6, color:'#fff', cursor:'pointer' }}><Copy size={12}/></button>
                     </div>
                   )}

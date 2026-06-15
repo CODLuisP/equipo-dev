@@ -313,7 +313,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           <div className="h-6 w-px bg-white/5 hidden sm:block" />
           <FilterDropdown value={filterMember} onChange={setFilterMember} members={members} />
         </div>
-        <button onClick={onAddTask} className="flex items-center gap-1.5 bg-(--blue) hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(var(--blue-rgb),0.3)]">
+        <button onClick={onAddTask} className="flex items-center gap-1.5 bg-(--blue) hover:bg-[#1d4ed8] text-gray-100 px-4 py-2 rounded-xl font-semibold text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(var(--blue-rgb),0.3)]">
           <Plus size={12}/> Nueva Tarea
         </button>
       </div>
