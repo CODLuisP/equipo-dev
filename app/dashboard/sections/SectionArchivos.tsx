@@ -18,6 +18,9 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [showShare, setShowShare] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [customCode, setCustomCode] = useState('');
+  const [codeError, setCodeError] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [publicLink, setPublicLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -39,58 +42,54 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
   const formatSize = (b:number) => { if (!b) return ''; if (b<1024) return `${b} B`; if (b<1048576) return `${(b/1024).toFixed(1)} KB`; return `${(b/1048576).toFixed(1)} MB`; };
   const handleAction = () => { if (file.type==='link') window.open(file.dataUrl,'_blank'); else { const a=document.createElement('a');a.href=file.dataUrl;a.download=file.name;a.click(); } };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (showShare) { setShowShare(false); return; }
-    setIsSharing(true);
+    if (showCodeInput) { setShowCodeInput(false); return; }
+    setCustomCode('');
+    setCodeError('');
+    setShowCodeInput(true);
+  };
 
+  const handleGenerate = async () => {
+    setIsSharing(true);
+    setCodeError('');
     try {
       let finalDataUrl = file.dataUrl;
       const isPhysicalFile = file.type !== 'link' && file.dataUrl.startsWith('data:');
-
-      // Si es un archivo físico, lo subimos a través de nuestra API local (Proxy)
-      // para evitar errores de CORS y URLs demasiado largas (Error 431)
       if (isPhysicalFile) {
         const formData = new FormData();
         const resBlob = await fetch(file.dataUrl);
         const blob = await resBlob.blob();
         formData.append('file', blob, file.name);
-
-        const response = await fetch('/api/share', {
-          method: 'POST',
-          body: formData
-        });
-
+        const response = await fetch('/api/share', { method: 'POST', body: formData });
         if (!response.ok) {
           const text = await response.text();
           let msg = 'Error en el servidor';
           try { const d = JSON.parse(text); msg = d.error || msg; } catch(e) {}
           throw new Error(msg);
         }
-
         const data = await response.json();
-        // Importante: Convertir ruta relativa (/shares/...) en absoluta para el payload
         finalDataUrl = window.location.origin + data.link;
       }
-
       const payload = {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        authorName: file.authorName,
-        createdAt: file.createdAt,
+        name: file.name, type: file.type, size: file.size,
+        authorName: file.authorName, createdAt: file.createdAt,
         expiresAt: Date.now() + 15 * 60 * 1000,
-        dataUrl: finalDataUrl
+        dataUrl: finalDataUrl,
+        customCode: customCode.trim() || undefined,
       };
-
-      const json = JSON.stringify(payload);
-      const b64 = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/gi, (_, p) => String.fromCharCode(parseInt(p, 16))));
-      const safe = b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-
-      setPublicLink(`${window.location.origin}/compartir?d=${safe}`);
+      const res = await fetch('/api/shortlink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) { setCodeError(json.error || 'Error'); setIsSharing(false); return; }
+      setPublicLink(`${window.location.origin}/compartir/${json.code}`);
+      setShowCodeInput(false);
       setShowShare(true);
     } catch (err: any) {
       toast.error(err.message || "No se pudo generar el link");
-      console.error("Share error:", err);
     } finally {
       setIsSharing(false);
     }
@@ -156,6 +155,31 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
           {file.type==='link'?'Abrir':'Bajar'}
         </button>
       </div>
+      {showCodeInput && (
+        <div style={{ borderTop:'1px solid rgba(52,152,219,0.15)', background:'rgba(52,152,219,0.04)', padding:'9px 12px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:7 }}>
+            <Globe size={9} color="#3498DB"/>
+            <span style={{ fontSize:9, fontWeight:800, color:'#3498DB', textTransform:'uppercase', letterSpacing:'0.07em' }}>Código personalizado</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <input
+              autoFocus
+              value={customCode}
+              onChange={e => { setCustomCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'')); setCodeError(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
+              placeholder="ej: miarchivo"
+              maxLength={20}
+              style={{ flex:1, background:'rgba(0,0,0,0.35)', border:`1px solid ${codeError?'rgba(231,76,60,0.5)':'rgba(52,152,219,0.25)'}`, borderRadius:7, padding:'5px 8px', fontSize:11, color:'#e2e8f0', outline:'none', fontFamily:'JetBrains Mono, monospace', letterSpacing:'0.05em' }}
+            />
+            <button onClick={handleGenerate} disabled={isSharing}
+              style={{ flexShrink:0, padding:'5px 9px', background:'rgba(52,152,219,0.18)', border:'1px solid rgba(52,152,219,0.3)', borderRadius:7, color:'#3498DB', fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:4, transition:'all 0.15s' }}>
+              {isSharing ? <RefreshCw size={11} className="animate-spin"/> : 'Crear'}
+            </button>
+          </div>
+          {codeError && <p style={{ fontSize:9, color:'#E74C3C', marginTop:4 }}>{codeError}</p>}
+          <p style={{ fontSize:8, color:'#3A3F4A', marginTop:5 }}>Vacío = código automático · Solo letras y números</p>
+        </div>
+      )}
       {showShare && (
         <div style={{ borderTop:'1px solid rgba(52,152,219,0.15)', background:'rgba(52,152,219,0.04)', padding:'9px 12px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:6 }}>
@@ -168,7 +192,7 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
               {copied?<Check size={11}/>:<Copy size={11}/>}
             </button>
           </div>
-          <p style={{ fontSize:8, color:'#3A3F4A', marginTop:5, letterSpacing:'0.03em' }}>Cualquiera con el link puede descargar</p>
+          <p style={{ fontSize:8, color:'#3A3F4A', marginTop:5, letterSpacing:'0.03em' }}>Código: <span style={{color:'#3498DB', fontFamily:'JetBrains Mono, monospace'}}>{publicLink.split('/').pop()}</span></p>
         </div>
       )}
     </div>
@@ -187,7 +211,7 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
   const authorName = currentUser?.name || members[0]?.name || 'Equipo';
 
   const processFile = (file: File) => {
-    if (file.size > 5*1024*1024) { toast.error(`"${file.name}" supera 5MB. Usa un enlace.`); return; }
+    if (file.size > 100*1024*1024) { toast.error(`"${file.name}" supera 100MB. Usa un enlace.`); return; }
     const reader = new FileReader();
     reader.onload = ev => {
       onSave([...archivos, { id:crypto.randomUUID(), name:file.name, type:file.type||'application/octet-stream', size:file.size, dataUrl:ev.target?.result as string, x:60+Math.random()*500, y:60+Math.random()*280, createdAt:Date.now(), authorName }]);
@@ -204,8 +228,9 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between flex-shrink-0">
+    <div className="flex flex-col gap-3 h-full relative">
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"><ArchivosBackground /></div>
+      <div className="flex items-center justify-between flex-shrink-0 relative z-10">
         <p className="text-xs text-gray-500"><span className="text-white font-semibold">{archivos.length}</span> {archivos.length===1?'archivo':'archivos'} compartidos</p>
         <div className="flex items-center gap-2">
           {showLink ? (
@@ -238,21 +263,21 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
           )}
         </div>
       </div>
-      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"#080B12", border:isDragOver?"2px dashed #E85D2F":"1px solid rgba(255,255,255,0.06)", transition:"border-color 0.15s" }}
+      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"transparent", border:isDragOver?"2px dashed #E85D2F":"none", transition:"border-color 0.15s", zIndex:10 }}
         onDragOver={e=>{e.preventDefault();setIsDragOver(true);}} onDragLeave={()=>setIsDragOver(false)}
         onDrop={e=>{e.preventDefault();setIsDragOver(false);Array.from(e.dataTransfer.files).forEach(processFile);}}>
-        <ArchivosBackground />
+
         {isDragOver && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/60 backdrop-blur-sm rounded-[16px] pointer-events-none">
             <UploadCloud size={52} className="text-[#E85D2F]"/>
             <p className="text-white text-lg font-bold">Suelta para compartir</p>
-            <p className="text-gray-400 text-xs">PDF, imágenes, ZIP, Word y más · máx 5 MB</p>
+            <p className="text-gray-400 text-xs">PDF, imágenes, ZIP, Word y más · máx 100 MB</p>
           </div>
         )}
         {archivos.length===0&&!isDragOver&&(
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none opacity-15">
-            <FolderOpen size={64}/><p className="text-lg font-bold uppercase tracking-widest">Espacio de archivos</p>
-            <p className="text-xs uppercase tracking-widest">Arrastra archivos o usa el botón de arriba</p>
+            <FolderOpen size={64}/><p className="text-xs font-bold uppercase tracking-widest">Espacio de archivos</p>
+            <p className="text-[10px] uppercase tracking-widest">Arrastra archivos o usa el botón de arriba</p>
           </div>
         )}
         {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}

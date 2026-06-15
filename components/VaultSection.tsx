@@ -86,8 +86,9 @@ export function SectionBoveda({
   }
 
   return (
-    <div className="flex flex-col h-full gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full gap-6 relative">
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"><BovedaBackground /></div>
+      <div className="flex items-center justify-between relative z-10">
         <div className="flex flex-col">
            <span className="text-[10px] font-bold text-[var(--blue)] uppercase tracking-widest">Almacén Seguro</span>
            <h2 className="text-white font-bold text-2xl tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
@@ -100,7 +101,7 @@ export function SectionBoveda({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto custom-scrollbar pr-1 pb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto custom-scrollbar pr-1 pb-6 relative z-10">
         {projects.map(p => (
           <VaultCard key={p.id} project={p} onEdit={() => onEditProject(p)} onDelete={() => onDeleteProject(p)} onFullscreen={() => setFullViewProject(p)} />
         ))}
