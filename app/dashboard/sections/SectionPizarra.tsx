@@ -1968,6 +1968,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const selectedIdsRef       = useRef(selectedIds);
   const selectedPathIdxRef   = useRef(selectedPathIndices);
   const zoomRef              = useRef(zoom);
+  const clipboardRef         = useRef(clipboard);
   const [showShapesPanel, setShowShapesPanel]     = useState(false);
   const [panelDrag, setPanelDrag] = useState<{ type: string; startX: number; startY: number; clientX: number; clientY: number } | null>(null);
   const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
@@ -2518,6 +2519,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => { selectedPathIdxRef.current = selectedPathIndices; }, [selectedPathIndices]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { offsetRef.current = offset; }, [offset]);
+  useEffect(() => { clipboardRef.current = clipboard; }, [clipboard]);
 
   const runLaserAnim = useCallback(() => {
     const canvas = laserCanvasRef.current; if (!canvas) return;
@@ -2614,52 +2616,65 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
-      const items = e.clipboardData?.items; if (!items) return;
-      for (let i=0; i<items.length; i++) {
-        if (items[i].type.indexOf("image")!==-1) {
-          e.preventDefault(); const file=items[i].getAsFile(); if (!file) continue;
-          const reader=new FileReader();
-          reader.onload = ev => {
-            const src=ev.target?.result as string;
-            const img=new window.Image();
-            img.onload = () => {
-              const width = Math.min(img.width, 300);
-              const height = img.width ? (img.height * width) / img.width : 180;
-              const center = getViewportCenter();
-              pushToHistory();
-              onSaveImages([...images, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
-              toast.success("Imagen pegada");
+      // Leer SIEMPRE el estado vivo desde refs para evitar pegar una selección desactualizada
+      const clip   = clipboardRef.current as any;
+      const curNotes    = notesRef.current;
+      const curImages   = imagesRef.current;
+      const curShapes   = shapesRef.current;
+      const curDrawings = drawingsRef.current;
+      const items = e.clipboardData?.items;
+      // 1) Prioridad: imagen en el portapapeles del sistema
+      if (items) {
+        for (let i=0; i<items.length; i++) {
+          if (items[i].type.indexOf("image")!==-1) {
+            e.preventDefault(); const file=items[i].getAsFile(); if (!file) continue;
+            const reader=new FileReader();
+            reader.onload = ev => {
+              const src=ev.target?.result as string;
+              const img=new window.Image();
+              img.onload = () => {
+                const width = Math.min(img.width, 300);
+                const height = img.width ? (img.height * width) / img.width : 180;
+                const rect = containerRef.current?.getBoundingClientRect();
+                const center = rect
+                  ? { x:(rect.width/2 - offsetRef.current.x)/zoomRef.current, y:(rect.height/2 - offsetRef.current.y)/zoomRef.current }
+                  : { x:160, y:120 };
+                pushToHistory();
+                onSaveImages([...imagesRef.current, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
+                toast.success("Imagen pegada");
+              };
+              img.src=src;
             };
-            img.src=src;
-          };
-          reader.readAsDataURL(file); return;
+            reader.readAsDataURL(file); return;
+          }
         }
       }
-      if (clipboard?.kind === 'board-selection') {
+      // 2) Sin imagen del sistema → portapapeles interno de la pizarra
+      if (clip?.kind === 'board-selection') {
         e.preventDefault(); pushToHistory();
         const newIds: string[] = [];
-        const newNotes = (clipboard.notes || []).map((n: Note) => {
+        const newNotes = (clip.notes || []).map((n: Note) => {
           const id = crypto.randomUUID(); newIds.push(id);
           return { ...n, id, x:n.x+20, y:n.y+20, createdAt:Date.now() };
         });
-        const newImages = (clipboard.images || []).map((img: BoardImage) => {
+        const newImages = (clip.images || []).map((img: BoardImage) => {
           const id = crypto.randomUUID(); newIds.push(id);
           return { ...img, id, x:img.x+20, y:img.y+20, zOrder: Date.now() };
         });
-        const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
+        const newShapes = (clip.shapes || []).map((s: BoardShape) => {
           const id = crypto.randomUUID(); newIds.push(id);
           return { ...s, id, x:s.x+20, y:s.y+20, zOrder: Date.now() };
         });
-        const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
+        const newDrawings = (clip.drawings || []).map((d: DrawingPath) => ({
           ...d,
           zOrder: Date.now(),
           points: d.points.map(pt => ({ x:pt.x+20, y:pt.y+20 })),
         }));
-        const newPathStart = drawings.length;
-        onSaveNotes([...notes, ...newNotes]);
-        onSaveImages([...images, ...newImages]);
-        onSaveShapes([...shapes, ...newShapes]);
-        onSaveDrawings([...drawings, ...newDrawings]);
+        const newPathStart = curDrawings.length;
+        onSaveNotes([...curNotes, ...newNotes]);
+        onSaveImages([...curImages, ...newImages]);
+        onSaveShapes([...curShapes, ...newShapes]);
+        onSaveDrawings([...curDrawings, ...newDrawings]);
         if (newIds.length === 1 && newDrawings.length === 0) {
           // Un solo elemento: selección simple (recuadro blanco, igual que al hacer clic)
           setSelectedId(newIds[0]);
@@ -2670,18 +2685,18 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           setSelectedIds(new Set(newIds));
           setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
         }
-        setClipboard({ ...clipboard, notes:newNotes, images:newImages, shapes:newShapes, drawings:newDrawings });
+        setClipboard({ ...clip, notes:newNotes, images:newImages, shapes:newShapes, drawings:newDrawings });
         toast.success("Pegado");
-      } else if (clipboard && 'content' in clipboard) {
+      } else if (clip && 'content' in clip) {
         e.preventDefault(); pushToHistory();
         const newId=crypto.randomUUID();
-        onSaveNotes([...notes, { ...clipboard, id:newId, x:clipboard.x+20, y:clipboard.y+20, createdAt:Date.now() }]);
-        setSelectedId(newId); setClipboard({ ...clipboard, id:newId, x:clipboard.x+20, y:clipboard.y+20, createdAt:Date.now() }); toast.success("Pegado");
+        onSaveNotes([...curNotes, { ...clip, id:newId, x:clip.x+20, y:clip.y+20, createdAt:Date.now() }]);
+        setSelectedId(newId); setClipboard({ ...clip, id:newId, x:clip.x+20, y:clip.y+20, createdAt:Date.now() }); toast.success("Pegado");
       }
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [images, notes, shapes, drawings, clipboard, onSaveImages, onSaveNotes, onSaveShapes, onSaveDrawings, offset, zoom, pushToHistory, setClipboard, members]);
+  }, [onSaveImages, onSaveNotes, onSaveShapes, onSaveDrawings, pushToHistory, setClipboard]);
 
   useEffect(() => {
     const canvas=canvasRef.current; if (!canvas) return;
