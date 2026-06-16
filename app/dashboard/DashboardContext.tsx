@@ -14,6 +14,30 @@ import { getSocket, disconnectSocket } from "@/lib/socket";
 type BoardSnapshot = { notes: Note[]; images: BoardImage[]; drawings: DrawingPath[]; shapes: BoardShape[] };
 interface DeleteConfig { type: string; id: string; name: string }
 
+// ─── Caché local de la pizarra ───────────────────────────────────────────────
+// Guardamos el último estado de la pizarra en localStorage para poder mostrarla
+// al instante en un F5, sin esperar a la red. El backend sigue siendo la fuente
+// de verdad y reemplaza estos datos cuando responde.
+const PIZARRA_CACHE_PREFIX = 'pizarra_cache_';
+function readPizarraCache(memberId: string): BoardSnapshot | null {
+  if (typeof window === 'undefined' || !memberId) return null;
+  try {
+    const raw = localStorage.getItem(PIZARRA_CACHE_PREFIX + memberId);
+    return raw ? JSON.parse(raw) as BoardSnapshot : null;
+  } catch { return null; }
+}
+function writePizarraCache(memberId: string, snap: BoardSnapshot) {
+  if (typeof window === 'undefined' || !memberId) return;
+  try { localStorage.setItem(PIZARRA_CACHE_PREFIX + memberId, JSON.stringify(snap)); } catch {}
+}
+function readCachedBoardForCurrentMember(): BoardSnapshot | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const id = localStorage.getItem('equipo_dev_current_member');
+    return id ? readPizarraCache(id) : null;
+  } catch { return null; }
+}
+
 export interface DashboardContextType {
   members: Member[];
   tasks: Task[];
@@ -103,10 +127,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [members,        setMembers]        = useState<Member[]>([]);
   const [tasks,          setTasks]          = useState<Task[]>([]);
   const [snippets,       setSnippets]       = useState<Snippet[]>([]);
-  const [notes,          setNotes]          = useState<Note[]>([]);
-  const [drawings,       setDrawings]       = useState<DrawingPath[]>([]);
-  const [boardImages,    setBoardImages]     = useState<BoardImage[]>([]);
-  const [boardShapes,    setBoardShapes]     = useState<BoardShape[]>([]);
+  // Hidratación instantánea desde la caché local (se reemplaza al responder el backend)
+  const [notes,          setNotes]          = useState<Note[]>(() => readCachedBoardForCurrentMember()?.notes ?? []);
+  const [drawings,       setDrawings]       = useState<DrawingPath[]>(() => readCachedBoardForCurrentMember()?.drawings ?? []);
+  const [boardImages,    setBoardImages]     = useState<BoardImage[]>(() => readCachedBoardForCurrentMember()?.images ?? []);
+  const [boardShapes,    setBoardShapes]     = useState<BoardShape[]>(() => readCachedBoardForCurrentMember()?.shapes ?? []);
   const [customShapes,   setCustomShapes]   = useState<CustomShape[]>([]);
   const [archivos,       setArchivos]       = useState<SharedFile[]>([]);
   const [vaultProjects,  setVaultProjects]  = useState<VaultProject[]>([]);
@@ -155,36 +180,44 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        const [m, t, s, v, cs, sf] = await Promise.all([
-          api.getMembers(),
-          api.getTasks(),
-          api.getSnippets(),
-          api.getVault(),
-          api.getCustomShapes(),
-          api.getSharedFiles(),
-        ]);
+        const savedId = localStorage.getItem('equipo_dev_current_member');
+        // La pizarra ya se hidrató desde caché (estado inicial). Lanzamos su carga
+        // del backend EN PARALELO, sin esperar al resto de secciones.
+        if (savedId) loadPizarra(savedId);
 
+        // Datos críticos para desbloquear la UI: miembros + formas personalizadas
+        const [m, cs] = await Promise.all([
+          api.getMembers(),
+          api.getCustomShapes(),
+        ]);
         setMembers(m);
-        setTasks(t);
-        setSnippets(s);
-        setVaultProjects(v);
         setCustomShapes(cs);
-        setArchivos(sf);
 
         if (!m || m.length === 0) {
           setIsSetup(true);
         } else {
-          const savedId = localStorage.getItem('equipo_dev_current_member');
           const found = m.find((mem: Member) => mem.id === savedId);
           if (found) {
             setCurrentUser(found);
             currentUserRef.current = found;
-            // Cargar pizarra personal
-            loadPizarra(found.id);
           } else {
             setShowWhoAreYou(true);
           }
         }
+        setIsLoading(false);
+
+        // Secciones secundarias en segundo plano: no bloquean la pizarra
+        Promise.all([
+          api.getTasks(),
+          api.getSnippets(),
+          api.getVault(),
+          api.getSharedFiles(),
+        ]).then(([t, s, v, sf]) => {
+          setTasks(t);
+          setSnippets(s);
+          setVaultProjects(v);
+          setArchivos(sf);
+        }).catch(err => console.error('Error cargando datos secundarios:', err));
       } catch (err) {
         console.error('Error cargando datos:', err);
         toast.error('No se pudo conectar al servidor. ¿Está corriendo el backend?');
@@ -255,10 +288,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const loadPizarra = useCallback(async (memberId: string) => {
     try {
       const data = await api.getPizarra(memberId);
-      if (data.notes)    setNotes(data.notes);
-      if (data.drawings) setDrawings(data.drawings);
-      if (data.images)   setBoardImages(data.images);
-      if (data.shapes)   setBoardShapes(data.shapes);
+      const notes    = data.notes    ?? [];
+      const drawings = data.drawings ?? [];
+      const images   = data.images   ?? [];
+      const shapes   = data.shapes   ?? [];
+      setNotes(notes);
+      setDrawings(drawings);
+      setBoardImages(images);
+      setBoardShapes(shapes);
+      // Actualizar la caché local con lo que dice el backend (fuente de verdad)
+      writePizarraCache(memberId, { notes, images, drawings, shapes });
 
       // Unirse a la sala personal de la pizarra
       getSocket().emit('join:pizarra', memberId);
@@ -270,6 +309,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const savePizarraDebounced = useCallback((memberId: string, data: {
     notes: Note[], drawings: DrawingPath[], images: BoardImage[], shapes: BoardShape[]
   }) => {
+    // Guardar en caché local de inmediato → F5 muestra la pizarra al instante
+    writePizarraCache(memberId, { notes: data.notes, images: data.images, drawings: data.drawings, shapes: data.shapes });
     if (pizarraTimerRef.current) clearTimeout(pizarraTimerRef.current);
     pizarraTimerRef.current = setTimeout(() => {
       api.savePizarra(memberId, data).catch(console.error);
