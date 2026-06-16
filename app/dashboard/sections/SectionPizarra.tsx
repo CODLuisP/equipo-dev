@@ -2392,9 +2392,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   }, [panelDrag, offset, zoom, shapes, onSaveShapes, currentColor, customShapes]);
 
   useEffect(() => {
-    const hasInternalClipboard = (v: any) =>
-      v?.kind === 'board-selection' || (v && 'content' in v);
-
     const getSelection = () => {
       const ids = new Set(selectedIds);
       if (selectedId) ids.add(selectedId);
@@ -2450,59 +2447,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       return true;
     };
 
-    const pasteInternalClipboard = () => {
-      if (!clipboard) return false;
-      pushToHistory();
-      if (clipboard.kind === 'board-selection') {
-        const newIds: string[] = [];
-        const newNotes = (clipboard.notes || []).map((n: Note) => {
-          const id = crypto.randomUUID(); newIds.push(id);
-          return { ...n, id, x: n.x + 20, y: n.y + 20, createdAt: Date.now() };
-        });
-        const newImages = (clipboard.images || []).map((img: BoardImage) => {
-          const id = crypto.randomUUID(); newIds.push(id);
-          return { ...img, id, x: img.x + 20, y: img.y + 20, zOrder: Date.now() };
-        });
-        const newShapes = (clipboard.shapes || []).map((s: BoardShape) => {
-          const id = crypto.randomUUID(); newIds.push(id);
-          return { ...s, id, x: s.x + 20, y: s.y + 20, zOrder: Date.now() };
-        });
-        const newDrawings = (clipboard.drawings || []).map((d: DrawingPath) => ({
-          ...d,
-          zOrder: Date.now(),
-          points: d.points.map(pt => ({ x: pt.x + 20, y: pt.y + 20 })),
-        }));
-        const newPathStart = drawings.length;
-        onSaveNotes([...notes, ...newNotes]);
-        onSaveImages([...images, ...newImages]);
-        onSaveShapes([...shapes, ...newShapes]);
-        onSaveDrawings([...drawings, ...newDrawings]);
-        setSelectedId(null);
-        setSelectedIds(new Set(newIds));
-        setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
-        setClipboard({
-          ...clipboard,
-          notes: newNotes,
-          images: newImages,
-          shapes: newShapes,
-          drawings: newDrawings,
-        });
-        toast.success("Pegado");
-        return true;
-      }
-      if ('content' in clipboard) {
-        const newId = crypto.randomUUID();
-        onSaveNotes([...notes, { ...clipboard, id: newId, x: clipboard.x + 20, y: clipboard.y + 20, createdAt: Date.now() }]);
-        setSelectedId(newId);
-        setSelectedIds(new Set());
-        setSelectedPathIndices(new Set());
-        setClipboard({ ...clipboard, id: newId, x: clipboard.x + 20, y: clipboard.y + 20, createdAt: Date.now() });
-        toast.success("Pegado");
-        return true;
-      }
-      return false;
-    };
-
     const onKey = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
       if ((e.key==='Delete'||e.key==='Backspace') && (selectedId || selectedIds.size > 0 || selectedPathIndices.size > 0)) {
@@ -2519,10 +2463,10 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           e.preventDefault();
           if (copySelection()) deleteSelection();
         }
-        if (key==='v' && hasInternalClipboard(clipboard)) {
-          e.preventDefault();
-          pasteInternalClipboard();
-        }
+        // Ctrl+V NO se maneja aquí: dejamos que el evento nativo 'paste' lo procese.
+        // Así, si el portapapeles del SO tiene una imagen, se pega la imagen; si no,
+        // el handler de 'paste' usa el portapapeles interno. (Evita pegar texto viejo
+        // y bloquear el pegado de imágenes con preventDefault).
         if (e.key==='='||e.key==='+') { e.preventDefault(); zoomIn(); }
         else if (e.key==='-') { e.preventDefault(); zoomOut(); }
         else if (e.key==='0') { e.preventDefault(); resetZoom(); }
@@ -2716,9 +2660,16 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         onSaveImages([...images, ...newImages]);
         onSaveShapes([...shapes, ...newShapes]);
         onSaveDrawings([...drawings, ...newDrawings]);
-        setSelectedId(null);
-        setSelectedIds(new Set(newIds));
-        setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
+        if (newIds.length === 1 && newDrawings.length === 0) {
+          // Un solo elemento: selección simple (recuadro blanco, igual que al hacer clic)
+          setSelectedId(newIds[0]);
+          setSelectedIds(new Set());
+          setSelectedPathIndices(new Set());
+        } else {
+          setSelectedId(null);
+          setSelectedIds(new Set(newIds));
+          setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
+        }
         setClipboard({ ...clipboard, notes:newNotes, images:newImages, shapes:newShapes, drawings:newDrawings });
         toast.success("Pegado");
       } else if (clipboard && 'content' in clipboard) {
@@ -3407,6 +3358,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 );
               }
               const note = el.data;
+              // Ocultar la nota que se está editando: el textarea la reemplaza visualmente
+              if (editingText?.id === note.id) return null;
               return <DraggableNote key={note.id} note={note} members={members} stackIndex={stackIdx + 1} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
             })
           }
