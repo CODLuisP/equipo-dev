@@ -1896,7 +1896,17 @@ function getNoteDims(n: any) {
 
 function getPathD(points: { x: number; y: number }[]) {
   if (points.length === 0) return '';
-  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  if (points.length < 3) return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  // Suavizado: curvas cuadráticas que pasan por los puntos medios → trazo sin esquinas
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const mx = (points[i].x + points[i + 1].x) / 2;
+    const my = (points[i].y + points[i + 1].y) / 2;
+    d += ` Q${points[i].x},${points[i].y} ${mx},${my}`;
+  }
+  const last = points[points.length - 1];
+  d += ` L${last.x},${last.y}`;
+  return d;
 }
 
 function getRoundedPolyPath(pts: { x: number; y: number }[], r: number): string {
@@ -1923,6 +1933,28 @@ function getRoundedPolyPath(pts: { x: number; y: number }[], r: number): string 
   return d + 'Z';
 }
 
+// ─── Persistencia de la vista (pan + zoom) ────────────────────────────────────
+// Guardamos dónde quedó el usuario en la pizarra infinita, por miembro, para que
+// al recargar/volver siga en el mismo lugar en vez de saltar al origen.
+function pizarraViewKey(): string {
+  const id = (typeof window !== 'undefined' ? localStorage.getItem('equipo_dev_current_member') : '') || '';
+  return `pizarra_view_${id}`;
+}
+function readPizarraView(): { x: number; y: number; zoom: number } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(pizarraViewKey());
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    if (typeof v?.x === 'number' && typeof v?.y === 'number' && typeof v?.zoom === 'number') return v;
+    return null;
+  } catch { return null; }
+}
+function writePizarraView(v: { x: number; y: number; zoom: number }) {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(pizarraViewKey(), JSON.stringify(v)); } catch {}
+}
+
 // ─── Sección: Pizarra ─────────────────────────────────────────────────────────
 
 export default function SectionPizarra({ notes, drawings, images, shapes, customShapes, members, onAddNote, onDeleteNote, onDeleteImage, onSaveDrawings, onSaveImages, onSaveNotes, onSaveShapes, onSaveCustomShapes, onDragNote, onDragImage, onClearAll, pushToHistory, undo, redo, clipboard, setClipboard }: {
@@ -1943,8 +1975,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const laserIsDrawingRef = useRef(false);
   const offsetRef         = useRef({ x:0, y:0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [offset, setOffset]     = useState({ x:0, y:0 });
-  const [zoom, setZoom]         = useState(1);
+  // Restaurar la última posición/zoom guardada (pizarra infinita: no saltar al origen)
+  const [offset, setOffset]     = useState(() => { const v = readPizarraView(); return v ? { x:v.x, y:v.y } : { x:0, y:0 }; });
+  const [zoom, setZoom]         = useState(() => readPizarraView()?.zoom ?? 1);
   const [selectedId, setSelectedId] = useState<string|null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x:number; y:number; id:string; kind:'image'|'shape' }|null>(null);
   const [currentColor, setCurrentColor] = useState('#F4F5F7');
@@ -2286,8 +2319,17 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         if (d.points.length < 2) continue;
         ctx.beginPath(); ctx.strokeStyle = d.color; ctx.lineWidth = d.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         ctx.fillStyle = d.fill || 'transparent';
-        ctx.moveTo(d.points[0].x, d.points[0].y);
-        d.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        const pp = d.points;
+        ctx.moveTo(pp[0].x, pp[0].y);
+        if (pp.length < 3) {
+          pp.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        } else {
+          for (let i = 1; i < pp.length - 1; i++) {
+            const mx = (pp[i].x + pp[i + 1].x) / 2, my = (pp[i].y + pp[i + 1].y) / 2;
+            ctx.quadraticCurveTo(pp[i].x, pp[i].y, mx, my);
+          }
+          ctx.lineTo(pp[pp.length - 1].x, pp[pp.length - 1].y);
+        }
         if (d.fill) ctx.fill();
         ctx.stroke();
       }
@@ -2557,6 +2599,12 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => { offsetRef.current = offset; }, [offset]);
   useEffect(() => { clipboardRef.current = clipboard; }, [clipboard]);
 
+  // Guardar la posición/zoom de la vista (con leve debounce) para restaurarla al recargar
+  useEffect(() => {
+    const t = setTimeout(() => writePizarraView({ x: offset.x, y: offset.y, zoom }), 250);
+    return () => clearTimeout(t);
+  }, [offset, zoom]);
+
   const runLaserAnim = useCallback(() => {
     const canvas = laserCanvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -2567,6 +2615,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     const pts = laserTrailRef.current;
     if (pts.length > 1) {
       const ox=offsetRef.current.x, oy=offsetRef.current.y, z=zoomRef.current;
+      const sx = (p:{x:number;y:number}) => p.x*z+ox, sy = (p:{x:number;y:number}) => p.y*z+oy;
       for (let i=1; i<pts.length; i++) {
         const age = (now - pts[i].t) / LIFE;
         const alpha = Math.max(0, (1 - age) * 0.95 + 0.05);
@@ -2574,8 +2623,14 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         ctx.strokeStyle = `rgba(255,45,45,${alpha})`;
         ctx.lineWidth = 4 * (1 - age * 0.65);
         ctx.lineCap = 'round';
-        ctx.moveTo(pts[i-1].x*z+ox, pts[i-1].y*z+oy);
-        ctx.lineTo(pts[i].x*z+ox, pts[i].y*z+oy);
+        ctx.lineJoin = 'round';
+        // Suavizado: cada tramo es una curva cuadrática entre puntos medios → sin esquinas
+        const start = { x:(sx(pts[i-1])+sx(pts[i]))/2, y:(sy(pts[i-1])+sy(pts[i]))/2 };
+        const end   = (i+1 < pts.length)
+          ? { x:(sx(pts[i])+sx(pts[i+1]))/2, y:(sy(pts[i])+sy(pts[i+1]))/2 }
+          : { x:sx(pts[i]), y:sy(pts[i]) };
+        ctx.moveTo(start.x, start.y);
+        ctx.quadraticCurveTo(sx(pts[i]), sy(pts[i]), end.x, end.y);
         ctx.stroke();
       }
     }
@@ -3498,21 +3553,24 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         })()}
 
         {/* Multi-select bounding box con handles de resize */}
-        {(selectedIds.size > 0 || selectedPathIndices.size > 1 || (selectedPathIndices.size > 0 && selectedIds.size > 0)) && tool === 'select' && !isMarqueeing && !multiDragActive && (() => {
+        {(selectedIds.size > 0 || selectedPathIndices.size > 1 || (selectedPathIndices.size > 0 && selectedIds.size > 0)) && tool === 'select' && !isMarqueeing && (() => {
           const bbox = multiResizeBBox ?? getMultiSelectBBox();
           if (!bbox) return null;
           const pad = 6;
-          const left   = (bbox.x - pad) * zoom + offset.x;
-          const top    = (bbox.y - pad) * zoom + offset.y;
+          // Mientras se arrastra la selección, el recuadro la sigue con el mismo offset
+          const dragX = multiDragActive ? multiDragDelta.x * zoom : 0;
+          const dragY = multiDragActive ? multiDragDelta.y * zoom : 0;
+          const left   = (bbox.x - pad) * zoom + offset.x + dragX;
+          const top    = (bbox.y - pad) * zoom + offset.y + dragY;
           const width  = (bbox.w + pad * 2) * zoom;
           const height = (bbox.h + pad * 2) * zoom;
           const handleStyle = (extra: React.CSSProperties): React.CSSProperties => ({
             position: 'absolute', width: 9, height: 9,
-            background: '#0A0C0F', border: '1.5px solid rgba(var(--blue-rgb),0.95)',
+            background: '#0A0C0F', border: '1.5px solid var(--blue-light)',
             borderRadius: 2, pointerEvents: 'auto', zIndex: 35, ...extra,
           });
           return (
-            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed rgba(var(--blue-rgb),0.6)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
+            <div style={{ position:'absolute', left, top, width, height, border:'1.5px dashed var(--blue-light)', borderRadius:4, pointerEvents:'none', zIndex:30 }}>
               {/* Esquinas */}
               <div style={handleStyle({ top:-4, left:-4, cursor:'nw-resize' })} onMouseDown={e=>onMultiResizeStart('nw',e)}/>
               <div style={handleStyle({ top:-4, right:-4, cursor:'ne-resize' })} onMouseDown={e=>onMultiResizeStart('ne',e)}/>
