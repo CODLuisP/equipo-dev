@@ -77,13 +77,12 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
 
   const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
   const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
-  const shadow = `0 10px 30px rgba(0,0,0,${isSelected ? 0.5 : 0.3})`;
   return (
-    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:stackIndex,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),boxShadow:shadow,pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
+    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:stackIndex,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); onSelect(); onContextMenu?.(e.clientX, e.clientY); }}
       className="group select-none">
-      <img src={image.src} className={`w-full h-full object-cover border ${isSelected ? 'rounded-none border-dashed border-white/40' : 'rounded-xl border-white/10'}`} draggable="false"/>
+      <img src={image.src} className={`w-full h-full object-cover border rounded-none ${isSelected ? 'border-dashed border-white/40' : 'border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
         <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
@@ -2448,11 +2447,48 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       return true;
     };
 
+    // Mover la selección con las flechas del teclado
+    const nudgeSelection = (dx: number, dy: number) => {
+      const { noteItems, imageItems, shapeItems, pathItems } = getSelection();
+      if (!(noteItems.length || imageItems.length || shapeItems.length || pathItems.length)) return false;
+      if (imageItems.length) {
+        const ids = new Set(imageItems.map(i => i.id));
+        onSaveImages(images.map(i => ids.has(i.id) ? { ...i, x: i.x + dx, y: i.y + dy } : i));
+      }
+      if (shapeItems.length) {
+        const ids = new Set(shapeItems.map(s => s.id));
+        onSaveShapes(shapes.map(s => ids.has(s.id) ? { ...s, x: s.x + dx, y: s.y + dy } : s));
+      }
+      if (noteItems.length) {
+        const ids = new Set(noteItems.map(n => n.id));
+        onSaveNotes(notes.map(n => ids.has(n.id) ? { ...n, x: n.x + dx, y: n.y + dy } : n));
+      }
+      if (pathItems.length) {
+        const idxs = new Set(pathItems.map(p => p.idx));
+        onSaveDrawings(drawings.map((p: DrawingPath, idx: number) =>
+          idxs.has(idx) ? { ...p, points: p.points.map(pt => ({ x: pt.x + dx, y: pt.y + dy })) } : p));
+      }
+      return true;
+    };
+
     const onKey = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
       if ((e.key==='Delete'||e.key==='Backspace') && (selectedId || selectedIds.size > 0 || selectedPathIndices.size > 0)) {
         e.preventDefault();
         deleteSelection();
+      }
+      if (e.key.startsWith('Arrow') && !e.ctrlKey && !e.metaKey && (selectedId || selectedIds.size > 0 || selectedPathIndices.size > 0)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        let dx = 0, dy = 0;
+        if (e.key==='ArrowUp') dy = -step;
+        else if (e.key==='ArrowDown') dy = step;
+        else if (e.key==='ArrowLeft') dx = -step;
+        else if (e.key==='ArrowRight') dx = step;
+        if (dx || dy) {
+          if (!e.repeat) pushToHistory(); // un solo paso de deshacer por ráfaga
+          nudgeSelection(dx, dy);
+        }
       }
       if (e.ctrlKey||e.metaKey) {
         const key = e.key.toLowerCase();
