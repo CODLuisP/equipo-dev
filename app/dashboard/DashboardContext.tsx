@@ -313,7 +313,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     writePizarraCache(memberId, { notes: data.notes, images: data.images, drawings: data.drawings, shapes: data.shapes });
     if (pizarraTimerRef.current) clearTimeout(pizarraTimerRef.current);
     pizarraTimerRef.current = setTimeout(() => {
-      api.savePizarra(memberId, data).catch(console.error);
+      // Si el backend está caído, el trabajo ya quedó en caché local: avisar en
+      // silencio (console.warn) en vez de console.error para no abrir el overlay.
+      api.savePizarra(memberId, data).catch((e) => console.warn('Pizarra: no se pudo sincronizar con el backend (offline?):', e?.message ?? e));
     }, 800); // guardar 800ms después del último cambio
   }, []);
 

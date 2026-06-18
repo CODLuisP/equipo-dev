@@ -2,7 +2,6 @@
 
 import { useDashboard } from "@/app/dashboard/DashboardContext";
 import SectionPizarra from "@/app/dashboard/sections/SectionPizarra";
-import { toast } from "sonner";
 
 export default function PizarraPage() {
   const {
@@ -24,7 +23,7 @@ export default function PizarraPage() {
       members={members}
       onAddNote={() => setOpenNoteModal(true)}
       onDeleteNote={n => { setDeleteConfig({ type: "note", id: n.id, name: "esta nota" }); setOpenDeleteModal(true); }}
-      onDeleteImage={img => { saveImages(boardImages.filter(i => i.id !== img.id)); toast.success("Imagen eliminada"); }}
+      onDeleteImage={img => { saveImages(boardImages.filter(i => i.id !== img.id)); }}
       onSaveDrawings={saveDrawings}
       onSaveImages={saveImages}
       onSaveNotes={saveNotes}
@@ -40,7 +39,6 @@ export default function PizarraPage() {
       onClearAll={() => {
         pushToHistory();
         saveDrawings([]); saveNotes([]); saveImages([]); saveShapes([]);
-        toast.success("Pizarra limpiada");
       }}
     />
   );

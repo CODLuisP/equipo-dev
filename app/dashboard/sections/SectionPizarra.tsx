@@ -6,7 +6,6 @@ import {
   Plus, ZoomIn, ZoomOut, Maximize, RefreshCw, Sparkles, Upload, Image as ImageIcon,
   Undo2, Redo2, Download, Layers, BringToFront, SendToBack, ArrowUp, ArrowDown
 } from "lucide-react";
-import { toast } from "sonner";
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 
@@ -784,7 +783,7 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         const canvas = document.createElement("canvas");
         canvas.width = PS; canvas.height = PS;
         const ctx = canvas.getContext("2d");
-        if (!ctx) { toast.error("Error al procesar la imagen"); setVectorizing(false); return; }
+        if (!ctx) { setVectorizing(false); return; }
 
         const natW = imgElement.naturalWidth || imgElement.width;
         const natH = imgElement.naturalHeight || imgElement.height;
@@ -808,7 +807,6 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         }
         if (opaqueCount === 0) {
           setStrokes([]);
-          toast.error("La imagen no tiene contenido visible para vectorizar");
           setVectorizing(false);
           return;
         }
@@ -828,7 +826,6 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
         if (samples.length === 0) {
           setStrokes([]);
-          toast.error("La imagen no tiene suficientes píxeles visibles");
           setVectorizing(false);
           return;
         }
@@ -981,10 +978,8 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
         }
 
         setStrokes(newStrokes);
-        toast.success(`Listo · ${newStrokes.length} regiones vectorizadas`);
       } catch (err) {
         console.error(err);
-        toast.error("Ocurrió un error al vectorizar la imagen");
       } finally {
         setVectorizing(false);
       }
@@ -993,7 +988,6 @@ function ShapeEditor({ onSave, onCancel }: { onSave: (s: CustomShape) => void; o
 
   const loadImage = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("Por favor selecciona un archivo de imagen válido.");
       return;
     }
     const reader = new FileReader();
@@ -2135,8 +2129,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setEditingText(null);
   };
 
-  const zoomIn  = () => setZoom(p => Math.min(p+0.1, 3));
-  const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.3));
+  const zoomIn  = () => setZoom(p => Math.min(p+0.1, 10));
+  const zoomOut = () => setZoom(p => Math.max(p-0.1, 0.1));
   const resetZoom = () => { setZoom(1); setOffset({x:0,y:0}); };
 
   const getViewportCenter = () => {
@@ -2190,7 +2184,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           height,
           zOrder: Date.now(),
         }]);
-        toast.success("Imagen importada");
       };
       img.src = src;
     };
@@ -2259,7 +2252,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       const shape = shapes.find(s => s.id === id); if (!shape) return;
       setClipboard({ kind: 'board-selection', images: [], shapes: [shape], notes: [], drawings: [] });
     }
-    toast.success('Copiado');
   }, [images, shapes, setClipboard]);
 
   const cutElement = useCallback((id: string, kind: 'image' | 'shape') => {
@@ -2273,7 +2265,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       pushToHistory(); onSaveShapes(shapes.filter(s => s.id !== id));
     }
     setSelectedId(null); setCtxMenu(null);
-    toast.success('Cortado');
   }, [images, shapes, setClipboard, pushToHistory, onDeleteImage, onSaveShapes]);
 
   const pasteFromCtx = useCallback(() => {
@@ -2286,7 +2277,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     if (newShapes.length) onSaveShapes([...shapes, ...newShapes]);
     if (newNotes.length)  onSaveNotes([...notes, ...newNotes]);
     setClipboard({ ...clipboard, images: newImages, shapes: newShapes, notes: newNotes });
-    toast.success('Pegado');
   }, [clipboard, images, shapes, notes, pushToHistory, onSaveImages, onSaveShapes, onSaveNotes, setClipboard]);
 
   const exportBoardPng = async () => {
@@ -2295,7 +2285,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     images.forEach(img => { allX.push(img.x, img.x + img.width); allY.push(img.y, img.y + img.height); });
     notes.forEach(n => { const dim = getNoteDims(n); allX.push(n.x, n.x + dim.w); allY.push(n.y, n.y + dim.h); });
     shapes.forEach(s => { allX.push(s.x, s.x + s.width); allY.push(s.y, s.y + s.height); });
-    if (!allX.length) { toast.error("No hay contenido para exportar"); return; }
+    if (!allX.length) { return; }
     const pad = 80;
     const minX = Math.min(...allX) - pad, minY = Math.min(...allY) - pad;
     const maxX = Math.max(...allX) + pad, maxY = Math.max(...allY) + pad;
@@ -2364,7 +2354,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     link.download = `pizarra-${new Date().toISOString().slice(0,10)}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    toast.success("Pizarra exportada");
   };
 
   const resolveShapeInfo = (type: string) => {
@@ -2401,7 +2390,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     const dw = Math.min(Math.round(aspect >= 1 ? 100 : 100*aspect), 120);
     const dh = Math.min(Math.round(aspect >= 1 ? 100/aspect : 100), 120);
     onSaveCustomShapes([...customShapes, { id: crypto.randomUUID(), label, svgContent, viewBox: '0 0 100 100', defaultW: dw, defaultH: dh }]);
-    toast.success(`"${label}" guardada en el panel de formas`);
   };
 
   const [showShapeEditor, setShowShapeEditor] = useState(false);
@@ -2485,7 +2473,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         shapes: shapeItems,
         drawings: pathItems.map(item => item.path),
       });
-      toast.success("Copiado");
       return true;
     };
 
@@ -2732,7 +2719,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                   : { x:160, y:120 };
                 pushToHistory();
                 onSaveImages([...imagesRef.current, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
-                toast.success("Imagen pegada");
               };
               img.src=src;
             };
@@ -2777,12 +2763,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           setSelectedPathIndices(new Set(newDrawings.map((_: DrawingPath, idx: number) => newPathStart + idx)));
         }
         setClipboard({ ...clip, notes:newNotes, images:newImages, shapes:newShapes, drawings:newDrawings });
-        toast.success("Pegado");
       } else if (clip && 'content' in clip) {
         e.preventDefault(); pushToHistory();
         const newId=crypto.randomUUID();
         onSaveNotes([...curNotes, { ...clip, id:newId, x:clip.x+20, y:clip.y+20, createdAt:Date.now() }]);
-        setSelectedId(newId); setClipboard({ ...clip, id:newId, x:clip.x+20, y:clip.y+20, createdAt:Date.now() }); toast.success("Pegado");
+        setSelectedId(newId); setClipboard({ ...clip, id:newId, x:clip.x+20, y:clip.y+20, createdAt:Date.now() });
       }
     };
     window.addEventListener('paste', onPaste);
@@ -2811,7 +2796,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if (e.ctrlKey || e.metaKey) {
         // Zoom centrado en el mouse
         const factor = Math.pow(1.1, -e.deltaY / 100);
-        const newZoom = Math.min(Math.max(zoom * factor, 0.3), 3);
+        const newZoom = Math.min(Math.max(zoom * factor, 0.1), 10);
 
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -3185,7 +3170,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     <div className="h-full relative overflow-hidden">
       {/* Shapes Panel (Right Center) */}
       <ShapesPanel isVisible={showShapesPanel} onToggle={() => setShowShapesPanel(v => !v)} onAddShape={handleAddShape} onDragStart={(type, e) => { setPanelDrag({ type, startX: e.clientX, startY: e.clientY, clientX: e.clientX, clientY: e.clientY }); }} defaultColor={currentColor} customTemplates={customShapes} onDeleteCustom={id => onSaveCustomShapes(customShapes.filter(s=>s.id!==id))} onRenameCustom={(id, label) => onSaveCustomShapes(customShapes.map(s=>s.id===id?{...s,label}:s))} onOpenEditor={() => { setShowShapesPanel(false); setShowShapeEditor(true); }} selectedPathCount={selectedPathIndices.size} onSaveSelectionAsShape={handleSaveSelectionAsShape} />
-      {showShapeEditor && <ShapeEditor onSave={shape => { onSaveCustomShapes([...customShapes, shape]); setShowShapeEditor(false); toast.success(`"${shape.label}" guardada en Mis Formas`); }} onCancel={() => setShowShapeEditor(false)} />}
+      {showShapeEditor && <ShapeEditor onSave={shape => { onSaveCustomShapes([...customShapes, shape]); setShowShapeEditor(false); }} onCancel={() => setShowShapeEditor(false)} />}
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display:'none' }} />
 
       {/* Ghost mientras arrastra desde el panel */}
