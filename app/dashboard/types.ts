@@ -25,7 +25,7 @@ export interface Task {
   blocks?: TaskBlock[];
 }
 export interface Snippet { id: string; title: string; content: string; label: 'env' | 'código' | 'config' | 'otro'; authorId: string; createdAt: number; }
-export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text' | 'textbox'; fontSize?: number; width?: number; height?: number; rotation?: number; fontFamily?: string; textAlign?: 'left' | 'center' | 'right'; fontWeight?: 'normal' | 'bold'; }
+export interface Note { id: string; content: string; authorId: string; createdAt: number; x: number; y: number; color?: string; type?: 'note' | 'text'; fontSize?: number; width?: number; rotation?: number; fontFamily?: string; textAlign?: 'left' | 'center' | 'right'; fontWeight?: 'normal' | 'bold'; }
 export interface BoardImage { id: string; src: string; x: number; y: number; width: number; height: number; rotation?: number; zOrder?: number; }
 export interface DrawingPath { points: { x: number; y: number }[]; color: string; width: number; fill?: string; cornerRadius?: number; zOrder?: number; }
 export interface BoardShape { id: string; type: string; x: number; y: number; width: number; height: number; color: string; label?: string; rotation?: number; zOrder?: number; }

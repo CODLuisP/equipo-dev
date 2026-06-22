@@ -15,20 +15,21 @@ type BoardSnapshot = { notes: Note[]; images: BoardImage[]; drawings: DrawingPat
 interface DeleteConfig { type: string; id: string; name: string }
 
 // ─── Caché local de la pizarra ───────────────────────────────────────────────
-// Guardamos el último estado de la pizarra en localStorage para poder mostrarla
-// al instante en un F5, sin esperar a la red. El backend sigue siendo la fuente
-// de verdad y reemplaza estos datos cuando responde.
+// Guardamos el último estado de la pizarra en localStorage para mostrarla al
+// instante en un F5. savedAt marca cuándo se guardó localmente; loadPizarra
+// solo sobreescribe si la caché no tiene cambios posteriores al inicio de carga.
 const PIZARRA_CACHE_PREFIX = 'pizarra_cache_';
-function readPizarraCache(memberId: string): BoardSnapshot | null {
+type CacheEntry = BoardSnapshot & { savedAt?: number };
+function readPizarraCache(memberId: string): CacheEntry | null {
   if (typeof window === 'undefined' || !memberId) return null;
   try {
     const raw = localStorage.getItem(PIZARRA_CACHE_PREFIX + memberId);
-    return raw ? JSON.parse(raw) as BoardSnapshot : null;
+    return raw ? JSON.parse(raw) as CacheEntry : null;
   } catch { return null; }
 }
 function writePizarraCache(memberId: string, snap: BoardSnapshot) {
   if (typeof window === 'undefined' || !memberId) return;
-  try { localStorage.setItem(PIZARRA_CACHE_PREFIX + memberId, JSON.stringify(snap)); } catch {}
+  try { localStorage.setItem(PIZARRA_CACHE_PREFIX + memberId, JSON.stringify({ ...snap, savedAt: Date.now() })); } catch {}
 }
 function readCachedBoardForCurrentMember(): BoardSnapshot | null {
   if (typeof window === 'undefined') return null;
@@ -286,8 +287,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // ── Cargar / guardar pizarra personal ──────────────────────────────────────
 
   const loadPizarra = useCallback(async (memberId: string) => {
+    const loadStartedAt = Date.now();
     try {
       const data = await api.getPizarra(memberId);
+
+      // Si el usuario hizo cambios locales DESPUÉS de que empezamos a cargar
+      // (race condition: cambio → F5 → loadPizarra trae datos viejos), preservar
+      // la caché local y no sobreescribir el estado con datos obsoletos del backend.
+      const cached = readPizarraCache(memberId);
+      if (cached?.savedAt && cached.savedAt > loadStartedAt) {
+        getSocket().emit('join:pizarra', memberId);
+        return;
+      }
+
       const notes    = data.notes    ?? [];
       const drawings = data.drawings ?? [];
       const images   = data.images   ?? [];
@@ -296,13 +308,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       setDrawings(drawings);
       setBoardImages(images);
       setBoardShapes(shapes);
-      // Actualizar la caché local con lo que dice el backend (fuente de verdad)
       writePizarraCache(memberId, { notes, images, drawings, shapes });
 
-      // Unirse a la sala personal de la pizarra
       getSocket().emit('join:pizarra', memberId);
     } catch (e) {
       console.warn('Sin datos de pizarra para este miembro');
+      // Aunque el backend falle, unirse a la sala para recibir updates en tiempo real
+      getSocket().emit('join:pizarra', memberId);
     }
   }, []);
 

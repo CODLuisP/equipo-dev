@@ -100,86 +100,6 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   );
 }
 
-// Rectángulo con texto centrado (herramienta "Cuadro de texto")
-function DraggableTextbox({ note, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onEditText, stackIndex = 1 }: any) {
-  const [pos, setPos] = useState({ x:note.x, y:note.y, w:note.width||160, h:note.height||80 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [resizeDir, setResizeDir]   = useState<string|null>(null);
-  const [localRotation, setLocalRotation] = useState<number>(note.rotation ?? 0);
-  const rotationRef  = useRef<number>(note.rotation ?? 0);
-  const isRotatingRef = useRef(false);
-  const elemDivRef   = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isDragging && !resizeDir) setPos({ x:note.x, y:note.y, w:note.width||160, h:note.height||80 });
-  }, [note.x, note.y, note.width, note.height]);
-  useEffect(() => {
-    if (!isRotatingRef.current) { const r = note.rotation ?? 0; setLocalRotation(r); rotationRef.current = r; }
-  }, [note.rotation]);
-  useEffect(() => {
-    const onMM=(e:MouseEvent)=>{
-      if (isDragging) setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom}));
-      if (resizeDir) setPos(p=>{ let{x,y,w,h}=p; const dx=e.movementX/zoom,dy=e.movementY/zoom; if(resizeDir.includes('e'))w+=dx; if(resizeDir.includes('w')){x+=dx;w-=dx;} if(resizeDir.includes('s'))h+=dy; if(resizeDir.includes('n')){y+=dy;h-=dy;} return{x,y,w:Math.max(40,w),h:Math.max(30,h)}; });
-    };
-    const onMU=()=>{ if(isDragging||resizeDir){setIsDragging(false);setResizeDir(null);onDrag(note.id,pos.x,pos.y,pos.w,pos.h);} };
-    if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
-    return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
-  },[isDragging,resizeDir,pos,note.id,onDrag,zoom]);
-
-  const handleRotateStart = (e: React.MouseEvent) => {
-    e.stopPropagation(); e.preventDefault();
-    const rect = elemDivRef.current?.getBoundingClientRect(); if (!rect) return;
-    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
-    const startRot = rotationRef.current;
-    isRotatingRef.current = true;
-    const onMove = (me: MouseEvent) => {
-      const a = Math.atan2(me.clientY - cy, me.clientX - cx);
-      setLocalRotation(startRot + (a - startAngle) * 180 / Math.PI); rotationRef.current = startRot + (a - startAngle) * 180 / Math.PI;
-    };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); isRotatingRef.current = false; onRotate?.(note.id, rotationRef.current); };
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-  };
-
-  const dx = isInMultiSelect && dragOffset ? dragOffset.x : 0;
-  const dy = isInMultiSelect && dragOffset ? dragOffset.y : 0;
-  const col = note.color || '#F4F5F7';
-  return (
-    <div ref={elemDivRef} style={{ position:'absolute',left:pos.x+dx,top:pos.y+dy,width:pos.w,height:pos.h,zIndex:stackIndex,cursor:disabled?'inherit':(isInMultiSelect?'grab':(isDragging?'grabbing':'grab')),pointerEvents:'auto',transform:`rotate(${localRotation}deg)` }}
-      onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
-      onDoubleClick={e=>{ if(disabled)return; e.stopPropagation(); onEditText?.(note); }}
-      className="group select-none">
-      <div style={{
-        width:'100%', height:'100%', boxSizing:'border-box',
-        border: `2px solid ${col}`, borderRadius: 8, background: col + '14',
-        display:'flex', alignItems:'center', justifyContent:'center', padding: 8,
-        overflow:'hidden',
-      }}>
-        <span style={{
-          color: col, fontSize: note.fontSize || 18, lineHeight:1.2,
-          fontFamily: note.fontFamily || "'Plus Jakarta Sans', sans-serif",
-          textAlign:'center', fontWeight: note.fontWeight || 'bold',
-          whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'anywhere',
-        }}>{note.content}</span>
-      </div>
-      {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
-        <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
-          className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/60 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
-      ))}
-      {isSelected&&!disabled&&(['n','s','e','w'] as const).map(dir=>(
-        <div key={`edge-${dir}`} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
-          className={`absolute bg-transparent z-50 rounded-sm
-            ${dir==='n'?'top-0 -translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
-            ${dir==='s'?'bottom-0 translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
-            ${dir==='e'?'right-0 translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
-            ${dir==='w'?'left-0 -translate-x-1/2 top-2 bottom-2 w-2 cursor-ew-resize':''}
-          `}/>
-      ))}
-      {isSelected&&!disabled&&<div style={{ position:'absolute', left:'50%', top:0, transform:'translateX(-50%)' }}><RotateHandle onMouseDown={handleRotateStart}/></div>}
-    </div>
-  );
-}
-
 function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onEditText, stackIndex = 1 }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -1958,9 +1878,6 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
 }
 
 function getNoteDims(n: any) {
-  if (n.type === 'textbox') {
-    return { w: n.width || 160, h: n.height || 80 };
-  }
   if (n.type === 'text') {
     const fs = n.fontSize || 18;
     const w = n.width > 0 ? n.width : Math.max(60, (n.content?.length || 4) * fs * 0.55);
@@ -2041,7 +1958,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; redo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
-  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'laser'|'textbox'>('select');
+  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'laser'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapeStart, setShapeStart]     = useState<{x:number;y:number}|null>(null);
   const [shapeCurrent, setShapeCurrent] = useState<{x:number;y:number}|null>(null);
@@ -2058,7 +1975,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [selectedId, setSelectedId] = useState<string|null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x:number; y:number; id:string; kind:'image'|'shape' }|null>(null);
   const [currentColor, setCurrentColor] = useState('#F4F5F7');
-  const [editingText, setEditingText] = useState<{ x: number, y: number, content: string, id?: string, boxW?: number, boxH?: number } | null>(null);
+  const [editingText, setEditingText] = useState<{ x: number, y: number, content: string, id?: string } | null>(null);
   const [isMarqueeing, setIsMarqueeing]           = useState(false);
   const [marqueeStart, setMarqueeStart]           = useState<{x:number,y:number}|null>(null);
   const [marqueeEnd, setMarqueeEnd]               = useState<{x:number,y:number}|null>(null);
@@ -2180,7 +2097,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const saveText = () => {
     if (!editingText) return;
     const content = editingText.content.trim();
-    const editingBox = editingText.id ? notes.find(n => n.id === editingText.id && n.type === 'textbox') : undefined;
     if (content) {
       pushToHistory();
       const rect = containerRef.current?.getBoundingClientRect();
@@ -2188,13 +2104,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         const worldX = (editingText.x - rect.left - offset.x) / zoom;
         const worldY = (editingText.y - rect.top - offset.y) / zoom;
         const textProps = { color: currentColor, type: 'text' as const, fontSize: textFontSize, fontFamily: textFontFamily, textAlign, fontWeight: textBold ? 'bold' as const : 'normal' as const };
-        if (editingBox) {
-          // Cuadro de texto: conservar tipo/tamaño/posición, solo actualizar el texto y estilo
-          onSaveNotes(notes.map(n => n.id === editingText.id
-            ? { ...n, content: editingText.content, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' as const : 'normal' as const }
-            : n));
-          setSelectedId(editingText.id);
-        } else if (editingText.id) {
+        if (editingText.id) {
           onSaveNotes(notes.map(n => n.id === editingText.id ? { ...n, content: editingText.content, x: worldX, y: worldY, ...textProps } : n));
           setSelectedId(editingText.id);
         } else {
@@ -2212,11 +2122,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         }
         setTool('select');
       }
-    } else if (editingBox) {
-      // Cuadro de texto vacío: conservar el recuadro (no borrarlo)
-      onSaveNotes(notes.map(n => n.id === editingText.id ? { ...n, content: '', color: currentColor } : n));
-      setSelectedId(editingText.id);
-      setTool('select');
     } else if (editingText.id) {
       pushToHistory();
       onSaveNotes(notes.filter(n => n.id !== editingText.id));
@@ -2251,13 +2156,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     if (note.textAlign)   setTextAlign(note.textAlign);
     if (note.fontWeight)  setTextBold(note.fontWeight === 'bold');
     setTool('text');
-    const isBox = note.type === 'textbox';
     setEditingText({
       id: note.id,
       content: note.content,
       x: note.x * zoom + offset.x + rect.left,
       y: note.y * zoom + offset.y + rect.top,
-      ...(isBox ? { boxW: (note.width || 160) * zoom, boxH: (note.height || 80) * zoom } : {}),
     });
     setSelectedId(note.id);
   };
@@ -2668,10 +2571,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
-    if (editingText?.boxW) return; // cuadro de texto: alto fijo, no autoajustar
     ta.style.height = 'auto';
     ta.style.height = ta.scrollHeight + 'px';
-  }, [editingText?.content, editingText?.boxW]);
+  }, [editingText?.content]);
 
   // Keep refs fresh so resize effect has no stale closures
   useEffect(() => { notesRef.current = notes; }, [notes]);
@@ -3030,7 +2932,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if(nn.length!==notesRef.current.length){notesRef.current=nn;onSaveNotes(nn);}
       if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
     }
-    if (['rect','rhombus','ellipse','line','textbox'].includes(tool)) {
+    if (['rect','rhombus','ellipse','line'].includes(tool)) {
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
@@ -3123,7 +3025,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
       }
     }
-    if (isDrawing && ['rect','rhombus','ellipse','line','textbox'].includes(tool)) {
+    if (isDrawing && ['rect','rhombus','ellipse','line'].includes(tool)) {
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       let x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
       if (e.shiftKey && shapeStart) {
@@ -3198,26 +3100,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       setMarqueeStart(null);
       setMarqueeEnd(null);
     }
-    if (isDrawing && shapeStart && shapeCurrent && tool==='textbox') {
-      const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
-      // Si fue un clic (sin arrastrar) o muy pequeño → cuadro por defecto
-      let x=Math.min(sx,ex), y=Math.min(sy,ey), w=Math.abs(ex-sx), h=Math.abs(ey-sy);
-      if (w < 30/zoom || h < 24/zoom) { w=160; h=80; x=sx; y=sy; }
-      const id = crypto.randomUUID();
-      const newNote: Note = {
-        id, content:'', authorId: members[0]?.id || '', createdAt: Date.now(),
-        x, y, width:w, height:h, color: currentColor, type:'textbox',
-        fontSize: textFontSize, fontFamily: textFontFamily, textAlign:'center',
-        fontWeight: textBold ? 'bold' : 'normal',
-      };
-      onSaveNotes([...notes, newNote]);
-      setSelectedId(id);
-      setShapeStart(null); setShapeCurrent(null); setIsDrawing(false);
-      setTool('select');
-      // Abrir el editor centrado dentro del cuadro recién creado
-      openTextEditorForNote(newNote);
-      return;
-    }
     if (isDrawing && shapeStart && shapeCurrent && ['rect','rhombus','ellipse','line'].includes(tool)) {
       const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
       const minSize = 6 / zoom;
@@ -3251,7 +3133,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsDrawing(false);
     setIsPanning(false);
   };
-  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line','textbox'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
   const selectedImageIndex = selectedId ? images.findIndex(img => img.id === selectedId) : -1;
   const hasSelectedImage = selectedImageIndex >= 0;
 
@@ -3299,7 +3181,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       {/* Panel herramientas de dibujo: colores + grosor + tipografía */}
-      {(tool === 'pencil' || tool === 'text' || tool === 'textbox' || ['rect','rhombus','ellipse','line'].includes(tool) || hasSelectedPaths || hasSelectedText) && (
+      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line'].includes(tool) || hasSelectedPaths || hasSelectedText) && (
         <div style={{ position:'fixed', left:16, top:16, zIndex:1000, background:'rgba(18,22,30,0.92)', backdropFilter:'blur(20px)', borderRadius:14, border:'1px solid rgba(255,255,255,0.09)', boxShadow:'0 12px 40px rgba(0,0,0,0.55)', padding:'7px', width: tool === 'text' ? 160 : 'auto' }}>
 
           {/* Grosores — para lápiz, formas y texto */}
@@ -3427,7 +3309,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Pencil size={18}/><div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white" style={{ background: currentColor }}/></div>} title="Lápiz"/>
             <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={18}/>} title="Texto"/>
-            <ToolBtn active={tool==='textbox'} onClick={()=>setTool('textbox')} title="Cuadro de texto" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="9" y1="9" x2="9" y2="9.01"/><path d="M7 7.2h4M9 7.2v3.6"/></svg>}/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={tool==='line'}    onClick={()=>setTool('line')}    title="Línea" icon={<svg viewBox="0 0 18 18" width={18} height={18} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="15" x2="15" y2="3"/></svg>}/>
             <ToolBtn active={tool==='rect'}    onClick={()=>setTool('rect')}    title="Rectángulo" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>}/>
@@ -3570,14 +3451,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               const note = el.data;
               // Ocultar la nota que se está editando: el textarea la reemplaza visualmente
               if (editingText?.id === note.id) return null;
-              if (note.type === 'textbox') {
-                return <DraggableTextbox key={note.id} note={note} stackIndex={stackIdx + 1}
-                  onDrag={(id:string,x:number,y:number,w:number,h:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,x,y,width:w,height:h}:n))}
-                  onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))}
-                  disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)}
-                  dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote}
-                  onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
-              }
               return <DraggableNote key={note.id} note={note} members={members} stackIndex={stackIdx + 1} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
             })
           }
@@ -3589,9 +3462,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             ref={textareaRef}
             autoFocus
             className="bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
-            style={editingText.boxW
-              ? { position:'fixed', left: editingText.x, top: editingText.y, width: editingText.boxW, height: editingText.boxH, padding: 8*zoom, boxSizing:'border-box', color: currentColor, fontSize: textFontSize*zoom, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', lineHeight: 1.2, textAlign:'center', outline:'none', zIndex: 2000, pointerEvents:'auto' }
-              : { position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', textAlign, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
+            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', textAlign, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
             value={editingText.content}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
@@ -3720,9 +3591,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           } else if (tool==='ellipse') {
             const cx=(sx+ex)/2,cy=(sy+ey)/2,rx2=Math.abs(ex-sx)/2,ry2=Math.abs(ey-sy)/2;
             shape=<ellipse {...common} cx={cx} cy={cy} rx={rx2} ry={ry2}/>;
-          } else if (tool==='textbox') {
-            const rx=Math.min(sx,ex),ry=Math.min(sy,ey),rw=Math.abs(ex-sx),rh=Math.abs(ey-sy);
-            shape=<rect x={rx} y={ry} width={rw} height={rh} rx={8/zoom} stroke={currentColor} strokeWidth={2/zoom} fill={currentColor+'14'} strokeDasharray={`${6/zoom} ${4/zoom}`}/>;
           }
           return shape ? (
             <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:25}} xmlns="http://www.w3.org/2000/svg">
