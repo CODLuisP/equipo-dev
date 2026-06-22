@@ -173,6 +173,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const redoRef    = useRef<BoardSnapshot[]>([]);
   const currentUserRef = useRef<Member | null>(null);
   const pizarraTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref sincrónico del estado de la pizarra — siempre actualizado ANTES de llamar a
+  // syncPizarra, evitando stale closures cuando se hacen varios saves seguidos
+  // (ej. clearAll llama saveDrawings+saveNotes+saveImages+saveShapes en cadena).
+  const liveBoardRef = useRef<BoardSnapshot>({
+    notes: notes, drawings: drawings, images: boardImages, shapes: boardShapes,
+  });
 
   // ── Cargar datos del backend ────────────────────────────────────────────────
   useEffect(() => {
@@ -304,6 +310,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       const drawings = data.drawings ?? [];
       const images   = data.images   ?? [];
       const shapes   = data.shapes   ?? [];
+      liveBoardRef.current = { notes, drawings, images, shapes };
       setNotes(notes);
       setDrawings(drawings);
       setBoardImages(images);
@@ -349,6 +356,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     if (!last) return;
     historyRef.current = rest;
     redoRef.current = [getBoardSnapshot(), ...redoRef.current].slice(0, 30);
+    liveBoardRef.current = { notes: last.notes, drawings: last.drawings, images: last.images, shapes: last.shapes };
     setNotes(last.notes); setBoardImages(last.images); setDrawings(last.drawings); setBoardShapes(last.shapes);
     toast.success("↩️ Deshecho");
   };
@@ -358,6 +366,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     if (!next) return;
     redoRef.current = rest;
     historyRef.current = [getBoardSnapshot(), ...historyRef.current].slice(0, 30);
+    liveBoardRef.current = { notes: next.notes, drawings: next.drawings, images: next.images, shapes: next.shapes };
     setNotes(next.notes); setBoardImages(next.images); setDrawings(next.drawings); setBoardShapes(next.shapes);
     toast.success("Rehecho");
   };
@@ -378,13 +387,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }) => {
     const uid = currentUserRef.current?.id;
     if (!uid) return;
-    savePizarraDebounced(uid, {
-      notes:    patch.notes    ?? notes,
-      drawings: patch.drawings ?? drawings,
-      images:   patch.images   ?? boardImages,
-      shapes:   patch.shapes   ?? boardShapes,
-    });
-  }, [notes, drawings, boardImages, boardShapes, savePizarraDebounced]);
+    // Leer del ref sincrónico — siempre tiene los datos más recientes incluso cuando
+    // se llama varias veces seguidas antes de que React re-renderice.
+    if (patch.notes    !== undefined) liveBoardRef.current.notes    = patch.notes;
+    if (patch.drawings !== undefined) liveBoardRef.current.drawings = patch.drawings;
+    if (patch.images   !== undefined) liveBoardRef.current.images   = patch.images;
+    if (patch.shapes   !== undefined) liveBoardRef.current.shapes   = patch.shapes;
+    savePizarraDebounced(uid, { ...liveBoardRef.current });
+  }, [savePizarraDebounced]);
 
   const saveNotes        = (d: Note[])        => { setNotes(d);       syncPizarra({ notes: d }); };
   const saveDrawings     = (d: DrawingPath[])  => { setDrawings(d);    syncPizarra({ drawings: d }); };
