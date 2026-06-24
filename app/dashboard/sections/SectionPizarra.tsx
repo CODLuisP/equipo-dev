@@ -1958,7 +1958,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   onDragNote: (id: string, x: number, y: number, extra?: Partial<Note>) => void; onDragImage: (id: string, x: number, y: number, w?: number, h?: number) => void;
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; redo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
-  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'laser'>('select');
+  const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'arrow'|'laser'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapeStart, setShapeStart]     = useState<{x:number;y:number}|null>(null);
   const [shapeCurrent, setShapeCurrent] = useState<{x:number;y:number}|null>(null);
@@ -1995,6 +1995,10 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const selectedPathIdxRef   = useRef(selectedPathIndices);
   const zoomRef              = useRef(zoom);
   const clipboardRef         = useRef(clipboard);
+  // 'internal' = el último Ctrl+C fue sobre un elemento de la pizarra.
+  // En ese caso el handler de paste debe priorizar el clipboard interno
+  // aunque el SO todavía tenga una imagen de un copiado anterior.
+  const clipSourceRef        = useRef<'internal' | 'os'>('os');
   const [showShapesPanel, setShowShapesPanel]     = useState(false);
   const [panelDrag, setPanelDrag] = useState<{ type: string; startX: number; startY: number; clientX: number; clientY: number } | null>(null);
   const [pathLiveRot, setPathLiveRot] = useState<{angle:number;cx:number;cy:number}|null>(null);
@@ -2466,6 +2470,12 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       const { noteItems, imageItems, shapeItems, pathItems } = getSelection();
       const hasSelection = noteItems.length || imageItems.length || shapeItems.length || pathItems.length;
       if (!hasSelection) return false;
+      // Escribir sentinel al clipboard del SO para que el handler de paste sepa
+      // que el último Ctrl+C fue interno. Si el usuario luego copia algo externo,
+      // el SO sobreescribe el clipboard y el sentinel desaparece.
+      navigator.clipboard.writeText('__pizarra_copy__').catch(() => {
+        clipSourceRef.current = 'internal'; // fallback si la API falla
+      });
       setClipboard({
         kind: 'board-selection',
         notes: noteItems,
@@ -2701,8 +2711,18 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       const curShapes   = shapesRef.current;
       const curDrawings = drawingsRef.current;
       const items = e.clipboardData?.items;
-      // 1) Prioridad: imagen en el portapapeles del sistema
-      if (items) {
+      // El sentinel '__pizarra_copy__' lo escribimos al SO cuando el usuario hace
+      // Ctrl+C sobre un elemento de la pizarra. Si el usuario después copia algo
+      // externo, el SO sobreescribe el clipboard y el sentinel desaparece.
+      // Así podemos saber con certeza cuál fue el último Ctrl+C.
+      const clipText = e.clipboardData?.getData('text/plain') ?? '';
+      const isInternalCopy =
+        (clipText === '__pizarra_copy__' || clipSourceRef.current === 'internal') &&
+        clip?.kind === 'board-selection';
+      clipSourceRef.current = 'os'; // reset siempre tras leer
+
+      // 1) Imagen del SO — solo si el último Ctrl+C NO fue sobre la pizarra.
+      if (items && !isInternalCopy) {
         for (let i=0; i<items.length; i++) {
           if (items[i].type.indexOf("image")!==-1) {
             e.preventDefault(); const file=items[i].getAsFile(); if (!file) continue;
@@ -2932,7 +2952,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       if(nn.length!==notesRef.current.length){notesRef.current=nn;onSaveNotes(nn);}
       if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
     }
-    if (['rect','rhombus','ellipse','line'].includes(tool)) {
+    if (['rect','rhombus','ellipse','line','arrow'].includes(tool)) {
       pushToHistory(); setIsDrawing(true);
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       const x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
@@ -3025,11 +3045,11 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         if(ns.length!==shapesRef.current.length){shapesRef.current=ns;onSaveShapes(ns);}
       }
     }
-    if (isDrawing && ['rect','rhombus','ellipse','line'].includes(tool)) {
+    if (isDrawing && ['rect','rhombus','ellipse','line','arrow'].includes(tool)) {
       const rect=canvasRef.current?.getBoundingClientRect(); if (!rect) return;
       let x=(e.clientX-rect.left-offset.x)/zoom, y=(e.clientY-rect.top-offset.y)/zoom;
       if (e.shiftKey && shapeStart) {
-        if (tool==='line') {
+        if (tool==='line'||tool==='arrow') {
           const ddx=Math.abs(x-shapeStart.x), ddy=Math.abs(y-shapeStart.y);
           if (ddx>ddy) y=shapeStart.y; else x=shapeStart.x;
         } else if (tool==='rect'||tool==='ellipse') {
@@ -3100,13 +3120,14 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       setMarqueeStart(null);
       setMarqueeEnd(null);
     }
-    if (isDrawing && shapeStart && shapeCurrent && ['rect','rhombus','ellipse','line'].includes(tool)) {
+    if (isDrawing && shapeStart && shapeCurrent && ['rect','rhombus','ellipse','line','arrow'].includes(tool)) {
       const sx=shapeStart.x,sy=shapeStart.y,ex=shapeCurrent.x,ey=shapeCurrent.y;
       const minSize = 6 / zoom;
       const tooSmall = Math.abs(ex-sx) < minSize && Math.abs(ey-sy) < minSize;
       if (!tooSmall) {
         let pts:{x:number;y:number}[]=[];
-        if (tool==='line') {
+        const isArrow = tool==='arrow';
+        if (tool==='line'||tool==='arrow') {
           pts=[{x:sx,y:sy},{x:ex,y:ey}];
         } else if (tool==='rect') {
           pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
@@ -3120,11 +3141,10 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         if (pts.length>=2) {
           const newIdx = drawings.length;
           const cornerRadius = (tool==='rect'||tool==='rhombus') ? 10/zoom : undefined;
-          onSaveDrawings([...drawings,{points:pts,color:currentColor,width:pencilWidth/zoom,fill:fillColor?fillColor+'30':undefined,cornerRadius,zOrder:Date.now()}]);
-          setSelectedPathIndices(new Set([newIdx]));
+          onSaveDrawings([...drawings,{points:pts,color:currentColor,width:pencilWidth/zoom,fill:fillColor?fillColor+'30':undefined,cornerRadius,zOrder:Date.now(),isArrow:isArrow||undefined}]);
+          setSelectedPathIndices(new Set());
           setSelectedIds(new Set());
           setSelectedId(null);
-          setTool('select');
         }
       }
       setShapeStart(null); setShapeCurrent(null);
@@ -3133,7 +3153,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsDrawing(false);
     setIsPanning(false);
   };
-  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
+  const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line','arrow'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
   const selectedImageIndex = selectedId ? images.findIndex(img => img.id === selectedId) : -1;
   const hasSelectedImage = selectedImageIndex >= 0;
 
@@ -3181,7 +3201,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       {/* Panel herramientas de dibujo: colores + grosor + tipografía */}
-      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line'].includes(tool) || hasSelectedPaths || hasSelectedText) && (
+      {(tool === 'pencil' || tool === 'text' || ['rect','rhombus','ellipse','line','arrow'].includes(tool) || hasSelectedPaths || hasSelectedText) && (
         <div style={{ position:'fixed', left:16, top:16, zIndex:1000, background:'rgba(18,22,30,0.92)', backdropFilter:'blur(20px)', borderRadius:14, border:'1px solid rgba(255,255,255,0.09)', boxShadow:'0 12px 40px rgba(0,0,0,0.55)', padding:'7px', width: tool === 'text' ? 160 : 'auto' }}>
 
           {/* Grosores — para lápiz, formas y texto */}
@@ -3311,6 +3331,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={18}/>} title="Texto"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <ToolBtn active={tool==='line'}    onClick={()=>setTool('line')}    title="Línea" icon={<svg viewBox="0 0 18 18" width={18} height={18} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="15" x2="15" y2="3"/></svg>}/>
+            <ToolBtn active={tool==='arrow'}   onClick={()=>setTool('arrow')}   title="Flecha" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="15" x2="14" y2="4"/><polyline points="8,4 14,4 14,10"/></svg>}/>
             <ToolBtn active={tool==='rect'}    onClick={()=>setTool('rect')}    title="Rectángulo" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>}/>
             <ToolBtn active={tool==='rhombus'} onClick={()=>setTool('rhombus')} title="Rombo" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="9,2 16,9 9,16 2,9"/></svg>}/>
             <ToolBtn active={tool==='ellipse'} onClick={()=>setTool('ellipse')} title="Círculo / Elipse" icon={<svg viewBox="0 0 18 18" width={18} height={18} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="9" cy="9" rx="6.5" ry="5"/></svg>}/>
@@ -3420,6 +3441,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                   pdx || pdy ? `translate(${pdx} ${pdy})` : '',
                 ].filter(Boolean).join(' ');
                 const d = p.cornerRadius ? getRoundedPolyPath(p.points, p.cornerRadius) : getPathD(p.points);
+                // Cabeza de flecha para trazos con isArrow=true
+                const arrowHead = p.isArrow && p.points.length >= 2 ? (() => {
+                  const p1 = p.points[p.points.length-2], p2 = p.points[p.points.length-1];
+                  const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+                  const ux=dx/len, uy=dy/len, hw=Math.max(p.width*4, 10);
+                  const lx=p2.x-ux*hw-uy*hw*0.4, ly=p2.y-uy*hw+ux*hw*0.4;
+                  const rx=p2.x-ux*hw+uy*hw*0.4, ry=p2.y-uy*hw-ux*hw*0.4;
+                  return <polygon points={`${p2.x},${p2.y} ${lx},${ly} ${rx},${ry}`} fill={p.color} stroke="none"/>;
+                })() : null;
                 return (
                   <svg key={`path-${idx}`} style={{ position:'absolute', inset:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:stackIdx + 1 }} xmlns="http://www.w3.org/2000/svg">
                     <g transform={transforms || undefined}>
@@ -3441,6 +3471,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                           setSelectedId(null);
                         }}
                       />
+                      {arrowHead}
                       {isSel && (
                         <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`} style={{ pointerEvents: 'none' }}/>
                       )}
@@ -3581,6 +3612,12 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
           let shape: React.ReactElement|null=null;
           if (tool==='line') {
             shape=<line {...common} x1={sx} y1={sy} x2={ex} y2={ey}/>;
+          } else if (tool==='arrow') {
+            const dx=ex-sx,dy=ey-sy,len=Math.sqrt(dx*dx+dy*dy)||1;
+            const ux=dx/len,uy=dy/len,hw=Math.max(pencilWidth/zoom*4,10);
+            const lx=ex-ux*hw-uy*hw*0.4,ly=ey-uy*hw+ux*hw*0.4;
+            const rx2=ex-ux*hw+uy*hw*0.4,ry2=ey-uy*hw-ux*hw*0.4;
+            shape=<g><line {...common} x1={sx} y1={sy} x2={ex} y2={ey}/><polygon points={`${ex},${ey} ${lx},${ly} ${rx2},${ry2}`} fill={currentColor} stroke="none"/></g>;
           } else if (tool==='rect') {
             const pts=[{x:sx,y:sy},{x:ex,y:sy},{x:ex,y:ey},{x:sx,y:ey},{x:sx,y:sy}];
             shape=<path {...common} d={getRoundedPolyPath(pts,10/zoom)}/>;
