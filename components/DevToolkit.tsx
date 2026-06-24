@@ -3,18 +3,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Terminal, Globe, Plus, Zap, Copy, ExternalLink, Activity, X,
+  Terminal, Globe, Plus, Zap, Copy, ExternalLink, Activity, X, Trash2, Link,
   Monitor, Utensils, PhoneCall, Coffee, DoorOpen, Moon, LogOut, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
+import { api } from '@/lib/api';
 import AvatarImg from '@/app/dashboard/components/AvatarImg';
 import ThreeAFKIcon from '@/components/ThreeAFKIcon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface StagingLink {
-  id: string; name: string; url: string; type: 'staging' | 'api' | 'branch' | 'prod';
+interface EnvLink {
+  id: string; name: string; url: string; createdAt: number; authorId?: string;
 }
 
 interface RadarEntry {
@@ -360,11 +361,11 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
     setTsResult({ local, iso: d.toISOString(), rfc: d.toUTCString() });
   };
 
-  // Staging
-  const [links] = useState<StagingLink[]>([
-    { id: '1', name: 'Pruebas Cliente', url: 'https://staging.example.com', type: 'staging' },
-    { id: '2', name: 'API Desarrollo',  url: 'https://api-dev.example.com', type: 'api'     },
-  ]);
+  // Entornos – links compartidos del equipo
+  const [envLinks, setEnvLinks]       = useState<EnvLink[]>([]);
+  const [linkUrl, setLinkUrl]         = useState('');
+  const [linkName, setLinkName]       = useState('');
+  const [linkSaving, setLinkSaving]   = useState(false);
 
   // Radar
   const [radarMap, setRadarMap]           = useState<Record<string, RadarEntry>>({});
@@ -375,6 +376,47 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
   // Presencia en tiempo real
   const [presenceMap, setPresenceMap] = useState<Record<string, PresenceEntry>>({});
   const now = useNow(15000);
+
+  // Load links from backend
+  useEffect(() => {
+    api.getLinks().then(setEnvLinks).catch(() => {});
+  }, []);
+
+  // Socket: sync links in real time
+  useEffect(() => {
+    const socket = getSocket();
+    const onAdded   = (link: EnvLink) => setEnvLinks(prev => [...prev.filter(l => l.id !== link.id), link]);
+    const onDeleted = ({ id }: { id: string }) => setEnvLinks(prev => prev.filter(l => l.id !== id));
+    socket.on('link:added',   onAdded);
+    socket.on('link:deleted', onDeleted);
+    return () => {
+      socket.off('link:added',   onAdded);
+      socket.off('link:deleted', onDeleted);
+    };
+  }, []);
+
+  const handleAddLink = async () => {
+    const url = linkUrl.trim();
+    if (!url) { toast.error('Ingresa una URL'); return; }
+    setLinkSaving(true);
+    try {
+      await api.addLink({ url, name: linkName.trim() || url, authorId: currentUser?.id || '' });
+      setLinkUrl('');
+      setLinkName('');
+    } catch {
+      toast.error('No se pudo guardar el link');
+    } finally {
+      setLinkSaving(false);
+    }
+  };
+
+  const handleDeleteLink = async (id: string) => {
+    try {
+      await api.deleteLink(id);
+    } catch {
+      toast.error('No se pudo eliminar el link');
+    }
+  };
 
   // Load persisted radar
   useEffect(() => {
@@ -968,25 +1010,136 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
             </div>
           )}
 
-          {/* ── STAGING ── */}
+          {/* ── ENTORNOS ── */}
           {activeTab === 'staging' && (
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-                <h4 style={{ margin:0, fontSize:13, color:'#fff' }}>Entornos</h4>
-                <button style={{ padding:'4px 8px', borderRadius:6, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:10, cursor:'pointer' }}><Plus size={10}/></button>
-              </div>
-              {links.map(link => (
-                <div key={link.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:6, height:6, borderRadius:'50%', background: link.type==='prod'?'#27AE60':'#3498DB' }} />
-                    <div>
-                      <div style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{link.name}</div>
-                      <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{link.url.replace('https://','')}</div>
-                    </div>
-                  </div>
-                  <a href={link.url} target="_blank" rel="noreferrer" style={{ color:'rgba(255,255,255,0.5)' } as any}><ExternalLink size={14}/></a>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              <p style={{ margin:0, fontSize:11, fontWeight:600, color:'rgba(255,255,255,0.6)' }}>
+                Links compartidos del equipo
+              </p>
+
+              {/* Formulario para agregar link */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <input
+                  type="text"
+                  placeholder="Nombre (opcional)"
+                  value={linkName}
+                  onChange={e => setLinkName(e.target.value)}
+                  style={{
+                    background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.08)',
+                    borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12,
+                    outline:'none', fontFamily:'inherit', boxSizing:'border-box' as const,
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.2)'}
+                  onBlur={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'}
+                />
+                <div style={{ display:'flex', gap:8 }}>
+                  <input
+                    type="text"
+                    placeholder="https://ejemplo.com"
+                    value={linkUrl}
+                    onChange={e => setLinkUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddLink()}
+                    style={{
+                      flex:1, background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.08)',
+                      borderRadius:10, padding:'9px 12px', color:'#fff', fontSize:12,
+                      outline:'none', fontFamily:'monospace', boxSizing:'border-box' as const,
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.2)'}
+                    onBlur={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'}
+                  />
+                  <button
+                    onClick={handleAddLink}
+                    disabled={linkSaving}
+                    style={{
+                      padding:'9px 14px', borderRadius:10, background:'rgba(52,152,219,0.2)',
+                      border:'1px solid rgba(52,152,219,0.4)', color:'#3498DB',
+                      fontWeight:700, fontSize:11, cursor:'pointer', flexShrink:0,
+                      display:'flex', alignItems:'center', gap:6, transition:'all 0.15s ease',
+                      opacity: linkSaving ? 0.5 : 1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background='rgba(52,152,219,0.3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background='rgba(52,152,219,0.2)'; }}
+                  >
+                    <Plus size={13}/> Agregar
+                  </button>
                 </div>
-              ))}
+              </div>
+
+              <div style={{ height:1, background:'rgba(255,255,255,0.05)' }} />
+
+              {/* Lista de links */}
+              {envLinks.length === 0 ? (
+                <div style={{ textAlign:'center', padding:'24px 16px', border:'1px dashed rgba(255,255,255,0.07)', borderRadius:14 }}>
+                  <div style={{ display:'flex', justifyContent:'center', marginBottom:8, color:'rgba(255,255,255,0.15)' }}>
+                    <Link size={24}/>
+                  </div>
+                  <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', margin:0, fontWeight:600 }}>
+                    Sin links guardados
+                  </p>
+                  <p style={{ fontSize:10, color:'rgba(255,255,255,0.15)', margin:'4px 0 0', fontWeight:500 }}>
+                    Agrega URLs para compartirlas con el equipo
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {envLinks.sort((a,b) => a.createdAt - b.createdAt).map(link => (
+                    <div key={link.id} style={{
+                      display:'flex', alignItems:'center', justifyContent:'space-between',
+                      padding:'10px 14px', background:'rgba(255,255,255,0.03)',
+                      border:'1px solid rgba(255,255,255,0.05)', borderRadius:12,
+                      gap:10,
+                    }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, flex:1, minWidth:0 }}>
+                        <div style={{
+                          width:30, height:30, borderRadius:8, flexShrink:0,
+                          background:'rgba(52,152,219,0.12)', border:'1px solid rgba(52,152,219,0.2)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                        }}>
+                          <Globe size={14} color="#3498DB"/>
+                        </div>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:'#fff', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {link.name}
+                          </div>
+                          <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {link.url.replace(/^https?:\/\//, '')}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            width:28, height:28, borderRadius:8, border:'1px solid rgba(255,255,255,0.08)',
+                            background:'transparent', color:'rgba(255,255,255,0.4)',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            transition:'all 0.15s ease', textDecoration:'none',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.07)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.4)'; e.currentTarget.style.background='transparent'; }}
+                        >
+                          <ExternalLink size={13}/>
+                        </a>
+                        <button
+                          onClick={() => handleDeleteLink(link.id)}
+                          style={{
+                            width:28, height:28, borderRadius:8, border:'1px solid rgba(255,255,255,0.08)',
+                            background:'transparent', color:'rgba(255,255,255,0.3)', cursor:'pointer',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            transition:'all 0.15s ease',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color='#e74c3c'; e.currentTarget.style.background='rgba(231,76,60,0.1)'; e.currentTarget.style.borderColor='rgba(231,76,60,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.3)'; e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; }}
+                        >
+                          <Trash2 size={13}/>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

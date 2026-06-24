@@ -104,6 +104,11 @@ export const api = {
   addCustomShape:    (data: Record<string, unknown>)       => req('POST',   '/pizarra/shapes', data),
   deleteCustomShape: (id: string)          => req('DELETE', `/pizarra/shapes/${id}`),
 
+  // ── Links de Entornos ────────────────────────────────────────────────────────
+  getLinks:    ()                                          => req('GET',    '/links'),
+  addLink:     (data: Record<string, unknown>)             => req('POST',   '/links', data),
+  deleteLink:  (id: string)                                => req('DELETE', `/links/${id}`),
+
   // ── Archivos compartidos ──────────────────────────────────────────────────────
   getSharedFiles:    ()                                    => req('GET',    '/pizarra/files/all'),
   addSharedFile:     (data: Record<string, unknown>)       => req('POST',   '/pizarra/files', data),
