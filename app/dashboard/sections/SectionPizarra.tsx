@@ -3472,9 +3472,6 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                         }}
                       />
                       {arrowHead}
-                      {isSel && (
-                        <path d={d} stroke="rgba(255,255,255,0.7)" strokeWidth={1.5/zoom} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${7/zoom} ${4/zoom}`} style={{ pointerEvents: 'none' }}/>
-                      )}
                     </g>
                   </svg>
                 );
