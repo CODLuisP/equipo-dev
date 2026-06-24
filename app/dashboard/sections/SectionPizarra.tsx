@@ -40,8 +40,7 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   const rotationRef  = useRef<number>(image.rotation ?? 0);
   const isRotatingRef = useRef(false);
   const elemDivRef   = useRef<HTMLDivElement>(null);
-  const imgResizeStartRef = useRef<{ mx: number; my: number; x: number; y: number; w: number; h: number } | null>(null);
-  const ar = image.width / image.height;
+  const imgResizeStartRef = useRef<{ mx: number; my: number; x: number; y: number; w: number; h: number; rectLeft: number; rectTop: number; rectRight: number; rectBottom: number } | null>(null);
 
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x:image.x, y:image.y, w:image.width, h:image.height });
@@ -54,24 +53,65 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
       if (isDragging) { setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom})); return; }
       if (resizeDir && imgResizeStartRef.current) {
         const s = imgResizeStartRef.current;
-        const totalDy = (e.clientY - s.my) / zoom;
-        let newH: number, newW: number, newX = s.x, newY = s.y;
-        if (resizeDir === 'se') {
-          newH = Math.max(20, s.h + totalDy); newW = newH * ar;
-        } else if (resizeDir === 'sw') {
-          newH = Math.max(20, s.h + totalDy); newW = newH * ar; newX = s.x + (s.w - newW);
-        } else if (resizeDir === 'ne') {
-          newH = Math.max(20, s.h - totalDy); newW = newH * ar; newY = s.y + totalDy;
-        } else { // nw
-          newH = Math.max(20, s.h - totalDy); newW = newH * ar; newX = s.x + (s.w - newW); newY = s.y + totalDy;
+        const corner = (resizeDir==='nw'||resizeDir==='ne'||resizeDir==='sw'||resizeDir==='se');
+        // scale uniforme (mantiene proporción → nunca recorta ni deforma la imagen)
+        let scale: number;
+        if (corner) {
+          const ax = resizeDir.includes('w') ? s.rectRight : s.rectLeft;
+          const ay = resizeDir.includes('n') ? s.rectBottom : s.rectTop;
+          const startD = Math.max(1, Math.hypot(s.mx - ax, s.my - ay));
+          scale = Math.hypot(e.clientX - ax, e.clientY - ay) / startD;
+        } else if (resizeDir==='e' || resizeDir==='w') {
+          const ax = resizeDir==='w' ? s.rectRight : s.rectLeft;
+          const startD = Math.max(1, Math.abs(s.mx - ax));
+          scale = Math.abs(e.clientX - ax) / startD;
+        } else { // n | s
+          const ay = resizeDir==='n' ? s.rectBottom : s.rectTop;
+          const startD = Math.max(1, Math.abs(s.my - ay));
+          scale = Math.abs(e.clientY - ay) / startD;
         }
-        setPos({ x: newX, y: newY, w: Math.max(20, newW), h: newH });
+        // límite inferior para no bajar de 20px en ningún lado, manteniendo proporción exacta
+        scale = Math.max(scale, 20 / s.w, 20 / s.h);
+        const newW = s.w * scale, newH = s.h * scale;
+        let nx: number, ny: number;
+        if (corner) {
+          nx = resizeDir.includes('w') ? s.x + (s.w - newW) : s.x;
+          ny = resizeDir.includes('n') ? s.y + (s.h - newH) : s.y;
+        } else if (resizeDir==='e') { nx = s.x;                 ny = s.y - (newH - s.h)/2; }
+        else if (resizeDir==='w')   { nx = s.x + (s.w - newW);  ny = s.y - (newH - s.h)/2; }
+        else if (resizeDir==='s')   { ny = s.y;                 nx = s.x - (newW - s.w)/2; }
+        else                        { ny = s.y + (s.h - newH);  nx = s.x - (newW - s.w)/2; } // n
+        setPos({ x: nx, y: ny, w: newW, h: newH });
       }
     };
     const onMU=()=>{ if(isDragging||resizeDir){ const p=posRef.current; setIsDragging(false); setResizeDir(null); onDrag(image.id,p.x,p.y,p.w,p.h); } };
     if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
     return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
-  },[isDragging,resizeDir,image.id,onDrag,zoom,ar]);
+  },[isDragging,resizeDir,image.id,onDrag,zoom]);
+
+  // Cursor de resize en toda la pantalla mientras se arrastra (no se pierde al salir del handle)
+  useEffect(() => {
+    if (!resizeDir) return;
+    const cur =
+      resizeDir==='nw'||resizeDir==='se' ? 'nwse-resize' :
+      resizeDir==='ne'||resizeDir==='sw' ? 'nesw-resize' :
+      resizeDir==='n' ||resizeDir==='s'  ? 'ns-resize'   : 'ew-resize';
+    const style = document.createElement('style');
+    style.innerHTML = `* { cursor: ${cur} !important; }`;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, [resizeDir]);
+
+  const beginImgResize = (e: React.MouseEvent, dir: string) => {
+    e.stopPropagation(); onSelect();
+    const rect = elemDivRef.current!.getBoundingClientRect();
+    imgResizeStartRef.current = {
+      mx: e.clientX, my: e.clientY,
+      x: posRef.current.x, y: posRef.current.y, w: posRef.current.w, h: posRef.current.h,
+      rectLeft: rect.left, rectTop: rect.top, rectRight: rect.right, rectBottom: rect.bottom,
+    };
+    setResizeDir(dir);
+  };
 
   const handleRotateStart = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault();
@@ -101,11 +141,11 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
       className="group select-none">
       <img src={image.src} className={`w-full h-full object-fill border rounded-none ${isSelected ? 'border-dashed border-white/40' : 'border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
-        <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();imgResizeStartRef.current={mx:e.clientX,my:e.clientY,x:posRef.current.x,y:posRef.current.y,w:posRef.current.w,h:posRef.current.h};setResizeDir(dir);}}
+        <div key={dir} onMouseDown={e=>beginImgResize(e,dir)}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
       ))}
       {isSelected&&!disabled&&(['n','s','e','w'] as const).map(dir=>(
-        <div key={`edge-${dir}`} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
+        <div key={`edge-${dir}`} onMouseDown={e=>beginImgResize(e,dir)}
           className={`absolute bg-transparent z-50 rounded-sm
             ${dir==='n'?'top-0 -translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
             ${dir==='s'?'bottom-0 translate-y-1/2 left-2 right-2 h-2 cursor-ns-resize':''}
