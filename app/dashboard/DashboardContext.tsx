@@ -341,7 +341,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // ── Board history ───────────────────────────────────────────────────────────
 
   const getBoardSnapshot = (): BoardSnapshot => ({
-    notes: [...notes], images: [...boardImages], drawings: [...drawings], shapes: [...boardShapes]
+    notes:    [...liveBoardRef.current.notes],
+    images:   [...liveBoardRef.current.images],
+    drawings: [...liveBoardRef.current.drawings],
+    shapes:   [...liveBoardRef.current.shapes],
   });
 
   const pushToHistory = () => {
@@ -358,7 +361,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     redoRef.current = [getBoardSnapshot(), ...redoRef.current].slice(0, 30);
     liveBoardRef.current = { notes: last.notes, drawings: last.drawings, images: last.images, shapes: last.shapes };
     setNotes(last.notes); setBoardImages(last.images); setDrawings(last.drawings); setBoardShapes(last.shapes);
-    toast.success("↩️ Deshecho");
   };
 
   const redo = () => {
@@ -368,7 +370,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     historyRef.current = [getBoardSnapshot(), ...historyRef.current].slice(0, 30);
     liveBoardRef.current = { notes: next.notes, drawings: next.drawings, images: next.images, shapes: next.shapes };
     setNotes(next.notes); setBoardImages(next.images); setDrawings(next.drawings); setBoardShapes(next.shapes);
-    toast.success("Rehecho");
   };
 
   // ── Filtrados ───────────────────────────────────────────────────────────────

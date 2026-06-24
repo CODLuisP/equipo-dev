@@ -32,12 +32,16 @@ function RotateHandle({ onMouseDown, extraOffset = 0 }: { onMouseDown: (e: React
 
 function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onContextMenu, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x:image.x, y:image.y, w:image.width, h:image.height });
+  const posRef = useRef(pos);
+  posRef.current = pos;
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir]   = useState<string|null>(null);
   const [localRotation, setLocalRotation] = useState<number>(image.rotation ?? 0);
   const rotationRef  = useRef<number>(image.rotation ?? 0);
   const isRotatingRef = useRef(false);
   const elemDivRef   = useRef<HTMLDivElement>(null);
+  const imgResizeStartRef = useRef<{ mx: number; my: number; x: number; y: number; w: number; h: number } | null>(null);
+  const ar = image.width / image.height;
 
   useEffect(() => {
     if (!isDragging && !resizeDir) setPos({ x:image.x, y:image.y, w:image.width, h:image.height });
@@ -47,13 +51,27 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
   }, [image.rotation]);
   useEffect(() => {
     const onMM=(e:MouseEvent)=>{
-      if (isDragging) setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom}));
-      if (resizeDir) setPos(p=>{ let{x,y,w,h}=p; const dx=e.movementX/zoom,dy=e.movementY/zoom; if(resizeDir.includes('e'))w+=dx; if(resizeDir.includes('w')){x+=dx;w-=dx;} if(resizeDir.includes('s'))h+=dy; if(resizeDir.includes('n')){y+=dy;h-=dy;} if(resizeDir==='se'||resizeDir==='nw')h=w/(image.width/image.height); return{x,y,w:Math.max(20,w),h:Math.max(20,h)}; });
+      if (isDragging) { setPos(p=>({...p,x:p.x+e.movementX/zoom,y:p.y+e.movementY/zoom})); return; }
+      if (resizeDir && imgResizeStartRef.current) {
+        const s = imgResizeStartRef.current;
+        const totalDy = (e.clientY - s.my) / zoom;
+        let newH: number, newW: number, newX = s.x, newY = s.y;
+        if (resizeDir === 'se') {
+          newH = Math.max(20, s.h + totalDy); newW = newH * ar;
+        } else if (resizeDir === 'sw') {
+          newH = Math.max(20, s.h + totalDy); newW = newH * ar; newX = s.x + (s.w - newW);
+        } else if (resizeDir === 'ne') {
+          newH = Math.max(20, s.h - totalDy); newW = newH * ar; newY = s.y + totalDy;
+        } else { // nw
+          newH = Math.max(20, s.h - totalDy); newW = newH * ar; newX = s.x + (s.w - newW); newY = s.y + totalDy;
+        }
+        setPos({ x: newX, y: newY, w: Math.max(20, newW), h: newH });
+      }
     };
-    const onMU=()=>{ if(isDragging||resizeDir){setIsDragging(false);setResizeDir(null);onDrag(image.id,pos.x,pos.y,pos.w,pos.h);} };
+    const onMU=()=>{ if(isDragging||resizeDir){ const p=posRef.current; setIsDragging(false); setResizeDir(null); onDrag(image.id,p.x,p.y,p.w,p.h); } };
     if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
     return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
-  },[isDragging,resizeDir,pos,image.id,onDrag,zoom,image.width,image.height]);
+  },[isDragging,resizeDir,image.id,onDrag,zoom,ar]);
 
   const handleRotateStart = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault();
@@ -81,9 +99,9 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
       onMouseDown={(e)=>{ if(disabled)return; e.stopPropagation(); if(isInMultiSelect){ onMultiDragStart(); return; } onSelect(); setIsDragging(true); }}
       onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); onSelect(); onContextMenu?.(e.clientX, e.clientY); }}
       className="group select-none">
-      <img src={image.src} className={`w-full h-full object-cover border rounded-none ${isSelected ? 'border-dashed border-white/40' : 'border-white/10'}`} draggable="false"/>
+      <img src={image.src} className={`w-full h-full object-fill border rounded-none ${isSelected ? 'border-dashed border-white/40' : 'border-white/10'}`} draggable="false"/>
       {isSelected&&!disabled&&(['nw','ne','sw','se'] as const).map(dir=>(
-        <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();setResizeDir(dir);}}
+        <div key={dir} onMouseDown={e=>{e.stopPropagation();onSelect();imgResizeStartRef.current={mx:e.clientX,my:e.clientY,x:posRef.current.x,y:posRef.current.y,w:posRef.current.w,h:posRef.current.h};setResizeDir(dir);}}
           className={`absolute w-2 h-2 bg-[#0A0C0F] border border-white/40 z-50 ${dir==='nw'?'-top-1 -left-1 cursor-nw-resize':dir==='ne'?'-top-1 -right-1 cursor-ne-resize':dir==='sw'?'-bottom-1 -left-1 cursor-sw-resize':'-bottom-1 -right-1 cursor-se-resize'}`}/>
       ))}
       {isSelected&&!disabled&&(['n','s','e','w'] as const).map(dir=>(
@@ -108,6 +126,7 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
   const posRef = useRef(pos);
   posRef.current = pos;
   const [tbSnap, setTbSnap] = useState({ t: 0, b: 0 });
+  const resizeStartRef = useRef<{ mx: number; my: number; fs: number; w: number; x: number; y: number; anchorX: number; anchorY: number; startDist: number; contWCanvas: number; contHCanvas: number } | null>(null);
   const author = members.find((m: any) => m.id === note.authorId);
   const isText = note.type === 'text';
   const defaultRot = isText ? 0 : ((note.createdAt % 10) - 5) / 2;
@@ -124,28 +143,32 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       if (isDragging) {
         setPos(p => ({ ...p, x: p.x + e.movementX / zoom, y: p.y + e.movementY / zoom }));
       } else if (resizeDir) {
-        const dx = e.movementX / zoom;
-        const dy = e.movementY / zoom;
         const corner = (resizeDir === 'nw' || resizeDir === 'ne' || resizeDir === 'sw' || resizeDir === 'se');
-        setPos(p => {
-          let { x, y, fs, w } = p;
-          if (corner) {
-            // Esquinas: escala uniforme — fontSize Y ancho proporcional
-            const delta = resizeDir.includes('s') ? dy : -dy;
-            const newFs = Math.max(8, fs + delta);
-            const ratio = newFs / fs;
-            if (w > 0) w = Math.max(50, w * ratio);
-            fs = newFs;
-            if (resizeDir.includes('n')) y += dy;
-          } else {
-            // Bordes medios: cambio independiente de ancho o alto
+        if (corner && resizeStartRef.current) {
+          const start = resizeStartRef.current;
+          // Distancia diagonal mouse→esquina anclada (la opuesta al handle).
+          // scale=1.0 cuando el mouse está en su posición inicial → sin salto.
+          const curDist = Math.hypot(e.clientX - start.anchorX, e.clientY - start.anchorY);
+          const scale = Math.max(0.05, curDist / start.startDist);
+          const newFs = Math.max(8, start.fs * scale);
+          const ratio = newFs / start.fs;
+          const newW = start.w > 0 ? Math.max(50, start.w * ratio) : 0;
+          // El borde opuesto queda fijo: para corners W mueve x, para corners N mueve y
+          const newX = resizeDir.includes('w') ? start.x + start.contWCanvas * (1 - ratio) : start.x;
+          const newY = resizeDir.includes('n') ? start.y + start.contHCanvas * (1 - ratio) : start.y;
+          setPos(p => ({ ...p, fs: newFs, w: newW, x: newX, y: newY }));
+        } else {
+          const dx = e.movementX / zoom;
+          const dy = e.movementY / zoom;
+          setPos(p => {
+            let { x, y, fs, w } = p;
             if (resizeDir === 'e' && w > 0) w = Math.max(50, w + dx);
             if (resizeDir === 'w' && w > 0) { x += dx; w = Math.max(50, w - dx); }
             if (resizeDir === 's') fs = Math.max(8, fs + dy);
             if (resizeDir === 'n') { fs = Math.max(8, fs - dy); y += dy; }
-          }
-          return { x, y, fs, w };
-        });
+            return { x, y, fs, w };
+          });
+        }
       }
     };
     const onMU = () => {
@@ -165,6 +188,20 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
       window.removeEventListener('mouseup', onMU);
     };
   }, [isDragging, resizeDir, note.id, onDrag, zoom]);
+
+  // Mantener el cursor de resize en TODA la pantalla mientras se arrastra un handle
+  // (si no, al salir del handle el cursor vuelve al de debajo y "desaparece").
+  useEffect(() => {
+    if (!resizeDir) return;
+    const cur =
+      resizeDir === 'nw' || resizeDir === 'se' ? 'nwse-resize' :
+      resizeDir === 'ne' || resizeDir === 'sw' ? 'nesw-resize' :
+      resizeDir === 'n'  || resizeDir === 's'  ? 'ns-resize'   : 'ew-resize';
+    const style = document.createElement('style');
+    style.innerHTML = `* { cursor: ${cur} !important; }`;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, [resizeDir]);
 
   useEffect(() => {
     if (!isRotatingRef.current) { const r = note.rotation !== undefined ? note.rotation : defaultRot; setLocalRotation(r); rotationRef.current = r; }
@@ -254,8 +291,21 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
             <div key={dir}
               onMouseDown={e => {
                 e.stopPropagation(); onSelect();
-                const currentW = containerRef.current?.getBoundingClientRect().width ?? 200;
-                setPos(p => ({ ...p, w: p.w > 0 ? p.w : currentW / zoom }));
+                // boxRect = caja punteada (donde realmente está el handle) → anclaje sin desfase
+                const boxRect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+                const contRect = containerRef.current?.getBoundingClientRect();
+                const initW = posRef.current.w > 0 ? posRef.current.w : (contRect?.width ?? 200) / zoom;
+                // Esquina opuesta al handle = punto de anclaje fijo
+                const anchorX = dir.includes('w') ? boxRect.right : boxRect.left;
+                const anchorY = dir.includes('n') ? boxRect.bottom : boxRect.top;
+                const startDist = Math.max(1, Math.hypot(e.clientX - anchorX, e.clientY - anchorY));
+                resizeStartRef.current = {
+                  mx: e.clientX, my: e.clientY, fs: posRef.current.fs, w: initW,
+                  x: posRef.current.x, y: posRef.current.y, anchorX, anchorY, startDist,
+                  contWCanvas: (contRect?.width ?? 200) / zoom,
+                  contHCanvas: (contRect?.height ?? 40) / zoom,
+                };
+                setPos(p => ({ ...p, w: initW }));
                 setResizeDir(dir);
               }}
               style={{ pointerEvents: 'all' }}
@@ -310,9 +360,9 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
            fontWeight: isText ? (note.fontWeight || 'bold') : undefined,
            margin: 0,
            padding: 0,
-           whiteSpace: 'pre-wrap',
-           wordBreak: isText ? 'break-word' : undefined,
-           overflowWrap: isText ? 'anywhere' : undefined
+           whiteSpace: isText ? (pos.w > 0 ? 'pre-wrap' : 'pre') : 'pre-wrap',
+           wordBreak: (isText && pos.w > 0) ? 'break-word' : (!isText ? 'break-word' : undefined),
+           overflowWrap: (isText && pos.w > 0) ? 'anywhere' : (!isText ? 'anywhere' : undefined)
          }}>
         {note.content}
       </p>
@@ -2577,13 +2627,21 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool]);
 
-  // Auto-resize textarea when editingText content changes
+  // Auto-resize textarea: crece horizontalmente por línea, verticalmente por Enter
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.font = `${textBold ? 'bold ' : ''}${textFontSize}px ${textFontFamily}, sans-serif`;
+      const lines = (editingText?.content ?? '').split('\n');
+      const maxW = Math.max(...lines.map(l => ctx.measureText(l || ' ').width), 60);
+      ta.style.width = (maxW + 28) + 'px';
+    }
     ta.style.height = 'auto';
     ta.style.height = ta.scrollHeight + 'px';
-  }, [editingText?.content]);
+  }, [editingText?.content, textFontSize, textFontFamily, textBold]);
 
   // Keep refs fresh so resize effect has no stale closures
   useEffect(() => { notesRef.current = notes; }, [notes]);
@@ -3490,7 +3548,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             ref={textareaRef}
             autoFocus
             className="bg-transparent border-none outline-none text-white font-bold resize-none overflow-hidden"
-            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', textAlign, width: 400, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto' }}
+            style={{ position:'fixed', left: editingText.x, top: editingText.y, color: currentColor, fontSize: textFontSize, fontFamily: textFontFamily, fontWeight: textBold ? 'bold' : 'normal', textAlign, minWidth: 60, minHeight: 40, height: 'auto', outline: 'none', zIndex: 2000, pointerEvents: 'auto', whiteSpace: 'pre', overflowWrap: 'normal', overflow: 'hidden' }}
             value={editingText.content}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
