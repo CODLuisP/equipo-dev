@@ -130,7 +130,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       {/* ── Header ── */}
       <header
         className={isPizarra ? "shrink-0" : "mb-4 shrink-0"}
-        style={isPizarra ? { position: "absolute", top: 16, left: 22, right: 22, zIndex: 100 } : undefined}
+        style={isPizarra ? { position: "absolute", top: 16, left: 22, right: 22, zIndex: 100, pointerEvents: "none" } : undefined}
       >
           <div className="flex items-center justify-between gap-2 flex-wrap">
 
@@ -141,7 +141,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
              
             </div>}
 
-            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto min-w-0 overflow-x-auto overflow-y-hidden">
+            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto min-w-0 overflow-x-auto overflow-y-hidden pointer-events-auto">
 
               {currentUser && (
                 <Button
