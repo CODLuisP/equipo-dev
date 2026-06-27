@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { Member, Task, Snippet, Note, DrawingPath, BoardImage, BoardShape, CustomShape, SharedFile } from "@/app/dashboard/types";
+import type { Member, Task, Snippet, Note, DrawingPath, BoardImage, BoardShape, CustomShape, SharedFile, WebSite } from "@/app/dashboard/types";
 import { AVATAR_PRESETS } from "@/app/dashboard/types";
 import type { VaultProject } from "@/components/VaultSection";
 import { api } from "@/lib/api";
@@ -49,6 +49,7 @@ export interface DashboardContextType {
   boardShapes: BoardShape[];
   customShapes: CustomShape[];
   archivos: SharedFile[];
+  websites: WebSite[];
   vaultProjects: VaultProject[];
   isVaultUnlocked: boolean;
   setIsVaultUnlocked: (v: boolean) => void;
@@ -111,6 +112,8 @@ export interface DashboardContextType {
   saveShapes: (d: BoardShape[]) => void;
   saveCustomShapes: (d: CustomShape[]) => void;
   saveArchivos: (d: SharedFile[]) => void;
+  handleSaveWebsite: (data: Partial<WebSite>, id?: string) => Promise<void>;
+  handleDeleteWebsite: (id: string) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -135,6 +138,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [boardShapes,    setBoardShapes]     = useState<BoardShape[]>(() => readCachedBoardForCurrentMember()?.shapes ?? []);
   const [customShapes,   setCustomShapes]   = useState<CustomShape[]>([]);
   const [archivos,       setArchivos]       = useState<SharedFile[]>([]);
+  const [websites,       setWebsites]       = useState<WebSite[]>([]);
   const [vaultProjects,  setVaultProjects]  = useState<VaultProject[]>([]);
   const [isVaultUnlocked, setIsVaultUnlockedState] = useState(false);
   useEffect(() => {
@@ -219,11 +223,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           api.getSnippets(),
           api.getVault(),
           api.getSharedFiles(),
-        ]).then(([t, s, v, sf]) => {
+          api.getWebsites(),
+        ]).then(([t, s, v, sf, ws]) => {
           setTasks(t);
           setSnippets(s);
           setVaultProjects(v);
           setArchivos(sf);
+          setWebsites(ws);
         }).catch(err => console.error('Error cargando datos secundarios:', err));
       } catch (err) {
         console.error('Error cargando datos:', err);
@@ -279,6 +285,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     socket.on('file:updated', (f: SharedFile) => setArchivos(prev => prev.map(x => x.id === f.id ? f : x)));
     socket.on('file:deleted', ({ id }: { id: string }) => setArchivos(prev => prev.filter(x => x.id !== id)));
 
+    // Web Sites
+    socket.on('website:added',   (w: WebSite) => setWebsites(prev => prev.some(x => x.id === w.id) ? prev : [w, ...prev]));
+    socket.on('website:updated', (w: WebSite) => setWebsites(prev => prev.map(x => x.id === w.id ? w : x)));
+    socket.on('website:deleted', ({ id }: { id: string }) => setWebsites(prev => prev.filter(x => x.id !== id)));
+
     return () => {
       socket.off('member:added'); socket.off('member:updated'); socket.off('member:deleted');
       socket.off('task:added');   socket.off('task:updated');   socket.off('task:deleted');
@@ -287,6 +298,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       socket.off('vault:added');  socket.off('vault:updated');  socket.off('vault:deleted');
       socket.off('shape:added');  socket.off('shape:deleted');
       socket.off('file:added');   socket.off('file:updated'); socket.off('file:deleted');
+      socket.off('website:added'); socket.off('website:updated'); socket.off('website:deleted');
     };
   }, []);
 
@@ -608,6 +620,21 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     try { await api.deleteVaultProject(id); toast.success('Proyecto eliminado'); } catch { toast.error('Error'); }
   };
 
+  // ── Web Sites handlers ────────────────────────────────────────────────────────
+  const handleSaveWebsite = async (data: Partial<WebSite>, id?: string) => {
+    if (id) {
+      await api.updateWebsite(id, data as Record<string, unknown>);
+      toast.success('Sitio actualizado');
+    } else {
+      await api.addWebsite({ ...(data as Record<string, unknown>), authorId: currentUserRef.current?.id || '' });
+      toast.success('Sitio agregado');
+    }
+  };
+
+  const handleDeleteWebsite = async (id: string) => {
+    try { await api.deleteWebsite(id); toast.success('Sitio eliminado'); } catch { toast.error('Error al eliminar'); }
+  };
+
   // Llamado desde VaultSection cuando editan el contenido inline
   const saveVault = useCallback((newList: VaultProject[]) => {
     setVaultProjects(newList);
@@ -644,7 +671,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardContext.Provider value={{
-      members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, vaultProjects,
+      members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
       isVaultUnlocked, setIsVaultUnlocked,
       currentUser, isLoading, isSetup, setIsSetup, showWhoAreYou, setShowWhoAreYou,
       taskFilterMember, setTaskFilterMember, filteredTasks,
@@ -668,6 +695,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       handleSaveVaultProject, handleDeleteVaultProject, saveVault,
       handleAddNote, handleDeleteNote, handleDragNote, handleDragImage,
       saveDrawings, saveImages, saveNotes, saveShapes, saveCustomShapes, saveArchivos,
+      handleSaveWebsite, handleDeleteWebsite,
     }}>
       {children}
     </DashboardContext.Provider>

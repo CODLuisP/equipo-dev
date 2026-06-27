@@ -109,6 +109,12 @@ export const api = {
   addLink:     (data: Record<string, unknown>)             => req('POST',   '/links', data),
   deleteLink:  (id: string)                                => req('DELETE', `/links/${id}`),
 
+  // ── Web Sites (gestión de webs con credenciales) ─────────────────────────────
+  getWebsites:    ()                                         => req('GET',    '/websites'),
+  addWebsite:     (data: Record<string, unknown>)           => req('POST',   '/websites', data),
+  updateWebsite:  (id: string, patch: Record<string, unknown>) => req('PATCH', `/websites/${id}`, patch),
+  deleteWebsite:  (id: string)                              => req('DELETE', `/websites/${id}`),
+
   // ── Archivos compartidos ──────────────────────────────────────────────────────
   getSharedFiles:    ()                                    => req('GET',    '/pizarra/files/all'),
   addSharedFile:     (data: Record<string, unknown>)       => req('POST',   '/pizarra/files', data),

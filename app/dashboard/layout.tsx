@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users, CheckSquare, Code, StickyNote, FolderOpen,
-  Shield, LogOut, Sparkles, CheckCircle2, AlertTriangle, AlertOctagon, Info, Bell
+  Shield, LogOut, Sparkles, CheckCircle2, AlertTriangle, AlertOctagon, Info, Bell, Globe
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { DashboardProvider, useDashboard } from "@/app/dashboard/DashboardContext";
@@ -34,6 +34,7 @@ const NAV = [
   { href: "/dashboard/snippets", icon: <Code size={12}/>,        label: "Snippets" },
   { href: "/dashboard/pizarra",  icon: <StickyNote size={12}/>,  label: "Pizarra"  },
   { href: "/dashboard/archivos", icon: <FolderOpen size={12}/>,  label: "Archivos" },
+  { href: "/dashboard/web-sites", icon: <Globe size={12}/>,      label: "Web Sites" },
   { href: "/dashboard/boveda",   icon: <Shield size={12}/>,      label: "Bóveda"   },
 ];
 

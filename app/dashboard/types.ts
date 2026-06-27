@@ -32,7 +32,11 @@ export interface BoardShape { id: string; type: string; x: number; y: number; wi
 export interface CustomShape { id: string; label: string; svgContent: string; viewBox: string; defaultW: number; defaultH: number; }
 export interface SharedFile { id: string; name: string; type: string; size: number; dataUrl: string; x: number; y: number; createdAt: number; authorName: string; }
 
-export type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'boveda' | 'ajustes';
+// ─── Web Sites (gestión de webs con credenciales) ─────────────────────────────
+export interface WebAccount { id: string; label?: string; username: string; password: string; isPrimary?: boolean; }
+export interface WebSite { id: string; name: string; url: string; image?: string; accounts: WebAccount[]; authorId?: string; createdAt: number; }
+
+export type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'boveda' | 'websites' | 'ajustes';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
