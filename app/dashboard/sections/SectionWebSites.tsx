@@ -109,68 +109,85 @@ function AccountRow({ acc, compact = false, multi = false }: { acc: WebAccount; 
 // ─── Site card ────────────────────────────────────────────────────────────────
 
 function SiteCard({ site, onOpen, onEdit, onDelete }: { site: WebSite; onOpen: () => void; onEdit: () => void; onDelete: () => void; }) {
-  const primary = primaryOf(site);
+  const [hov, setHov] = useState(false);
   const host = hostOf(site.url);
-  const extra = Math.max(0, (site.accounts?.length ?? 0) - 1);
+  const count = site.accounts?.length ?? 0;
+
+  const tx  = hov ? "#ffffff"               : "var(--text-1)";
+  const mu  = hov ? "rgba(255,255,255,0.55)" : "var(--text-3)";
+  const bd  = hov ? "rgba(255,255,255,0.12)" : "rgba(var(--blue-rgb),0.12)";
+  const t   = "all 0.2s ease";
 
   return (
     <div
       onClick={onOpen}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{
         display: "flex", flexDirection: "column", borderRadius: 16, overflow: "hidden", cursor: "pointer",
-        background: "var(--bg-surface)", border: "1px solid rgba(var(--blue-rgb),0.12)",
-        transition: "transform 0.15s, border-color 0.15s, box-shadow 0.15s",
+        background: hov ? "linear-gradient(140deg, #0d1b38 0%, #091224 100%)" : "var(--bg-surface)",
+        border: `1px solid ${bd}`,
+        transform: hov ? "translateY(-3px)" : "none",
+        boxShadow: hov ? "0 20px 44px -18px rgba(0,0,0,0.75)" : "none",
+        transition: t, minHeight: 210,
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = "rgba(var(--blue-rgb),0.30)"; e.currentTarget.style.boxShadow = "0 16px 36px -16px rgba(0,0,0,0.6)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(var(--blue-rgb),0.12)"; e.currentTarget.style.boxShadow = "none"; }}
     >
-      {/* Imagen de referencia */}
-      <div style={{ position: "relative", height: 118, background: "linear-gradient(135deg, rgba(var(--blue-rgb),0.22), rgba(var(--blue-rgb),0.06))", overflow: "hidden" }}>
-        {site.image
-          ? <img src={site.image} alt={site.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
-          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(var(--blue-rgb),0.5)" }}><Globe size={34} /></div>}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(10,12,15,0.82) 0%, rgba(10,12,15,0.15) 55%, transparent 100%)" }} />
-        <div style={{ position: "absolute", left: 12, right: 12, bottom: 9, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{site.name}</div>
-            {host && <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{host}</div>}
-          </div>
-          {extra > 0 && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0, fontSize: 10, fontWeight: 800, color: "#fff", background: "rgba(var(--blue-rgb),0.55)", backdropFilter: "blur(4px)", padding: "3px 7px", borderRadius: 6 }}>
-              <Users size={10} /> +{extra}
-            </span>
-          )}
+      {/* Contenido principal */}
+      <div style={{ padding: "16px 14px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: tx, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: t }}>
+          {site.name}
         </div>
+        {host && (
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: mu, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: t }}>
+            {host}
+          </div>
+        )}
+        {count > 0 && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 2,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+            color: hov ? "rgba(255,255,255,0.8)" : "var(--blue-light)",
+            background: hov ? "rgba(255,255,255,0.1)" : "rgba(var(--blue-rgb),0.1)",
+            border: `1px solid ${hov ? "rgba(255,255,255,0.15)" : "rgba(var(--blue-rgb),0.2)"}`,
+            transition: t,
+          }}>
+            <Users size={10} /> {count} cuenta{count !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
-      {/* Cuenta principal */}
-      <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-        {primary
-          ? <AccountRow acc={primary} compact multi={(site.accounts?.length ?? 0) > 1} />
-          : <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(var(--blue-rgb),0.04)", border: "1px dashed rgba(var(--blue-rgb),0.15)", fontSize: 11.5, color: "var(--text-3)", textAlign: "center" }}>Sin credenciales</div>}
+      {/* Imagen pequeña con ondas circulares */}
+      <div style={{ position: "relative", height: 88, overflow: "hidden" }}>
+        {/* Ondas */}
+        {[80, 118, 156].map((sz, i) => (
+          <div key={i} style={{
+            position: "absolute", bottom: -(sz * 0.3), right: -(sz * 0.3),
+            width: sz, height: sz, borderRadius: "50%",
+            border: `1px solid ${hov ? "rgba(255,255,255,0.09)" : "rgba(var(--blue-rgb),0.13)"}`,
+            transition: t, pointerEvents: "none",
+          }} />
+        ))}
+        {site.image
+          ? <img src={site.image} alt={site.name} draggable={false} style={{ position: "absolute", bottom: 0, right: 6, height: "86%", width: "auto", maxWidth: "55%", objectFit: "contain" }} />
+          : <div style={{ position: "absolute", bottom: 10, right: 12, width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: mu, transition: t }}><Globe size={22} /></div>}
+      </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (site.url) window.open(/^https?:\/\//.test(site.url) ? site.url : `https://${site.url}`, "_blank"); else toast.error("Sin URL"); }}
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 32, borderRadius: 9, border: "1px solid rgba(var(--blue-rgb),0.25)", background: "rgba(var(--blue-rgb),0.10)", color: "var(--blue-light)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(var(--blue-rgb),0.18)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(var(--blue-rgb),0.10)"; }}
-          >
-            <ExternalLink size={13} /> Abrir
-          </button>
-          <button title="Editar" onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            style={{ width: 32, height: 32, borderRadius: 9, border: "1px solid rgba(var(--blue-rgb),0.15)", background: "transparent", color: "var(--text-3)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "var(--blue-soft)"; e.currentTarget.style.background = "rgba(var(--blue-rgb),0.10)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "transparent"; }}>
-            <Pencil size={13} />
-          </button>
-          <button title="Eliminar" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            style={{ width: 32, height: 32, borderRadius: 9, border: "1px solid rgba(var(--blue-rgb),0.15)", background: "transparent", color: "var(--text-3)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#f87171"; e.currentTarget.style.background = "rgba(239,68,68,0.10)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.30)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(var(--blue-rgb),0.15)"; }}>
-            <Trash2 size={13} />
-          </button>
-        </div>
+      {/* Acciones */}
+      <div style={{ padding: "8px 10px", borderTop: `1px solid ${bd}`, display: "flex", gap: 5, transition: t }}>
+        <button
+          onClick={e => { e.stopPropagation(); if (site.url) window.open(/^https?:\/\//.test(site.url) ? site.url : `https://${site.url}`, "_blank"); else toast.error("Sin URL"); }}
+          style={{ flex: 1, height: 30, borderRadius: 8, border: `1px solid ${hov ? "rgba(255,255,255,0.2)" : "rgba(var(--blue-rgb),0.22)"}`, background: hov ? "rgba(255,255,255,0.1)" : "rgba(var(--blue-rgb),0.08)", color: hov ? "#fff" : "var(--blue-light)", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: t }}
+        >
+          <ExternalLink size={11} /> Abrir
+        </button>
+        <button title="Editar" onClick={e => { e.stopPropagation(); onEdit(); }}
+          style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${bd}`, background: "transparent", color: mu, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: t }}>
+          <Pencil size={12} />
+        </button>
+        <button title="Eliminar" onClick={e => { e.stopPropagation(); onDelete(); }}
+          style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${bd}`, background: "transparent", color: mu, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: t }}>
+          <Trash2 size={12} />
+        </button>
       </div>
     </div>
   );
