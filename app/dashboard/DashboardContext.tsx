@@ -140,12 +140,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [archivos,       setArchivos]       = useState<SharedFile[]>([]);
   const [websites,       setWebsites]       = useState<WebSite[]>([]);
   const [vaultProjects,  setVaultProjects]  = useState<VaultProject[]>([]);
-  const [isVaultUnlocked, setIsVaultUnlockedState] = useState(false);
-  useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("vault-unlocked") === "1") {
-      setIsVaultUnlockedState(true);
-    }
-  }, []);
+  // La bóveda ya no requiere contraseña: arranca siempre desbloqueada.
+  const [isVaultUnlocked, setIsVaultUnlockedState] = useState(true);
   const setIsVaultUnlocked = (v: boolean) => {
     setIsVaultUnlockedState(v);
     if (typeof window !== "undefined") {

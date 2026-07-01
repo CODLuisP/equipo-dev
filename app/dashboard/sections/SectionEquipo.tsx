@@ -238,7 +238,7 @@ function AvatarEditor({ member, open, onSave, onClose }: {
 }) {
   const [seed, setSeed] = useState(member.avatarSeed || AVATAR_PRESETS[0]);
   const [activeTab, setActiveTab] = useState(0);
-  const rc = roleColor(member.role);
+  const rc = member.color || roleColor(member.role);
   const seedLabel = seed.charAt(0).toUpperCase() + seed.slice(1);
 
   // Tabs matching AVATAR_GROUPS
@@ -480,7 +480,7 @@ function MemberCard({ member, tasks, onEdit, onDelete }: {
 }) {
   const [hovered, setHovered] = useState(false);
   const tilt = useTilt();
-  const rc  = roleColor(member.role);
+  const rc  = member.color || roleColor(member.role);
   const mt  = tasks.filter(t => t.assignedTo === member.id);
   const done = mt.filter(t => t.status === 'completada').length;
   const prog = mt.filter(t => t.status === 'en progreso').length;
@@ -504,8 +504,8 @@ function MemberCard({ member, tasks, onEdit, onDelete }: {
         borderRadius: 14,
         overflow: 'hidden',
         background: hovered
-          ? `linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 42%, rgba(26, 31, 46, 0.9) 42%)`
-          : `linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 42%, rgba(22, 27, 34, 0.82) 42%)`,
+          ? `rgba(40, 45, 50, 0.96)`
+          : `rgba(33, 37, 41, 0.92)`,
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         border: 'none',
@@ -666,39 +666,45 @@ function AddCard({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
       style={{
+        position: 'relative',
         borderRadius: 14,
+        overflow: 'hidden',
         cursor: 'pointer',
-        background: 'rgba(67,97,238,0.03)',
+        backgroundImage: "url('/assets/nuevomienbro.png')",
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        backgroundColor: 'rgba(33, 37, 41, 0.6)',
         border: '1.5px dashed rgba(67,97,238,0.2)',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        gap: 8, minHeight: 180,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        alignItems: 'center', justifyContent: 'flex-end',
+        gap: 8, minHeight: 180, padding: '0 0 10px',
         transition: 'all 0.2s',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.background = 'rgba(67,97,238,0.08)';
         (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(67,97,238,0.45)';
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.background = 'rgba(67,97,238,0.03)';
         (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(67,97,238,0.2)';
       }}
     >
+      {/* Capa oscura para legibilidad */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,10,14,0.55)', pointerEvents: 'none' }} />
       <motion.div
         whileHover={{ rotate: 90, scale: 1.1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
         style={{
+          position: 'relative', zIndex: 1,
           width: 32, height: 32, borderRadius: 9,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(67,97,238,0.12)',
-          border: '1px solid rgba(67,97,238,0.3)',
+          background: 'rgba(67,97,238,0.25)',
+          border: '1px solid rgba(67,97,238,0.4)',
+          backdropFilter: 'blur(4px)',
         }}
       >
-        <Plus size={14} color="#60a5fa" />
+        <Plus size={14} color="#93c5fd" />
       </motion.div>
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.02em' }}>
+      <span style={{ position: 'relative', zIndex: 1, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.02em' }}>
         Nuevo miembro
       </span>
     </motion.div>

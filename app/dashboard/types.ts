@@ -34,7 +34,8 @@ export interface SharedFile { id: string; name: string; type: string; size: numb
 
 // ─── Web Sites (gestión de webs con credenciales) ─────────────────────────────
 export interface WebAccount { id: string; label?: string; username: string; password: string; isPrimary?: boolean; }
-export interface WebSite { id: string; name: string; url: string; image?: string; accounts: WebAccount[]; authorId?: string; createdAt: number; }
+// kind: 'credentials' = web con usuario/contraseña · 'resource' = recurso/link útil sin credenciales
+export interface WebSite { id: string; name: string; url: string; image?: string; accounts: WebAccount[]; kind?: 'credentials' | 'resource'; description?: string; authorId?: string; createdAt: number; }
 
 export type Tab = 'equipo' | 'tareas' | 'snippets' | 'pizarra' | 'archivos' | 'boveda' | 'websites' | 'ajustes';
 

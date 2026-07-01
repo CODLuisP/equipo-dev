@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { Users } from "lucide-react";
+import { Users, ListChecks, ArrowRight } from "lucide-react";
 import { Toaster } from "sonner";
 import ButtonBase from "@/components/ui/ButtonBase";
 import SetupForm from "@/app/dashboard/forms/SetupForm";
@@ -15,113 +15,74 @@ interface SetupScreenProps {
 
 export default function SetupScreen({ members, handleAddMember, onFinish, toasterProps }: SetupScreenProps) {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg-base)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    <div className="min-h-screen w-full flex" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#08091c" }}>
       <Toaster {...toasterProps} />
 
-      {/* Background glows */}
-      <div style={{ position: 'absolute', top: -100, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--blue-rgb),0.11) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -100, left: -80, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(29,78,216,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      {/* ── Panel izquierdo: sólido, sin imagen ── */}
+      <div className="relative flex flex-col justify-center w-full lg:w-[480px] xl:w-[540px] shrink-0 px-10 md:px-14 py-14">
 
-      {/* Dot grid */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(var(--blue-rgb),0.08) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Card */}
-      <div style={{
-        background: '#0f1223',
-        border: '1px solid rgba(var(--blue-rgb),0.18)',
-        borderTop: '1px solid rgba(var(--blue-rgb),0.32)',
-        borderRadius: 22,
-        padding: '40px 36px',
-        width: '100%',
-        maxWidth: 440,
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 10,
-      }}>
-
-        {/* Icon */}
-        <div style={{
-          width: 64, height: 64, borderRadius: 18,
-          background: 'rgba(var(--blue-rgb),0.10)',
-          border: '1px solid rgba(var(--blue-rgb),0.28)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 24px',
-        }}>
-          <Users size={28} color="var(--blue-soft)" />
+        {/* Logo */}
+        <div className="absolute top-10 left-10 md:left-14 flex items-center gap-2.5">
+          <img src="/assets/codexa.png" alt="Codexa" className="h-6 w-6 object-contain" />
+          <span className="text-white font-semibold text-[15px]">Codexa</span>
         </div>
 
-        <h2 style={{
-          fontSize: 24, fontWeight: 800,
-          color: 'var(--text)', margin: '0 0 8px',
-          letterSpacing: '-0.5px',
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-        }}>
-          Bienvenido al{' '}
-          <span style={{
-            background: 'linear-gradient(135deg,var(--blue-soft),var(--blue-light))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>Equipo Dev</span>
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 32, lineHeight: 1.5, fontWeight: 400 }}>
-          Agrega los miembros de tu equipo para comenzar.
+        <div style={{ width: 60, height: 60, borderRadius: 17, background: "rgba(var(--blue-rgb),0.14)", border: "1px solid rgba(var(--blue-rgb),0.32)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+          <Users size={26} color="var(--blue-light)" />
+        </div>
+
+        <h1 className="text-white text-[32px] font-extrabold tracking-tight m-0 leading-tight">
+          Bienvenido al<br/>Equipo Dev
+        </h1>
+        <p className="text-white/45 text-[13.5px] mt-3 mb-9 leading-relaxed max-w-[380px]">
+          Agrega los miembros de tu equipo para comenzar a colaborar en un solo lugar.
         </p>
 
         <SetupForm onAddMember={handleAddMember} />
 
         {members.length > 0 && (
-          <div style={{
-            marginTop: 28, paddingTop: 24,
-            borderTop: '1px solid rgba(var(--blue-rgb),0.10)',
-          }}>
-            <p style={{
-              fontSize: 10, fontWeight: 600,
-              color: 'var(--text-dim)', letterSpacing: '0.12em',
-              textTransform: 'uppercase', marginBottom: 14,
-              fontFamily: "'JetBrains Mono', monospace",
-            }}>
-              Miembros ({members.length})
+          <div className="mt-8 pt-6" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <ListChecks size={12} /> Miembros ({members.length})
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
+            <div className="flex flex-col gap-2 mb-6" style={{ maxHeight: 208, overflowY: "auto" }}>
               {members.map(m => (
-                <span key={m.id} style={{
-                  background: `${m.color}18`,
-                  border: `1px solid ${m.color}40`,
-                  color: m.color,
-                  padding: '4px 12px',
-                  borderRadius: 50,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                <div key={m.id} className="flex items-center gap-3" style={{
+                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 12, padding: "9px 12px",
                 }}>
-                  {m.name}
-                </span>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                    background: `${m.color}22`, border: `1px solid ${m.color}55`, color: m.color,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, fontWeight: 800,
+                  }}>
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="text-white text-[13px] font-semibold truncate">{m.name}</div>
+                    <div className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{m.role}</div>
+                  </div>
+                </div>
               ))}
             </div>
-            <div style={{ width: '100%' }}>
-              <ButtonBase className="w-full" onClick={onFinish}>
-                Comenzar ahora →
-              </ButtonBase>
-            </div>
+            <ButtonBase className="w-full flex items-center justify-center gap-2" onClick={onFinish}>
+              Comenzar ahora <ArrowRight size={15} />
+            </ButtonBase>
           </div>
         )}
+      </div>
+
+      {/* ── Panel derecho: imagen a pantalla completa ── */}
+      <div className="relative hidden lg:block flex-1 overflow-hidden">
+        <img
+          src="/assets/registerfondo.jpg"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div aria-hidden className="absolute inset-0" style={{ background: "rgba(8,9,28,0.35)" }} />
+        <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(8,9,28,0.45) 0%, transparent 25%)" }} />
       </div>
     </div>
   );

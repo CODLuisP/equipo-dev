@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Lock, Users } from "lucide-react";
 import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -123,8 +123,8 @@ export default function Login() {
 
           {/* Logo */}
           <div className="slide-1 flex items-center gap-2.5">
-            <img src="/assets/logo.png" alt="Codexa" className="h-5.5 " />
-            <span className="text-[15px] font-semibold text-[#70a6ee] tracking-tight" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+            <img src="/assets/codexa.png" alt="Codexa" className="h-6" />
+            <span className="text-white font-semibold text-[15px]">
               Codexa
             </span>
           </div>
@@ -184,10 +184,35 @@ export default function Login() {
               </div>
 
             </form>
+
+            {/* Registro */}
+            <div className="slide-5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
+              <p style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", margin: "0 0 10px", lineHeight: 1.5 }}>
+                ¿Aún no has creado tu equipo?
+              </p>
+              <a
+                href="/register"
+                style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  width: "100%", padding: "11px 16px", borderRadius: 10,
+                  border: "1px solid rgba(67,97,238,0.28)",
+                  background: "rgba(67,97,238,0.08)",
+                  color: "#70a6ee", fontSize: 13, fontWeight: 600,
+                  textDecoration: "none", transition: "all .15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(67,97,238,0.16)"; e.currentTarget.style.borderColor = "rgba(67,97,238,0.5)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(67,97,238,0.08)"; e.currentTarget.style.borderColor = "rgba(67,97,238,0.28)"; }}
+              >
+                <Users size={15} />
+                Crear mi equipo
+                <ArrowRight size={13} style={{ marginLeft: "auto", opacity: 0.6 }} />
+              </a>
+            </div>
+
           </div>
 
           {/* Footer */}
-          <p className="slide-5 text-[11px] text-[#1e293b] tracking-wide">
+          <p className="text-[11px] text-[#1e293b] tracking-wide">
             Acceso restringido · solo equipo interno
           </p>
         </div>
