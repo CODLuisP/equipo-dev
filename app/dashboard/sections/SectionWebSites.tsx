@@ -548,7 +548,7 @@ export default function SectionWebSites() {
                 <button key={opt.val} onClick={() => { setTab(opt.val); setSearch(""); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 12px", borderRadius: 8,
-                    border: `1px solid ${active ? opt.bd : "transparent"}`,
+                    border: "none",
                     background: active ? opt.bg : "transparent",
                     color: active ? opt.accent : "var(--text-3)",
                     fontSize: 11.5, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
