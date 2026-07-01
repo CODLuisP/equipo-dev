@@ -575,7 +575,7 @@ export default function SectionWebSites() {
       <div className="ws-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingRight: 4 }}>
         {filtered.length === 0 ? (
           <div style={{ height: "100%", minHeight: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center" }}>
-            <div style={{ width: 64, height: 64, borderRadius: 18, background: onResources ? "rgba(167,139,250,0.08)" : "rgba(var(--blue-rgb),0.08)", border: `1px solid ${onResources ? "rgba(167,139,250,0.15)" : "rgba(var(--blue-rgb),0.15)"}`, display: "flex", alignItems: "center", justifyContent: "center", color: onResources ? "rgba(167,139,250,0.6)" : "rgba(var(--blue-rgb),0.5)" }}>
+            <div style={{ width: 64, height: 64, borderRadius: 18, background: "rgba(var(--blue-rgb),0.08)", border: "1px solid rgba(var(--blue-rgb),0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(var(--blue-rgb),0.5)" }}>
               {onResources ? <Sparkles size={30} /> : <KeyIcon size={30} />}
             </div>
             <div>
@@ -583,7 +583,7 @@ export default function SectionWebSites() {
               <p style={{ fontSize: 12, color: "var(--text-3)", margin: "4px 0 0" }}>{search ? "Prueba con otro término" : onResources ? "Guarda links útiles (paletas, IA, herramientas) con su descripción" : "Guarda webs con sus credenciales para acceder rápido"}</p>
             </div>
             {!search && (
-              <button onClick={openNew} style={{ display: "flex", alignItems: "center", gap: 7, height: 38, padding: "0 18px", borderRadius: 10, border: `1px solid ${onResources ? "rgba(167,139,250,0.4)" : "rgba(var(--blue-rgb),0.4)"}`, background: onResources ? "rgba(167,139,250,0.18)" : "rgba(var(--blue-rgb),0.18)", color: onResources ? "#a78bfa" : "var(--blue-light)", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+              <button onClick={openNew} style={{ display: "flex", alignItems: "center", gap: 7, height: 38, padding: "0 18px", borderRadius: 10, border: "1px solid rgba(var(--blue-rgb),0.4)", background: "rgba(var(--blue-rgb),0.18)", color: "var(--blue-light)", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
                 <Plus size={15} /> {onResources ? "Agregar recurso" : "Agregar el primero"}
               </button>
             )}
