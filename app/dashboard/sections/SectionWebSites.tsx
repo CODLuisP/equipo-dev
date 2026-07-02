@@ -31,6 +31,33 @@ async function copyText(text: string, label = "Copiado") {
   catch { toast.error("No se pudo copiar"); }
 }
 
+// Redimensiona y comprime una imagen a JPEG para evitar payloads gigantes (base64).
+function compressImage(file: File, maxSize = 1280, quality = 0.72): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width >= height) { height = Math.round(height * (maxSize / width)); width = maxSize; }
+          else { width = Math.round(width * (maxSize / height)); height = maxSize; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("no-canvas")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ─── Copy button ──────────────────────────────────────────────────────────────
 
 function CopyBtn({ value, title }: { value: string; title: string }) {
@@ -301,12 +328,15 @@ function FormModal({ initial, initialKind = 'credentials', onClose, onSave }: { 
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const readImage = (file: File) => {
+  const readImage = async (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Debe ser una imagen"); return; }
-    if (file.size > 8 * 1024 * 1024) { toast.error("Imagen muy grande (máx 8MB)"); return; }
-    const reader = new FileReader();
-    reader.onload = () => setImage(reader.result as string);
-    reader.readAsDataURL(file);
+    if (file.size > 20 * 1024 * 1024) { toast.error("Imagen muy grande (máx 20MB)"); return; }
+    try {
+      const compressed = await compressImage(file);
+      setImage(compressed);
+    } catch {
+      toast.error("No se pudo procesar la imagen");
+    }
   };
 
   const setPrimary = (id: string) => setAccounts(prev => prev.map(a => ({ ...a, isPrimary: a.id === id })));
