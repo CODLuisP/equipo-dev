@@ -45,7 +45,7 @@ export default function Navbar({
 
         {!isPizarra && (
           <div className="hidden md:flex items-center gap-2 shrink-0">
-            <img src="/assets/codexa.png" alt="Codexa" className="h-6 w-6 object-contain" />
+            <img src="/assets/codexa.webp" alt="Codexa" className="h-6 w-6 object-contain" />
             <h1 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.2px" }}>
               Codexa
             </h1>

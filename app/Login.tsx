@@ -99,7 +99,7 @@ export default function Login() {
         {/* Lado derecho */}
         <div className="absolute inset-y-0 right-0 flex items-center justify-center" style={{ width: "60%" }}>
           <img
-            src="/assets/fondo.png"
+            src="/assets/fondo.webp"
             alt=""
             aria-hidden
             style={{ width: "920px", height: "auto", objectFit: "contain" }}
@@ -123,7 +123,7 @@ export default function Login() {
 
           {/* Logo */}
           <div className="slide-1 flex items-center gap-2.5">
-            <img src="/assets/codexa.png" alt="Codexa" className="h-6" />
+            <img src="/assets/codexa.webp" alt="Codexa" className="h-6" />
             <span className="text-white font-semibold text-[15px]">
               Codexa
             </span>

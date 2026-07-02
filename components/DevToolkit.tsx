@@ -685,7 +685,7 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
                         <AvatarImg seed={currentUser.avatarSeed || currentUser.name} name={currentUser.name} color={currentUser.color} size={36} borderRadius={10} />
                       </div>
                     ) : (
-                      <img src="/assets/trabajando.png" alt="Trabajando"
+                      <img src="/assets/trabajando.webp" alt="Trabajando"
                         style={{ width: 56, alignSelf: 'stretch', objectFit: 'cover', flexShrink: 0 }} />
                     )}
                     <div style={{ padding: '13px 15px' }}>

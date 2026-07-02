@@ -670,7 +670,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
         borderRadius: 14,
         overflow: 'hidden',
         cursor: 'pointer',
-        backgroundImage: "url('/assets/nuevomienbro.png')",
+        backgroundImage: "url('/assets/nuevomienbro.webp')",
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',

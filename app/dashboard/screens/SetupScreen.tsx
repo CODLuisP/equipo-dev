@@ -23,7 +23,7 @@ export default function SetupScreen({ members, handleAddMember, onFinish, toaste
 
         {/* Logo */}
         <div className="absolute top-10 left-10 md:left-14 flex items-center gap-2.5">
-          <img src="/assets/codexa.png" alt="Codexa" className="h-6 w-6 object-contain" />
+          <img src="/assets/codexa.webp" alt="Codexa" className="h-6 w-6 object-contain" />
           <span className="text-white font-semibold text-[15px]">Codexa</span>
         </div>
 

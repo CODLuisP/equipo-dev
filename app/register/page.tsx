@@ -69,7 +69,7 @@ export default function RegisterPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="absolute top-0 left-0 z-20 flex items-center gap-2.5 p-8 md:p-10">
-          <img src="/assets/codexa.png" alt="Codexa" className="h-6" />
+          <img src="/assets/codexa.webp" alt="Codexa" className="h-6" />
           <span className="text-white font-semibold text-[15px]">Codexa</span>
         </motion.div>
 

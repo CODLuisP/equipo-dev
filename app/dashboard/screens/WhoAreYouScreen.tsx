@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Toaster } from "sonner";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
@@ -70,7 +70,7 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
               filter: "blur(6px)", pointerEvents: "none",
             }} />
             <img
-              src="/assets/3dpersonaje.png"
+              src="/assets/3dpersonaje.webp"
               alt="Personaje"
               style={{ position: "relative", width: 220, height: "auto", display: "block" }}
             />
