@@ -372,6 +372,33 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
   const [myStatus, setMyStatus]           = useState<RadarEntry | null>(null);
   const [pendingAlerts, setPendingAlerts] = useState<PendingAlert[]>([]);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Precargar el sonido y "desbloquearlo" en la primera interacción del usuario,
+  // para que pueda reproducirse aunque la pestaña esté en segundo plano.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const audio = new Audio('/assets/iPhoneSonido.mp3');
+    audio.preload = 'auto';
+    audioRef.current = audio;
+    const unlock = () => {
+      audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  const playAlertSound = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    try { a.currentTime = 0; a.play().catch(() => {}); } catch {}
+  };
 
   // Presencia en tiempo real
   const [presenceMap, setPresenceMap] = useState<Record<string, PresenceEntry>>({});
@@ -462,9 +489,7 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
           ...prev.filter(a => a.userId !== entry.userId),
           { ...entry, alertId: crypto.randomUUID() },
         ]);
-        try {
-          new Audio('/assets/iPhoneSonido.mp3').play();
-        } catch {}
+        playAlertSound();
       }
     };
 
@@ -497,22 +522,34 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
     socket.on('radar:afk',  handleAFK);
     socket.on('radar:back', handleBack);
 
-    // Sincronización: recibir todos los AFK activos
+    // Sincronización: la lista es AUTORITATIVA — refleja EXACTAMENTE quién está AFK ahora.
     const handleSync = (entries: RadarEntry[]) => {
-      entries.forEach(entry => {
-        setRadarMap(prev => {
-          const updated = { ...prev, [entry.userId]: entry };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-          return updated;
+      const afkIds = new Set(entries.filter(e => e.isAFK).map(e => e.userId));
+      setRadarMap(prev => {
+        const updated = { ...prev };
+        // Aplicar los AFK entrantes
+        entries.forEach(entry => { updated[entry.userId] = entry; });
+        // Reconciliar: cualquiera marcado AFK localmente que YA NO esté en el sync → volvió (o se desconectó)
+        Object.keys(updated).forEach(uid => {
+          if (uid !== currentUser?.id && updated[uid]?.isAFK && !afkIds.has(uid)) {
+            updated[uid] = { ...updated[uid], isAFK: false, iconKey: 'online', statusText: 'Trabajando' };
+          }
         });
-        if (currentUser && entry.userId !== currentUser.id) {
-          setPendingAlerts(prev =>
-            prev.find(a => a.userId === entry.userId)
-              ? prev
-              : [...prev, { ...entry, alertId: crypto.randomUUID() }]
-          );
-        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
       });
+      // Alertas: solo para AFK reales entrantes; quitar las de quienes ya no están AFK
+      if (currentUser) {
+        setPendingAlerts(prev => {
+          let next = prev.filter(a => afkIds.has(a.userId));
+          entries.forEach(entry => {
+            if (entry.isAFK && entry.userId !== currentUser.id && !next.find(a => a.userId === entry.userId)) {
+              next = [...next, { ...entry, alertId: crypto.randomUUID() }];
+            }
+          });
+          return next;
+        });
+      }
     };
     socket.on('radar:sync', handleSync);
 
@@ -549,6 +586,16 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
         // Merge: si vienen campos extra (name, color, etc.) los incorporamos
         return { ...prev, [userId]: { ...prev[userId], ...data, userId, lastSeen } };
       });
+      // Si el usuario se desconectó, no debe quedar como AFK "fantasma"
+      if (lastSeen === null && userId !== currentUser?.id) {
+        setRadarMap(prev => {
+          if (!prev[userId]?.isAFK) return prev;
+          const updated = { ...prev, [userId]: { ...prev[userId], isAFK: false, iconKey: 'online', statusText: 'Trabajando' } };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          return updated;
+        });
+        setPendingAlerts(prev => prev.filter(a => a.userId !== userId));
+      }
     };
 
     socket.on('presence:sync',   handlePresenceSync);
@@ -618,10 +665,18 @@ export default function DevToolkit({ members = [], currentUser = null, borderRad
 
   // Team list: ALL members except current user
   const teamMembers = members.filter((m: any) => m.id !== currentUser?.id);
-  // Legacy: for AFK marquee
+  // Un miembro solo cuenta como AFK si además está ONLINE (presencia fresca);
+  // así un estado viejo en localStorage nunca se muestra como AFK "fantasma".
+  const isOnlineNow = (id: string) => {
+    const p = presenceMap[id];
+    return !!(p && p.lastSeen != null && (now - p.lastSeen) < ONLINE_WINDOW);
+  };
   const teamList: RadarEntry[] = teamMembers
     .filter((m: any) => radarMap[m.id])
-    .map((m: any) => radarMap[m.id]);
+    .map((m: any) => {
+      const e = radarMap[m.id];
+      return e.isAFK && !isOnlineNow(m.id) ? { ...e, isAFK: false } : e;
+    });
 
   const onlineCount = teamMembers.filter((m: any) => {
     const p = presenceMap[m.id];
