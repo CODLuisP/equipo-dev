@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
@@ -2113,7 +2113,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const [multiDragDelta, setMultiDragDelta]       = useState({x:0, y:0});
   const [multiResizeDir, setMultiResizeDir]       = useState<string|null>(null);
   const [multiResizeBBox, setMultiResizeBBox]     = useState<{x:number,y:number,w:number,h:number}|null>(null);
-  const multiResizeOriginRef = useRef<{bbox:{x:number,y:number,w:number,h:number};noteMap:Map<string,any>;imageMap:Map<string,any>;shapeMap:Map<string,any>;pathMap:Map<number,any>}|null>(null);
+  const multiResizeOriginRef = useRef<{bbox:{x:number,y:number,w:number,h:number};noteMap:Map<string,any>;imageMap:Map<string,any>;shapeMap:Map<string,any>;pathMap:Map<number,any>;mx:number;my:number}|null>(null);
   const multiResizeBBoxRef   = useRef<{x:number,y:number,w:number,h:number}|null>(null);
   const notesRef             = useRef(notes);
   const imagesRef            = useRef(images);
@@ -2780,57 +2780,146 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   useEffect(() => {
     if (!multiResizeDir) return;
     const onMM = (e: MouseEvent) => {
-      const dx = e.movementX / zoomRef.current;
-      const dy = e.movementY / zoomRef.current;
-      const prev = multiResizeBBoxRef.current;
       const origin = multiResizeOriginRef.current;
-      if (!prev || !origin) return;
-      let { x, y, w, h } = prev;
-      if (multiResizeDir.includes('e')) w += dx;
-      if (multiResizeDir.includes('w')) { x += dx; w -= dx; }
-      if (multiResizeDir.includes('s')) h += dy;
-      if (multiResizeDir.includes('n')) { y += dy; h -= dy; }
-      const nb = { x, y, w: Math.max(20, w), h: Math.max(20, h) };
-      multiResizeBBoxRef.current = nb;
-      setMultiResizeBBox({ ...nb });
-      // Aplicar scale en tiempo real usando posiciones originales
+      if (!origin) return;
+
       const ob = origin.bbox;
-      const sx = ob.w > 1 ? nb.w / ob.w : 1;
-      const sy = ob.h > 1 ? nb.h / ob.h : 1;
-      const scx = (v: number) => nb.x + (v - ob.x) * sx;
-      const scy = (v: number) => nb.y + (v - ob.y) * sy;
-      onSaveNotes(notesRef.current.map((n: any) => {
-        const orig = origin.noteMap.get(n.id);
-        if (!orig) return n;
-        const updated: any = { ...n, x: scx(orig.x), y: scy(orig.y) };
-        if (n.type === 'text') {
-          const scale = Math.min(sx, sy);
-          updated.fontSize = Math.max(8, (orig.fontSize || 18) * scale);
-          if ((orig.width || 0) > 0) updated.width = Math.max(50, orig.width * sx);
-        }
-        return updated;
-      }));
-      onSaveImages(imagesRef.current.map((img: any) => {
-        const orig = origin.imageMap.get(img.id); return orig ? { ...img, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) } : img;
-      }));
-      onSaveShapes(shapesRef.current.map((s: any) => {
-        const orig = origin.shapeMap.get(s.id); return orig ? { ...s, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) } : s;
-      }));
-      if (origin.pathMap.size > 0) {
-        onSaveDrawings(drawingsRef.current.map((p: any, idx: number) => {
-          const orig = origin.pathMap.get(idx); return orig ? { ...p, points: orig.points.map((pt: any) => ({ x: scx(pt.x), y: scy(pt.y) })) } : p;
-        }));
+      const zoom = zoomRef.current;
+
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+
+      // Convert start mouse client coords to canvas coords
+      const startMouseX = (origin.mx - offsetRef.current.x - containerRect.left) / zoom;
+      const startMouseY = (origin.my - offsetRef.current.y - containerRect.top) / zoom;
+
+      // Convert current mouse client coords to canvas coords
+      const currentMouseX = (e.clientX - offsetRef.current.x - containerRect.left) / zoom;
+      const currentMouseY = (e.clientY - offsetRef.current.y - containerRect.top) / zoom;
+
+      // Determine anchor based on resize direction
+      let anchorX = ob.x;
+      if (multiResizeDir.includes('w')) {
+        anchorX = ob.x + ob.w;
+      } else if (multiResizeDir.includes('e')) {
+        anchorX = ob.x;
+      } else {
+        anchorX = ob.x + ob.w / 2;
       }
+
+      let anchorY = ob.y;
+      if (multiResizeDir.includes('n')) {
+        anchorY = ob.y + ob.h;
+      } else if (multiResizeDir.includes('s')) {
+        anchorY = ob.y;
+      } else {
+        anchorY = ob.y + ob.h / 2;
+      }
+
+      // Calculate proportional scale factor
+      let scale = 1;
+      const isCorner = multiResizeDir === 'nw' || multiResizeDir === 'ne' || multiResizeDir === 'sw' || multiResizeDir === 'se';
+
+      if (isCorner) {
+        const startDist = Math.max(1, Math.hypot(startMouseX - anchorX, startMouseY - anchorY));
+        const currentDist = Math.hypot(currentMouseX - anchorX, currentMouseY - anchorY);
+        scale = currentDist / startDist;
+      } else if (multiResizeDir === 'e' || multiResizeDir === 'w') {
+        const startDist = Math.max(1, Math.abs(startMouseX - anchorX));
+        const currentDist = Math.abs(currentMouseX - anchorX);
+        scale = currentDist / startDist;
+      } else { // 'n' or 's'
+        const startDist = Math.max(1, Math.abs(startMouseY - anchorY));
+        const currentDist = Math.abs(currentMouseY - anchorY);
+        scale = currentDist / startDist;
+      }
+
+      // Limit minimum size
+      scale = Math.max(scale, 20 / ob.w, 20 / ob.h);
+
+      const nbW = ob.w * scale;
+      const nbH = ob.h * scale;
+
+      let nbX = ob.x;
+      if (multiResizeDir.includes('w')) {
+        nbX = anchorX - nbW;
+      } else if (multiResizeDir.includes('e')) {
+        nbX = anchorX;
+      } else {
+        nbX = ob.x + (ob.w - nbW) / 2;
+      }
+
+      let nbY = ob.y;
+      if (multiResizeDir.includes('n')) {
+        nbY = anchorY - nbH;
+      } else if (multiResizeDir.includes('s')) {
+        nbY = anchorY;
+      } else {
+        nbY = ob.y + (ob.h - nbH) / 2;
+      }
+
+      const nb = { x: nbX, y: nbY, w: nbW, h: nbH };
+      multiResizeBBoxRef.current = nb;
+      setMultiResizeBBox(nb);
     };
+
     const onMU = () => {
+      const nb = multiResizeBBoxRef.current;
+      const origin = multiResizeOriginRef.current;
+      if (nb && origin) {
+        const ob = origin.bbox;
+        const sx = ob.w > 1 ? nb.w / ob.w : 1;
+        const sy = ob.h > 1 ? nb.h / ob.h : 1;
+        const scx = (v: number) => nb.x + (v - ob.x) * sx;
+        const scy = (v: number) => nb.y + (v - ob.y) * sy;
+
+        onSaveNotes(notesRef.current.map((n: any) => {
+          const orig = origin.noteMap.get(n.id);
+          if (!orig) return n;
+          const updated: any = { ...n, x: scx(orig.x), y: scy(orig.y) };
+          if (n.type === 'text') {
+            const scale = Math.min(sx, sy);
+            updated.fontSize = Math.max(8, (orig.fontSize || 18) * scale);
+            if ((orig.width || 0) > 0) updated.width = Math.max(50, orig.width * sx);
+          }
+          return updated;
+        }));
+
+        onSaveImages(imagesRef.current.map((img: any) => {
+          const orig = origin.imageMap.get(img.id);
+          return orig
+            ? { ...img, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) }
+            : img;
+        }));
+
+        onSaveShapes(shapesRef.current.map((s: any) => {
+          const orig = origin.shapeMap.get(s.id);
+          return orig
+            ? { ...s, x: scx(orig.x), y: scy(orig.y), width: Math.max(20, orig.width * sx), height: Math.max(20, orig.height * sy) }
+            : s;
+        }));
+
+        if (origin.pathMap.size > 0) {
+          onSaveDrawings(drawingsRef.current.map((p: any, idx: number) => {
+            const orig = origin.pathMap.get(idx);
+            return orig
+              ? { ...p, points: orig.points.map((pt: any) => ({ x: scx(pt.x), y: scy(pt.y) })) }
+              : p;
+          }));
+        }
+      }
       setMultiResizeDir(null);
       setMultiResizeBBox(null);
       multiResizeOriginRef.current = null;
       multiResizeBBoxRef.current = null;
     };
+
     window.addEventListener('mousemove', onMM);
     window.addEventListener('mouseup', onMU);
-    return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); };
+    return () => {
+      window.removeEventListener('mousemove', onMM);
+      window.removeEventListener('mouseup', onMU);
+    };
   }, [multiResizeDir, onSaveNotes, onSaveImages, onSaveShapes, onSaveDrawings]);
 
   useEffect(() => {
@@ -3133,7 +3222,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     const shapeMap = new Map(shapes.filter((s: any) => selectedIds.has(s.id)).map((s: any) => [s.id, { ...s }]));
     const pathMap  = new Map<number, any>();
     drawings.forEach((p: any, idx: number) => { if (selectedPathIndices.has(idx)) pathMap.set(idx, { ...p, points: p.points.map((pt: any) => ({ ...pt })) }); });
-    multiResizeOriginRef.current = { bbox, noteMap, imageMap, shapeMap, pathMap };
+    multiResizeOriginRef.current = { bbox, noteMap, imageMap, shapeMap, pathMap, mx: e.clientX, my: e.clientY };
     multiResizeBBoxRef.current = { ...bbox };
     setMultiResizeDir(dir);
     setMultiResizeBBox({ ...bbox });
@@ -3551,11 +3640,41 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             .map((el, stackIdx) => {
               if (el.kind === 'image') {
                 const img = el.data;
-                return <DraggableImage key={img.id} image={img} stackIndex={stackIdx + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:img.id,kind:'image'})}/>;
+                const isSel = selectedIds.has(img.id);
+                let tempImage = img;
+                if (isSel && multiResizeDir && multiResizeBBox && multiResizeOriginRef.current) {
+                  const ob = multiResizeOriginRef.current.bbox;
+                  const nb = multiResizeBBox;
+                  const sx = ob.w > 1 ? nb.w / ob.w : 1;
+                  const sy = ob.h > 1 ? nb.h / ob.h : 1;
+                  tempImage = {
+                    ...img,
+                    x: nb.x + (img.x - ob.x) * sx,
+                    y: nb.y + (img.y - ob.y) * sy,
+                    width: Math.max(20, img.width * sx),
+                    height: Math.max(20, img.height * sy)
+                  };
+                }
+                return <DraggableImage key={img.id} image={tempImage} stackIndex={stackIdx + 1} onDrag={onDragImage} onRotate={(id:string,rotation:number)=>onSaveImages(images.map(im=>im.id===id?{...im,rotation}:im))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===img.id} isInMultiSelect={selectedIds.has(img.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(img.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:img.id,kind:'image'})}/>;
               }
               if (el.kind === 'shape') {
                 const s = el.data;
-                return <DraggableShape key={s.id} shape={s} customTemplates={customShapes} stackIndex={stackIdx + 1} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:s.id,kind:'shape'})}/>;
+                const isSel = selectedIds.has(s.id);
+                let tempShape = s;
+                if (isSel && multiResizeDir && multiResizeBBox && multiResizeOriginRef.current) {
+                  const ob = multiResizeOriginRef.current.bbox;
+                  const nb = multiResizeBBox;
+                  const sx = ob.w > 1 ? nb.w / ob.w : 1;
+                  const sy = ob.h > 1 ? nb.h / ob.h : 1;
+                  tempShape = {
+                    ...s,
+                    x: nb.x + (s.x - ob.x) * sx,
+                    y: nb.y + (s.y - ob.y) * sy,
+                    width: Math.max(20, s.width * sx),
+                    height: Math.max(20, s.height * sy)
+                  };
+                }
+                return <DraggableShape key={s.id} shape={tempShape} customTemplates={customShapes} stackIndex={stackIdx + 1} onSave={(id:string,x:number,y:number,w:number,h:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,x,y,width:w,height:h}:sh))} onRotate={(id:string,rotation:number)=>onSaveShapes(shapes.map(sh=>sh.id===id?{...sh,rotation}:sh))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===s.id} isInMultiSelect={selectedIds.has(s.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onSelect={()=>{ setSelectedId(s.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }} onContextMenu={(x:number,y:number)=>setCtxMenu({x,y,id:s.id,kind:'shape'})}/>;
               }
               if (el.kind === 'path') {
                 const p = el.data;
@@ -3564,9 +3683,20 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
                 const isSel = selectedPathIndices.has(idx);
                 const pdx = isSel && multiDragActive ? multiDragDelta.x : 0;
                 const pdy = isSel && multiDragActive ? multiDragDelta.y : 0;
+                
+                let resizeTransform = '';
+                if (isSel && multiResizeDir && multiResizeBBox && multiResizeOriginRef.current) {
+                  const ob = multiResizeOriginRef.current.bbox;
+                  const nb = multiResizeBBox;
+                  const sx = ob.w > 1 ? nb.w / ob.w : 1;
+                  const sy = ob.h > 1 ? nb.h / ob.h : 1;
+                  resizeTransform = `translate(${nb.x} ${nb.y}) scale(${sx} ${sy}) translate(${-ob.x} ${-ob.y})`;
+                }
+
                 const rot = isSel && pathLiveRotRef.current ? pathLiveRotRef.current : null;
                 const transforms = [
                   rot ? `rotate(${rot.angle} ${rot.cx} ${rot.cy})` : '',
+                  resizeTransform,
                   pdx || pdy ? `translate(${pdx} ${pdy})` : '',
                 ].filter(Boolean).join(' ');
                 const d = p.cornerRadius ? getRoundedPolyPath(p.points, p.cornerRadius) : getPathD(p.points);
@@ -3608,7 +3738,24 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
               const note = el.data;
               // Ocultar la nota que se está editando: el textarea la reemplaza visualmente
               if (editingText?.id === note.id) return null;
-              return <DraggableNote key={note.id} note={note} members={members} stackIndex={stackIdx + 1} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
+
+              const isSel = selectedIds.has(note.id);
+              let tempNote = note;
+              if (isSel && multiResizeDir && multiResizeBBox && multiResizeOriginRef.current) {
+                const ob = multiResizeOriginRef.current.bbox;
+                const nb = multiResizeBBox;
+                const sx = ob.w > 1 ? nb.w / ob.w : 1;
+                const sy = ob.h > 1 ? nb.h / ob.h : 1;
+                const scale = Math.min(sx, sy);
+                tempNote = {
+                  ...note,
+                  x: nb.x + (note.x - ob.x) * sx,
+                  y: nb.y + (note.y - ob.y) * sy,
+                  width: note.width ? Math.max(50, note.width * sx) : undefined,
+                  fontSize: note.fontSize ? Math.max(8, note.fontSize * scale) : undefined
+                };
+              }
+              return <DraggableNote key={note.id} note={tempNote} members={members} stackIndex={stackIdx + 1} onDrag={onDragNote} onRotate={(id:string,rotation:number)=>onSaveNotes(notes.map(n=>n.id===id?{...n,rotation}:n))} disabled={tool!=='select'} zoom={zoom} isSelected={selectedId===note.id} isInMultiSelect={selectedIds.has(note.id)} dragOffset={multiDragActive?multiDragDelta:null} onMultiDragStart={onMultiDragStart} onEditText={openTextEditorForNote} onSelect={()=>{ setSelectedId(note.id); setSelectedIds(new Set()); setSelectedPathIndices(new Set()); }}/>;
             })
           }
         </div>
