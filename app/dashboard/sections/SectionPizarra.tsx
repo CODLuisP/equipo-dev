@@ -9,6 +9,40 @@ import {
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 
+// ─── Carga de imágenes ──────────────────────────────────────────────────────────
+// Lee un archivo, y SOLO si es muy grande (dimensiones enormes o base64 pesado)
+// lo redimensiona/comprime para no guardar payloads gigantes. Preserva imágenes
+// pequeñas tal cual (mantiene transparencia de logos/PNG chicos).
+function readCompressedImage(file: File, maxDim = 1600, quality = 0.82): Promise<{ src: string; w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const original = reader.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        const needResize = img.width > maxDim || img.height > maxDim;
+        const tooBig = original.length > 500_000; // ~500KB en base64
+        if (!needResize && !tooBig) { resolve({ src: original, w: img.width, h: img.height }); return; }
+        let w = img.width, h = img.height;
+        if (needResize) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else        { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve({ src: original, w: img.width, h: img.height }); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ src: canvas.toDataURL('image/jpeg', quality), w: img.width, h: img.height });
+      };
+      img.onerror = reject;
+      img.src = original;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ─── Pizarra Helpers ──────────────────────────────────────────────────────────
 
 function ToolBtn({ active, onClick, icon, title }: any) {
@@ -85,8 +119,8 @@ function DraggableImage({ image, onDrag, onRotate, disabled, zoom, isSelected, i
       }
     };
     const onMU=()=>{ if(isDragging||resizeDir){ const p=posRef.current; setIsDragging(false); setResizeDir(null); onDrag(image.id,p.x,p.y,p.w,p.h); } };
-    if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);}
-    return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);};
+    if(isDragging||resizeDir){window.addEventListener('mousemove',onMM);window.addEventListener('mouseup',onMU);window.addEventListener('blur',onMU);}
+    return()=>{window.removeEventListener('mousemove',onMM);window.removeEventListener('mouseup',onMU);window.removeEventListener('blur',onMU);};
   },[isDragging,resizeDir,image.id,onDrag,zoom]);
 
   // Cursor de resize en toda la pantalla mientras se arrastra (no se pierde al salir del handle)
@@ -222,10 +256,12 @@ function DraggableNote({ note, members, onDrag, onRotate, disabled, zoom, isSele
     if (isDragging || resizeDir) {
       window.addEventListener('mousemove', onMM);
       window.addEventListener('mouseup', onMU);
+      window.addEventListener('blur', onMU);
     }
     return () => {
       window.removeEventListener('mousemove', onMM);
       window.removeEventListener('mouseup', onMU);
+      window.removeEventListener('blur', onMU);
     };
   }, [isDragging, resizeDir, note.id, onDrag, zoom]);
 
@@ -502,6 +538,8 @@ function ShapeSvg({ type, color, width, height, customTemplates }: { type: strin
 
 function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zoom, isSelected, isInMultiSelect, dragOffset, onMultiDragStart, onSelect, onContextMenu, stackIndex = 1 }: any) {
   const [pos, setPos] = useState({ x: shape.x, y: shape.y, w: shape.width, h: shape.height });
+  const posRef = useRef(pos);
+  posRef.current = pos;
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string|null>(null);
   const [localRotation, setLocalRotation] = useState<number>(shape.rotation ?? 0);
@@ -528,10 +566,10 @@ function DraggableShape({ shape, customTemplates, onSave, onRotate, disabled, zo
         return { x, y, w: Math.max(40, w), h: Math.max(40, h) };
       });
     };
-    const onMU = () => { if (isDragging || resizeDir) { setIsDragging(false); setResizeDir(null); onSave(shape.id, pos.x, pos.y, pos.w, pos.h); } };
-    if (isDragging || resizeDir) { window.addEventListener('mousemove', onMM); window.addEventListener('mouseup', onMU); }
-    return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); };
-  }, [isDragging, resizeDir, pos, shape.id, onSave, zoom]);
+    const onMU = () => { if (isDragging || resizeDir) { const p = posRef.current; setIsDragging(false); setResizeDir(null); onSave(shape.id, p.x, p.y, p.w, p.h); } };
+    if (isDragging || resizeDir) { window.addEventListener('mousemove', onMM); window.addEventListener('mouseup', onMU); window.addEventListener('blur', onMU); }
+    return () => { window.removeEventListener('mousemove', onMM); window.removeEventListener('mouseup', onMU); window.removeEventListener('blur', onMU); };
+  }, [isDragging, resizeDir, shape.id, onSave, zoom]);
 
   const handleRotateStart = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault();
@@ -2260,28 +2298,24 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   };
 
   const importImageFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const src = ev.target?.result as string;
-      const img = new window.Image();
-      img.onload = () => {
-        const center = getViewportCenter();
-        const width = Math.min(img.width, 420);
-        const height = img.width ? (img.height * width) / img.width : 240;
-        pushToHistory();
-        onSaveImages([...images, {
-          id: crypto.randomUUID(),
-          src,
-          x: center.x - width / 2,
-          y: center.y - height / 2,
-          width,
-          height,
-          zOrder: Date.now(),
-        }]);
-      };
-      img.src = src;
-    };
-    reader.readAsDataURL(file);
+    readCompressedImage(file).then(({ src, w, h }) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      // Ancho = 50% del ancho visible de la pizarra (en coords del canvas), manteniendo proporción
+      const viewW = rect ? rect.width / zoomRef.current : 600;
+      const width = viewW * 0.5;
+      const height = w ? (h * width) / w : width * 0.6;
+      const center = getViewportCenter();
+      pushToHistory();
+      onSaveImages([...imagesRef.current, {
+        id: crypto.randomUUID(),
+        src,
+        x: center.x - width / 2,
+        y: center.y - height / 2,
+        width,
+        height,
+        zOrder: Date.now(),
+      }]);
+    }).catch(() => {});
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2801,7 +2835,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
-      if (document.activeElement?.tagName==='INPUT'||document.activeElement?.tagName==='TEXTAREA') return;
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae?.tagName==='INPUT'||ae?.tagName==='TEXTAREA'||ae?.isContentEditable) return;
       // Leer SIEMPRE el estado vivo desde refs para evitar pegar una selección desactualizada
       const clip   = clipboardRef.current as any;
       const curNotes    = notesRef.current;
@@ -2824,23 +2859,19 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         for (let i=0; i<items.length; i++) {
           if (items[i].type.indexOf("image")!==-1) {
             e.preventDefault(); const file=items[i].getAsFile(); if (!file) continue;
-            const reader=new FileReader();
-            reader.onload = ev => {
-              const src=ev.target?.result as string;
-              const img=new window.Image();
-              img.onload = () => {
-                const width = Math.min(img.width, 300);
-                const height = img.width ? (img.height * width) / img.width : 180;
-                const rect = containerRef.current?.getBoundingClientRect();
-                const center = rect
-                  ? { x:(rect.width/2 - offsetRef.current.x)/zoomRef.current, y:(rect.height/2 - offsetRef.current.y)/zoomRef.current }
-                  : { x:160, y:120 };
-                pushToHistory();
-                onSaveImages([...imagesRef.current, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
-              };
-              img.src=src;
-            };
-            reader.readAsDataURL(file); return;
+            readCompressedImage(file).then(({ src, w, h }) => {
+              const rect = containerRef.current?.getBoundingClientRect();
+              // Ancho = 50% del ancho visible de la pizarra (en coords del canvas), manteniendo proporción
+              const viewW = rect ? rect.width / zoomRef.current : 600;
+              const width = viewW * 0.5;
+              const height = w ? (h * width) / w : width * 0.6;
+              const center = rect
+                ? { x:(rect.width/2 - offsetRef.current.x)/zoomRef.current, y:(rect.height/2 - offsetRef.current.y)/zoomRef.current }
+                : { x:160, y:120 };
+              pushToHistory();
+              onSaveImages([...imagesRef.current, { id:crypto.randomUUID(), src, x:center.x - width / 2 + Math.random()*30, y:center.y - height / 2 + Math.random()*30, width, height, zOrder: Date.now() }]);
+            }).catch(() => {});
+            return;
           }
         }
       }

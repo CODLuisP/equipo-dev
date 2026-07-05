@@ -148,14 +148,19 @@ function TaskCard({ task, member, isCurrentUser, size = 'md', onEdit, onDelete, 
             </button>
           )}
           {task.status === 'pendiente' && (
-            <button onClick={e => { e.stopPropagation(); onStart(task.id); }}
-              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all bg-(--blue) text-white shadow-[0_3px_10px_rgba(var(--blue-rgb),0.3)]">
-              Iniciar
-            </button>
+       <button
+  onClick={e => {
+    e.stopPropagation();
+    onStart(task.id);
+  }}
+  className="flex items-center justify-center px-2 py-1 rounded-md text-[11px] font-bold   bg-(--blue) text-white"
+>
+  Iniciar
+</button>
           )}
           {task.status === 'en progreso' && (
             <button onClick={e => { e.stopPropagation(); onChangeStatus(task.id, 'completada'); }}
-              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all bg-(--blue) text-white shadow-[0_3px_10px_rgba(var(--blue-rgb),0.3)]">
+              className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider  bg-(--blue) text-white ">
               Finalizar
             </button>
           )}
@@ -364,7 +369,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
         <div
           className="md:col-span-3 md:row-span-6 flex flex-col gap-2 rounded-[24px] p-3 overflow-hidden max-h-64 md:max-h-none"
           style={{
-            background: overPending ? 'rgba(var(--blue-rgb),0.06)' : 'rgba(255,255,255,0.02)',
+            background: overPending ? 'rgba(var(--blue-rgb),0.06)' : '#141417',
             border: overPending ? '1px solid rgba(var(--blue-rgb),0.35)' : '1px solid rgba(255,255,255,0.05)',
             transition: 'background 0.2s, border-color 0.2s',
           }}
@@ -482,7 +487,7 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           <div
             className="flex-1 flex flex-col gap-2 border rounded-[22px] p-3 overflow-hidden max-h-52 md:max-h-none"
             style={{
-              background: overDone ? 'rgba(var(--blue-rgb),0.06)' : 'rgba(255,255,255,0.02)',
+              background: overDone ? 'rgba(var(--blue-rgb),0.06)' : '#141417',
               borderColor: overDone ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.05)',
               transition: 'background 0.2s, border-color 0.2s',
             }}
