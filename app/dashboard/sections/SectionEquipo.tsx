@@ -3,15 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
-  Trash2, Pencil, Check, Plus, Shield, Zap, Code2,
+  Trash2, Pencil, Plus, Shield, Zap, Code2,
   Palette, Star, Smartphone, Cloud, ChevronRight,
+  User,
+  MonitorSmartphone,
 } from "lucide-react";
 import type { Member, Task } from "@/app/dashboard/types";
-import { AVATAR_PRESETS } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import * as THREE from "three";
+import EditarMiembroModal, { roleColor } from "@/app/dashboard/components/EditarMiembroModal";
 
 // ─── Three.js background component ───────────────────────────────────────────
 
@@ -37,41 +36,7 @@ function ThreeBackground() {
     let height = (canvas.height = container.clientHeight);
 
     // Ultra-soft glowing orbs (monochrome greyscale for obsidian look)
-    const orbs = [
-      {
-        x: width * 0.2,
-        y: height * 0.3,
-        targetX: width * 0.2,
-        targetY: height * 0.3,
-        vx: 0.05,
-        vy: 0.03,
-        radius: Math.min(width, height) * 0.45,
-        colorStart: "rgba(255, 255, 255, 0.035)",
-        colorMid: "rgba(255, 255, 255, 0.01)",
-      },
-      {
-        x: width * 0.8,
-        y: height * 0.7,
-        targetX: width * 0.8,
-        targetY: height * 0.7,
-        vx: -0.04,
-        vy: -0.05,
-        radius: Math.min(width, height) * 0.5,
-        colorStart: "rgba(255, 255, 255, 0.025)",
-        colorMid: "rgba(255, 255, 255, 0.008)",
-      },
-      {
-        x: width * 0.5,
-        y: height * 0.5,
-        targetX: width * 0.5,
-        targetY: height * 0.5,
-        vx: 0.03,
-        vy: -0.03,
-        radius: Math.min(width, height) * 0.4,
-        colorStart: "rgba(255, 255, 255, 0.015)",
-        colorMid: "rgba(255, 255, 255, 0.004)",
-      },
-    ];
+   
 
     let targetMouseX = width / 2;
     let targetMouseY = height / 2;
@@ -85,16 +50,7 @@ function ThreeBackground() {
     };
     window.addEventListener("mousemove", handleMouseMove);
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        width = canvas.width = entry.contentRect.width;
-        height = canvas.height = entry.contentRect.height;
-        orbs[0].radius = Math.min(width, height) * 0.45;
-        orbs[1].radius = Math.min(width, height) * 0.5;
-        orbs[2].radius = Math.min(width, height) * 0.4;
-      }
-    });
-    resizeObserver.observe(container);
+
 
     let animId: number;
     const draw = () => {
@@ -105,49 +61,6 @@ function ThreeBackground() {
       mouseX += (targetMouseX - mouseX) * 0.015;
       mouseY += (targetMouseY - mouseY) * 0.015;
 
-      orbs.forEach((orb) => {
-        // Drifting movement
-        orb.targetX += orb.vx;
-        orb.targetY += orb.vy;
-
-        // Wrap-around logic
-        if (orb.targetX < -orb.radius) orb.targetX = width + orb.radius;
-        if (orb.targetX > width + orb.radius) orb.targetX = -orb.radius;
-        if (orb.targetY < -orb.radius) orb.targetY = height + orb.radius;
-        if (orb.targetY > height + orb.radius) orb.targetY = -orb.radius;
-
-        // Faint attraction to cursor
-        const dx = mouseX - orb.targetX;
-        const dy = mouseY - orb.targetY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Gentle cursor influence
-        let pullX = 0;
-        let pullY = 0;
-        if (dist < 600) {
-          const force = (600 - dist) * 0.04;
-          pullX = (dx / dist) * force;
-          pullY = (dy / dist) * force;
-        }
-
-        // Apply smooth interpolation for positions
-        orb.x += (orb.targetX + pullX - orb.x) * 0.05;
-        orb.y += (orb.targetY + pullY - orb.y) * 0.05;
-
-        // Render ambient radial gradient glow
-        const grad = ctx.createRadialGradient(
-          orb.x, orb.y, 0,
-          orb.x, orb.y, orb.radius
-        );
-        grad.addColorStop(0, orb.colorStart);
-        grad.addColorStop(0.5, orb.colorMid);
-        grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
     };
 
     draw();
@@ -155,7 +68,6 @@ function ThreeBackground() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("mousemove", handleMouseMove);
-      resizeObserver.disconnect();
       if (container.contains(canvas)) {
         container.removeChild(canvas);
       }
@@ -179,17 +91,6 @@ function ThreeBackground() {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function roleColor(role: string): string {
-  const r = role.toLowerCase();
-  if (r.includes('full') || r.includes('stack'))   return '#60a5fa';
-  if (r.includes('front') || r.includes('ui'))     return '#a78bfa';
-  if (r.includes('design'))                         return '#f472b6';
-  if (r.includes('back') || r.includes('api'))     return '#34d399';
-  if (r.includes('devops') || r.includes('cloud')) return '#fb923c';
-  if (r.includes('mobile'))                         return '#facc15';
-  return '#94a3b8';
-}
 
 function RoleIcon({ role, size = 11 }: { role: string; size?: number }) {
   const r = role.toLowerCase();
@@ -220,250 +121,6 @@ function useTilt() {
   };
   const onMouseLeave = () => { rawX.set(0); rawY.set(0); };
   return { ref, rotateX, rotateY, onMouseMove, onMouseLeave };
-}
-
-// ─── Avatar Groups ────────────────────────────────────────────────────────────
-
-const AVATAR_GROUPS = [
-  { label: 'Clásicos',  seeds: AVATAR_PRESETS.slice(0, 10)  },
-  { label: 'Guerreros', seeds: AVATAR_PRESETS.slice(10, 20) },
-  { label: 'Nombres',   seeds: AVATAR_PRESETS.slice(20, 30) },
-  { label: 'Nuevos',    seeds: AVATAR_PRESETS.slice(30, 40) },
-];
-
-// ─── Avatar Editor ────────────────────────────────────────────────────────────
-
-function AvatarEditor({ member, open, onSave, onClose }: {
-  member: Member; open: boolean; onSave: (seed: string) => void; onClose: () => void;
-}) {
-  const [seed, setSeed] = useState(member.avatarSeed || AVATAR_PRESETS[0]);
-  const [activeTab, setActiveTab] = useState(0);
-  const rc = member.color || roleColor(member.role);
-  const seedLabel = seed.charAt(0).toUpperCase() + seed.slice(1);
-
-  // Tabs matching AVATAR_GROUPS
-  const tabs = ['🎮 Clásicos', '⚔️ Guerreros', '👤 Nombres', '✨ Nuevos'];
-
-  return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="p-0 overflow-hidden gap-0 outline-none" style={{
-        background: 'rgba(10, 12, 18, 0.88)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 20,
-        maxWidth: 440,
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-      }}>
-
-        {/* Header */}
-        <div style={{ padding: '24px 24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, color: rc, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 6 }}>
-            Personalizar Perfil
-          </p>
-          <DialogTitle style={{ fontSize: 16, fontWeight: 800, color: '#f0f6fc', letterSpacing: '-0.3px', margin: 0 }}>
-            {member.name}
-          </DialogTitle>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>
-            {member.role}
-          </p>
-        </div>
-
-        <div style={{ padding: '0 24px 24px' }}>
-          {/* Large Preview & Ring */}
-          <div style={{
-            display: 'flex', justifyContent: 'center', marginBottom: 24, position: 'relative'
-          }}>
-            <div style={{ position: 'relative', width: 92, height: 92 }}>
-              {/* Spinning Glow Ring */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                style={{
-                  position: 'absolute', inset: -5, borderRadius: '50%',
-                  border: `2px dashed ${rc}50`,
-                  boxShadow: `0 0 20px ${rc}25`,
-                }}
-              />
-              <div style={{
-                position: 'absolute', inset: -2, borderRadius: '50%',
-                border: `2px solid ${rc}`,
-                boxShadow: `0 0 15px ${rc}40`,
-              }} />
-              <div style={{ borderRadius: '50%', overflow: 'hidden', width: 92, height: 92, background: 'rgba(255,255,255,0.03)' }}>
-                <AvatarImg seed={seed} name={member.name} color={rc} size={92} borderRadius={46} />
-              </div>
-            </div>
-          </div>
-
-          {/* Sliding Tabs Segment Control */}
-          <div style={{
-            display: 'flex',
-            padding: 3,
-            background: 'rgba(255,255,255,0.03)',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.05)',
-            marginBottom: 20,
-            position: 'relative',
-          }}>
-            {tabs.map((t, idx) => {
-              const isActive = activeTab === idx;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setActiveTab(idx)}
-                  style={{
-                    flex: 1,
-                    position: 'relative',
-                    padding: '8px 0',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: 7,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    transition: 'color 0.2s',
-                    zIndex: 2,
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabPill"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'rgba(255,255,255,0.07)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 7,
-                        zIndex: -1,
-                      }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  {t.split(' ')[1]}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Category Label */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Colección {tabs[activeTab]}
-            </p>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: rc }}>
-              {seedLabel}
-            </p>
-          </div>
-
-          {/* Roomy 5x2 Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-            <AnimatePresence mode="popLayout">
-              {AVATAR_GROUPS[activeTab].seeds.map((p) => {
-                const sel = seed === p;
-                return (
-                  <motion.button
-                    key={p}
-                    type="button"
-                    onClick={() => setSeed(p)}
-                    title={p}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      position: 'relative',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      aspectRatio: '1',
-                      padding: 4,
-                      background: sel ? `${rc}25` : 'rgba(255,255,255,0.02)',
-                      border: `1.5px solid ${sel ? rc : 'rgba(255,255,255,0.05)'}`,
-                      borderRadius: 12,
-                      cursor: 'pointer',
-                      outline: 'none',
-                      boxShadow: 'none',
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.2s, background-color 0.2s',
-                    }}
-                  >
-                    <AvatarImg seed={p} name={p} color={rc} size={50} borderRadius={8} />
-                    {sel && (
-                      <div style={{
-                        position: 'absolute', top: -4, right: -4,
-                        width: 14, height: 14, borderRadius: '50%',
-                        background: rc,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '1.5px solid #0f1117',
-                        boxShadow: 'none',
-                      }}>
-                        <Check size={8} color="#fff" strokeWidth={4} />
-                      </div>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          display: 'flex',
-          gap: 10,
-          justifyContent: 'flex-end',
-          padding: '16px 24px 22px',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          background: 'rgba(255,255,255,0.01)'
-        }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'rgba(255,255,255,0.4)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              transition: 'color 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => { onSave(seed); onClose(); }}
-            style={{
-              background: rc,
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 700,
-              border: 'none',
-              borderRadius: 9,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 18px',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            <Check size={12} strokeWidth={2.5} /> Guardar
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 // ─── Member Card — diseño horizontal compacto ─────────────────────────────────
@@ -504,14 +161,10 @@ function MemberCard({ member, tasks, onEdit, onDelete }: {
         borderRadius: 14,
         overflow: 'hidden',
         background: hovered
-          ? `rgba(40, 45, 50, 0.96)`
-          : `rgba(33, 37, 41, 0.92)`,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+          ? `rgba(33, 37, 41, 0.92)`
+          : `#212529`,
         border: 'none',
-        boxShadow: hovered
-          ? `0 12px 32px rgba(0,0,0,0.5)`
-          : '0 4px 20px rgba(0,0,0,0.2)',
+     
         transition: 'box-shadow 0.2s, background 0.2s',
         fontFamily: "'Plus Jakarta Sans', sans-serif",
         cursor: 'default',
@@ -558,7 +211,7 @@ function MemberCard({ member, tasks, onEdit, onDelete }: {
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
               <span style={{ color: rc, display: 'flex', alignItems: 'center' }}>
-                <RoleIcon role={member.role} size={9} />
+                <MonitorSmartphone  role={member.role} size={9} />
               </span>
               <p style={{
                 margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 500,
@@ -596,34 +249,22 @@ function MemberCard({ member, tasks, onEdit, onDelete }: {
 
         {/* Fila 4: Acciones */}
         <div style={{ display: 'flex', gap: 6 }}>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={e => { e.stopPropagation(); onEdit(); }}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               padding: '6px 0',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))",
+              border: 'none',
               borderRadius: 8, cursor: 'pointer',
               fontSize: 11, fontWeight: 600,
-              color: 'rgba(255,255,255,0.55)',
-              transition: 'all 0.15s',
+              color: '#fff',
               fontFamily: "'Plus Jakarta Sans', sans-serif",
               outline: 'none',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = `${rc}18`;
-              e.currentTarget.style.borderColor = `${rc}50`;
-              e.currentTarget.style.color = rc;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-              e.currentTarget.style.color = 'rgba(255,255,255,0.55)';
-            }}
           >
-            <Pencil size={10} /> Avatar
-          </motion.button>
+            <User size={10} /> Avatar
+          </button>
 
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -678,7 +319,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
         border: '1.5px dashed rgba(67,97,238,0.2)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'flex-end',
-        gap: 8, minHeight: 180, padding: '0 0 10px',
+        gap: 8, minHeight: 160, padding: '0 0 10px',
         transition: 'all 0.2s',
       }}
       onMouseEnter={e => {
@@ -755,7 +396,7 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
       </div>
 
       {editingMember && (
-        <AvatarEditor
+        <EditarMiembroModal
           member={editingMember}
           open={!!editingMember}
           onSave={seed => onChangeAvatar(editingMember.id, seed)}

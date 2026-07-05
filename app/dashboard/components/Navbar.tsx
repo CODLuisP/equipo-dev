@@ -3,7 +3,7 @@
 import { Users, CheckSquare, Code, StickyNote, FolderOpen, Shield, LogOut, Sparkles, Globe } from "lucide-react";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+
 import type { Member } from "@/app/dashboard/types";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ export default function Navbar({
           <Tabs value={activeHref} onValueChange={val => onNavigate(val as string)}>
             <TabsList
               className="h-10 gap-1 rounded-full p-1"
-              style={{ background: "rgba(0,0,0,0.20)", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ background: "#161b22", border: "1px solid rgba(255,255,255,0.06)" }}
             >
               {NAV.map(({ href, icon, label }) => (
                 <TabsTrigger

@@ -14,8 +14,8 @@
    ═══════════════════════════════════════════════════════════ */
 :root {
   /* Fondos */
-  --bg-base:    #0b1220;   /* fondo principal */
-  --bg-surface: #161b22;   /* cards y paneles */
+  --bg-base:    #0b0b0d;   /* fondo principal */
+  --bg-surface: #c;   /* cards y paneles */
   --bg-raised:  #21262d;   /* hover, dropdowns */
 
   /* Texto */

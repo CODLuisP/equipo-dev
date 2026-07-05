@@ -67,7 +67,6 @@ export interface DashboardContextType {
   filteredSnippets: Snippet[];
   isToolkitVisible: boolean;
   setIsToolkitVisible: (v: boolean) => void;
-  openMemberModal: boolean;  setOpenMemberModal: (v: boolean) => void;
   openTaskModal: boolean;    setOpenTaskModal: (v: boolean) => void;
   openSnippetModal: boolean; setOpenSnippetModal: (v: boolean) => void;
   openNoteModal: boolean;    setOpenNoteModal: (v: boolean) => void;
@@ -157,7 +156,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [clipboard,      setClipboard]      = useState<unknown>(null);
   const [taskFilterMember, setTaskFilterMember] = useState("all");
   const [snippetSearch,    setSnippetSearch]    = useState("");
-  const [openMemberModal,  setOpenMemberModal]  = useState(false);
   const [openTaskModal,    setOpenTaskModal]    = useState(false);
   const [openSnippetModal, setOpenSnippetModal] = useState(false);
   const [openNoteModal,    setOpenNoteModal]    = useState(false);
@@ -673,7 +671,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       taskFilterMember, setTaskFilterMember, filteredTasks,
       snippetSearch, setSnippetSearch, filteredSnippets,
       isToolkitVisible, setIsToolkitVisible,
-      openMemberModal, setOpenMemberModal,
       openTaskModal, setOpenTaskModal,
       openSnippetModal, setOpenSnippetModal,
       openNoteModal, setOpenNoteModal,

@@ -206,15 +206,15 @@ export default function MemberForm({ onAdd }: { onAdd: (name: string, role: stri
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           padding: "11px 0",
-          background: name.trim() ? "#3b82f6" : "rgba(59,130,246,0.15)",
+          background: name.trim() ? "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))" : "rgba(59,130,246,0.15)",
           border: "none", borderRadius: 10,
           color: name.trim() ? "#fff" : "rgba(255,255,255,0.25)",
-          fontSize: 13, fontWeight: 800, cursor: name.trim() ? "pointer" : "not-allowed",
+          fontSize: 12, fontWeight: 600, cursor: name.trim() ? "pointer" : "not-allowed",
           transition: "all 0.16s", letterSpacing: "-0.1px",
           outline: "none",
         }}
-        onMouseEnter={e => { if (name.trim()) { e.currentTarget.style.background = "#2563eb"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-        onMouseLeave={e => { if (name.trim()) { e.currentTarget.style.background = "#3b82f6"; e.currentTarget.style.transform = "none"; } }}
+        onMouseEnter={e => { if (name.trim()) { e.currentTarget.style.background = "rgba(var(--blue-rgb),0.85)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
+        onMouseLeave={e => { if (name.trim()) { e.currentTarget.style.background = "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))"; e.currentTarget.style.transform = "none"; } }}
       >
         <UserPlus size={14} />
         Agregar al equipo

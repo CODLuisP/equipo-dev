@@ -8,8 +8,7 @@ import AppToaster, { toasterProps } from "@/app/dashboard/components/Toast";
 import DevToolkit from "@/components/DevToolkit";
 import ModalBase from "@/components/modal/ModalBase";
 import ModalEliminar from "@/components/modal/ModalEliminar";
-import { SectionBoveda, VaultProjectForm } from "@/components/VaultSection";
-import MemberForm from "@/app/dashboard/forms/MemberForm";
+import { VaultProjectForm } from "@/components/VaultSection";
 import MemberPicker from "@/app/dashboard/forms/MemberPicker";
 import TaskForm from "@/app/dashboard/forms/TaskForm";
 import SnippetForm from "@/app/dashboard/forms/SnippetForm";
@@ -33,7 +32,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     members, currentUser, isLoading, isSetup, setIsSetup, showWhoAreYou,
     isToolkitVisible, setIsToolkitVisible,
     setShowWhoAreYou, handleAddMember, selectCurrentUser, handleLogout,
-    openMemberModal, setOpenMemberModal,
     openTaskModal, setOpenTaskModal, editingTask, setEditingTask,
     openSnippetModal, setOpenSnippetModal, editingSnippet, setEditingSnippet,
     openNoteModal, setOpenNoteModal,
@@ -123,9 +121,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Global Modals ── */}
-      <ModalBase open={openMemberModal} title="Agregar Miembro" onClose={() => setOpenMemberModal(false)}>
-        <MemberForm onAdd={(n, r, seed) => { handleAddMember(n, r, seed); setOpenMemberModal(false); }} />
-      </ModalBase>
       <ModalBase open={openTaskModal} title={editingTask ? "Editar Tarea" : "Nueva Tarea"} onClose={() => { setOpenTaskModal(false); setEditingTask(null); }}>
         <TaskForm members={members} initialData={editingTask || undefined} currentUser={currentUser} onSave={handleSaveTask} onCancel={() => { setOpenTaskModal(false); setEditingTask(null); }} />
       </ModalBase>

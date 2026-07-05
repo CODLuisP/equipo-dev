@@ -1,15 +1,15 @@
-﻿"use client";
+"use client";
 
 import { X } from "lucide-react";
+import MemberForm from "@/app/dashboard/forms/MemberForm";
 
-type ModalBaseProps = {
+interface AgregarMiembroModalProps {
   open: boolean;
-  title: string;
   onClose: () => void;
-  children: React.ReactNode;
-};
+  onAdd: (name: string, role: string, avatarSeed: string) => void;
+}
 
-export default function ModalBase({ open, title, onClose, children }: ModalBaseProps) {
+export default function AgregarMiembroModal({ open, onClose, onAdd }: AgregarMiembroModalProps) {
   if (!open) return null;
 
   return (
@@ -34,7 +34,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "#f4f4f6", margin: 0, letterSpacing: "-0.2px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            {title}
+            Agregar Miembro
           </h2>
           <button
             onClick={onClose}
@@ -50,7 +50,8 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
             <X size={15} />
           </button>
         </div>
-        {children}
+
+        <MemberForm onAdd={(n, r, seed) => { onAdd(n, r, seed); onClose(); }} />
       </div>
     </div>
   );
