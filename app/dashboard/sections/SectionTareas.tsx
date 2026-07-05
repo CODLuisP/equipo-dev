@@ -199,15 +199,15 @@ function FilterDropdown({ value, onChange, members }: {
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '5px 10px',
-          background: open ? 'rgba(var(--blue-rgb),0.10)' : 'rgba(255,255,255,0.04)',
+          height: 29, boxSizing: 'border-box', padding: '0 10px',
+          background: open ? 'rgba(var(--blue-rgb),0.10)' : '#212529',
           border: `1px solid ${open ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.07)'}`,
           borderRadius: 10, cursor: 'pointer',
           transition: 'all 0.15s',
         }}
       >
-        <Filter size={11} color="#4a5570" />
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+        <Filter size={11} color="#adb5bd" />
+        <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text)', whiteSpace: 'nowrap' }}>
           {selected.label}
         </span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
@@ -220,7 +220,7 @@ function FilterDropdown({ value, onChange, members }: {
         <div ref={panelRef} style={{
           position: 'fixed', zIndex: 99999,
           minWidth: 200,
-          background: '#161b22',
+          background: '#141417',
           border: '1px solid rgba(var(--blue-rgb),0.25)',
           borderRadius: 14,
           padding: '6px',
@@ -324,7 +324,6 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
     <div className="flex flex-col gap-3 overflow-y-auto md:h-full md:overflow-hidden relative">
 
       {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-125 bg-(--blue)/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* ── Top Control HUD ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 z-10">
@@ -333,16 +332,16 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
           <div className="h-6 w-px bg-white/5 hidden sm:block" />
           <FilterDropdown value={filterMember} onChange={setFilterMember} members={members} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={11} style={{ position: 'absolute', left: 10, color: '#4a5570', pointerEvents: 'none' }} />
+            <Search size={11} style={{ position: 'absolute', left: 10, color: '#adb5bd', pointerEvents: 'none' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar tarea…"
+              placeholder="Buscar tarea"
               style={{
-                height: 29, width: 150, paddingLeft: 28, paddingRight: search ? 26 : 10,
-                background: search ? 'rgba(var(--blue-rgb),0.10)' : 'rgba(255,255,255,0.04)',
+                height: 29, boxSizing: 'border-box', width: 150, paddingLeft: 28, paddingRight: search ? 26 : 10,
+                background: search ? 'rgba(var(--blue-rgb),0.10)' : '#212529',
                 border: `1px solid ${search ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.07)'}`,
-                borderRadius: 10, color: 'var(--text)', fontSize: 11, fontWeight: 600, outline: 'none',
+                borderRadius: 10, color: 'var(--text)', fontSize: 11, fontWeight: 400, outline: 'none',
                 fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all 0.15s',
               }}
             />
