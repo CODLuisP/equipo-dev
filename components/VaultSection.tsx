@@ -105,7 +105,7 @@ export function SectionBoveda({
       </div>
 
       {fullViewProject && (
-        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8" onClick={e => { if (e.target === e.currentTarget) { setFullViewProject(null); setVaultSearchTerm(''); } }}>
+        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
           <div style={{ background:'#0C0E13', border:'1px solid rgba(255,255,255,0.08)' }} className="max-w-5xl w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
             {/* Header compacto — una sola barra */}

@@ -7,9 +7,10 @@ type ModalBaseProps = {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  closeOnOverlayClick?: boolean;
 };
 
-export default function ModalBase({ open, title, onClose, children }: ModalBaseProps) {
+export default function ModalBase({ open, title, onClose, children, closeOnOverlayClick = true }: ModalBaseProps) {
   if (!open) return null;
 
   return (
@@ -20,7 +21,7 @@ export default function ModalBase({ open, title, onClose, children }: ModalBaseP
         background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)",
         fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => { if (closeOnOverlayClick && e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
         background: "#0b0b0d",

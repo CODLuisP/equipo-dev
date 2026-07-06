@@ -2300,10 +2300,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   const importImageFile = (file: File) => {
     readCompressedImage(file).then(({ src, w, h }) => {
       const rect = containerRef.current?.getBoundingClientRect();
-      // Ancho = 50% del ancho visible de la pizarra (en coords del canvas), manteniendo proporción
-      const viewW = rect ? rect.width / zoomRef.current : 600;
-      const width = viewW * 0.5;
-      const height = w ? (h * width) / w : width * 0.6;
+      // Máximo 50% del ancho visible Y 50% del alto visible, manteniendo proporción
+      const viewW = rect ? rect.width  / zoomRef.current : 600;
+      const viewH = rect ? rect.height / zoomRef.current : 400;
+      const maxW = viewW * 0.5;
+      const maxH = viewH * 0.5;
+      const aspect = (w && h) ? w / h : 1;
+      let width  = maxW;
+      let height = maxW / aspect;
+      if (height > maxH) { height = maxH; width = maxH * aspect; }
       const center = getViewportCenter();
       pushToHistory();
       onSaveImages([...imagesRef.current, {
@@ -2950,10 +2955,15 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             e.preventDefault(); const file=items[i].getAsFile(); if (!file) continue;
             readCompressedImage(file).then(({ src, w, h }) => {
               const rect = containerRef.current?.getBoundingClientRect();
-              // Ancho = 50% del ancho visible de la pizarra (en coords del canvas), manteniendo proporción
-              const viewW = rect ? rect.width / zoomRef.current : 600;
-              const width = viewW * 0.5;
-              const height = w ? (h * width) / w : width * 0.6;
+              // Máximo 50% del ancho visible Y 50% del alto visible, manteniendo proporción
+              const viewW = rect ? rect.width  / zoomRef.current : 600;
+              const viewH = rect ? rect.height / zoomRef.current : 400;
+              const maxW = viewW * 0.5;
+              const maxH = viewH * 0.5;
+              const aspect = (w && h) ? w / h : 1;
+              let width  = maxW;
+              let height = maxW / aspect;
+              if (height > maxH) { height = maxH; width = maxH * aspect; }
               const center = rect
                 ? { x:(rect.width/2 - offsetRef.current.x)/zoomRef.current, y:(rect.height/2 - offsetRef.current.y)/zoomRef.current }
                 : { x:160, y:120 };

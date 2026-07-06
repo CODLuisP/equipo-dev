@@ -8,9 +8,10 @@ type ModalEliminarProps = {
   message: string;
   onClose: () => void;
   onConfirm: () => void;
+  closeOnOverlayClick?: boolean;
 };
 
-export default function ModalEliminar({ open, title, message, onClose, onConfirm }: ModalEliminarProps) {
+export default function ModalEliminar({ open, title, message, onClose, onConfirm, closeOnOverlayClick = true }: ModalEliminarProps) {
   if (!open) return null;
 
   return (
@@ -21,7 +22,7 @@ export default function ModalEliminar({ open, title, message, onClose, onConfirm
         background: "rgba(0,0,0,0.10)", backdropFilter: "blur(4px)",
         fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => { if (closeOnOverlayClick && e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
         background: "var(--bg-surface)",

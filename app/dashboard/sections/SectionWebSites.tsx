@@ -161,7 +161,7 @@ function SiteCard({ site, author, onOpen, onEdit, onDelete }: { site: WebSite; a
       onMouseLeave={() => setHov(false)}
       style={{
         display: "flex", flexDirection: "column", borderRadius: 18, overflow: "hidden", cursor: "pointer",
-        background: hov ? "#212529" : "#212529",
+        background: hov ? "#212529" : "#141417",
         border: `1px solid ${bd}`,
       }}
     >

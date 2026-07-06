@@ -137,12 +137,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <ModalBase open={openNoteModal} title="Nueva Nota" onClose={() => setOpenNoteModal(false)}>
         <NoteForm members={members} onSave={handleAddNote} onCancel={() => setOpenNoteModal(false)} />
       </ModalBase>
-      <ModalBase open={openVaultModal} title={editingVaultProject ? "Editar Proyecto" : "Nuevo Proyecto en Bóveda"} onClose={() => { setOpenVaultModal(false); setEditingVaultProject(null); }}>
+      <ModalBase open={openVaultModal} title={editingVaultProject ? "Editar Proyecto" : "Nuevo Proyecto en Bóveda"} onClose={() => { setOpenVaultModal(false); setEditingVaultProject(null); }} closeOnOverlayClick={false}>
         <VaultProjectForm initialData={editingVaultProject || undefined} onSave={handleSaveVaultProject} onCancel={() => setOpenVaultModal(false)} />
       </ModalBase>
       <ModalEliminar
         open={openDeleteModal}
         onClose={() => setOpenDeleteModal(false)}
+        closeOnOverlayClick={deleteConfig?.type !== "vault"}
         onConfirm={() => {
           if (!deleteConfig) return;
           const { type, id } = deleteConfig;
