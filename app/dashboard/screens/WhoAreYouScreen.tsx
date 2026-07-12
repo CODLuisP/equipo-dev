@@ -15,7 +15,7 @@ export default function WhoAreYouScreen({ members, onSelect, onSkip, toasterProp
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#070917",
+      background: "#141417",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",

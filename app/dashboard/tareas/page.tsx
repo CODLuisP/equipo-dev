@@ -2,15 +2,18 @@
 
 import { useDashboard } from "@/app/dashboard/DashboardContext";
 import SectionTareas from "@/app/dashboard/sections/SectionTareas";
+import { CenteredLoader } from "@/components/ui/Spinner";
 
 export default function TareasPage() {
   const {
     filteredTasks, members, taskFilterMember, setTaskFilterMember,
-    currentUser,
+    currentUser, isLoadingSecondary,
     setOpenTaskModal, setEditingTask,
     handleChangeTaskStatus, handleStartTask, handleDeleteTask, handleClearCompleted,
     setDeleteConfig, setOpenDeleteModal,
   } = useDashboard();
+
+  if (isLoadingSecondary) return <CenteredLoader />;
 
   return (
     <SectionTareas

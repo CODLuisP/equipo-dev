@@ -62,8 +62,8 @@ export default function RegisterPage() {
         {/* ── Imagen de fondo de TODA la pantalla ── */}
         <img src={HERO_IMG} alt="" aria-hidden
           className="absolute inset-0 w-full h-full object-cover" style={{ transform: "scale(1.03)" }} />
-        <div aria-hidden className="absolute inset-0" style={{ background: "rgba(8,9,28,0.7)" }} />
-        <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(120deg, rgba(11,13,26,0.78) 0%, rgba(11,13,26,0.30) 55%, rgba(11,13,26,0.20) 100%)" }} />
+        <div aria-hidden className="absolute inset-0" style={{ background: "rgba(20,20,23,0.7)" }} />
+        <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(to right, #141417 30%, rgba(20,20,23,0.85) 55%, rgba(20,20,23,0.1) 100%)" }} />
 
         {/* Logo global arriba-izquierda */}
         <motion.div

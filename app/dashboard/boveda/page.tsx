@@ -2,14 +2,17 @@
 
 import { useDashboard } from "@/app/dashboard/DashboardContext";
 import { SectionBoveda } from "@/components/VaultSection";
+import { CenteredLoader } from "@/components/ui/Spinner";
 
 export default function BovedaPage() {
   const {
     vaultProjects, isVaultUnlocked, setIsVaultUnlocked, saveVault,
     setOpenVaultModal, setEditingVaultProject,
     handleDeleteVaultProject,
-    setDeleteConfig, setOpenDeleteModal,
+    setDeleteConfig, setOpenDeleteModal, isLoadingSecondary,
   } = useDashboard();
+
+  if (isLoadingSecondary) return <CenteredLoader />;
 
   return (
     <SectionBoveda

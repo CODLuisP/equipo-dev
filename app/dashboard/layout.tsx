@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useLayoutEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardProvider, useDashboard } from "@/app/dashboard/DashboardContext";
 import Navbar, { NAV } from "@/app/dashboard/components/Navbar";
@@ -17,6 +17,7 @@ import ButtonBase from "@/components/ui/ButtonBase";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SetupScreen from "@/app/dashboard/screens/SetupScreen";
 import WhoAreYouScreen from "@/app/dashboard/screens/WhoAreYouScreen";
+import Spinner from "@/components/ui/Spinner";
 
 // ─── Inner layout ─────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const isPizarra = pathname === "/dashboard/pizarra";
   const [isWide, setIsWide] = useState(false);
+  const [hasSavedMember, setHasSavedMember] = useState(false);
 
   const activeHref = NAV.find(n => pathname.startsWith(n.href))?.href ?? "";
 
@@ -47,7 +49,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     isVaultUnlocked, setIsVaultUnlocked,
   } = useDashboard();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    setHasSavedMember(!!localStorage.getItem('equipo_dev_current_member'));
+  }, []);
+
+  useLayoutEffect(() => {
     const check = () => {
       const wide = window.innerWidth >= 1320;
       setIsWide(wide);
@@ -59,20 +65,25 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', check);
   }, [setIsToolkitVisible]);
 
-  if (isLoading) return null;
-
-  if (isSetup) return (
+  if (!isLoading && isSetup) return (
     <>
       <AppToaster />
       <SetupScreen members={members} handleAddMember={handleAddMember} onFinish={() => { setIsSetup(false); setShowWhoAreYou(true); }} toasterProps={toasterProps} />
     </>
   );
 
-  if (showWhoAreYou) return (
+  if (!isLoading && showWhoAreYou) return (
     <>
       <AppToaster />
       <WhoAreYouScreen members={members} onSelect={selectCurrentUser} onSkip={() => setShowWhoAreYou(false)} toasterProps={toasterProps} />
     </>
+  );
+
+  // Si no hay un miembro guardado, lo más probable es que vayamos a mostrar
+  // WhoAreYouScreen apenas termine de cargar: evitamos el flash del dashboard
+  // completo mostrando un loader neutro mientras tanto.
+  if (isLoading && !hasSavedMember) return (
+    <div className="h-screen w-full bg-(--bg-base)" />
   );
 
   return (
@@ -94,19 +105,28 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Content + Toolkit ── */}
       <div className={`flex-1 min-h-0 overflow-hidden relative ${isPizarra ? "" : "flex flex-col wide:flex-row gap-3 wide:gap-5"}`}>
-        <div className={`min-w-0 overflow-hidden ${isPizarra ? 'h-full' : 'flex-1 min-h-0'}`}>{children}</div>
+        <div className={`min-w-0 overflow-hidden ${isPizarra ? 'h-full' : 'flex-1 min-h-0'}`}>
+          {isLoading ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <Spinner size={28} />
+            </div>
+          ) : children}
+        </div>
 
-        {isToolkitVisible && !isPizarra && (
+        {!isPizarra && (
           <>
             {/* Overlay backdrop — solo en < 1320px */}
-            <div
-              className="wide:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-              onClick={() => setIsToolkitVisible(false)}
-            />
-            {/* Sidebar — inline en wide, overlay en móvil/tablet */}
+            {isToolkitVisible && (
+              <div
+                className="wide:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+                onClick={() => setIsToolkitVisible(false)}
+              />
+            )}
+            {/* Sidebar — siempre montado (no pierde estado interno); se muestra u oculta con CSS */}
             <div className={`
+              ${isToolkitVisible ? '' : 'hidden'}
               ${isWide ? 'relative block w-80 h-full shrink-0' : 'fixed top-0 right-0 h-full w-80 max-w-[90vw] z-50'}
-              animate-in slide-in-from-right duration-300
+              ${isWide ? '' : 'animate-in slide-in-from-right duration-300'}
             `}>
               <div className="h-full">
                 <DevToolkit

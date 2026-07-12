@@ -72,7 +72,7 @@ export default function Login() {
 
         .l-input { width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:10px; padding:12px 44px; font-size:14px; color:#f1f5f9; font-family:inherit; outline:none; transition:border-color .15s, box-shadow .15s; }
         .l-input::placeholder { color:rgba(148,163,184,0.35); }
-        .l-input:focus { border-color:rgba(99,102,241,0.55); box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
+        .l-input:focus { border-color:rgba(33,37,41,0.9); box-shadow:0 0 0 3px rgba(33,37,41,0.35); }
 
         .l-btn { width:100%; padding:13px; border-radius:10px; border:none; background:#4361ee; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background .15s, transform .15s, box-shadow .15s; }
         .l-btn:hover:not(:disabled) { background:#1565c0; transform:translateY(-1px); }
@@ -94,7 +94,7 @@ export default function Login() {
       `}</style>
 
       {/* ── Root ── */}
-      <div className="relative h-screen overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: "#08091c" }}>
+      <div className="relative h-screen overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: "#161b22" }}>
 
         {/* Lado derecho */}
         <div className="absolute inset-y-0 right-0 flex items-center justify-center" style={{ width: "60%" }}>
@@ -110,7 +110,7 @@ export default function Login() {
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: "linear-gradient(to right, #08091c 30%, rgba(8,9,28,0.85) 55%, rgba(8,9,28,0.1) 100%)" }}
+          style={{ background: "linear-gradient(to right, #141417 30%, rgba(20,20,23,0.85) 55%, rgba(20,20,23,0.1) 100%)" }}
         />
 
         {/* ── Form con imagen de fondo ── */}
@@ -119,7 +119,7 @@ export default function Login() {
        
         >
           {/* Capa del mismo tono que el fondo derecho */}
-          <div aria-hidden className="absolute inset-0" style={{ background: "rgba(8,9,28,0.88)" }} />
+          <div aria-hidden className="absolute inset-0" style={{ background: "rgba(20,20,23,0.88)" }} />
 
           {/* Logo */}
           <div className="slide-1 flex items-center gap-2.5">
@@ -240,10 +240,8 @@ export default function Login() {
   <h2 className="text-[24px] md:text-[28px] font-bold tracking-tight text-white/90">
     Donde el código{" "}
     <span
-      className="bg-clip-text text-transparent"
-      style={{
-        backgroundImage: "linear-gradient(135deg, #818cf8, #60a5fa)",
-      }}
+      className="bg-clip-text  text-[#788eee]"
+
     >
       cobra vida.
     </span>

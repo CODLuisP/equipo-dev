@@ -55,6 +55,7 @@ export interface DashboardContextType {
   setIsVaultUnlocked: (v: boolean) => void;
   currentUser: Member | null;
   isLoading: boolean;
+  isLoadingSecondary: boolean;
   isSetup: boolean;
   setIsSetup: (v: boolean) => void;
   showWhoAreYou: boolean;
@@ -150,9 +151,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   };
   const [currentUser,    setCurrentUser]    = useState<Member | null>(null);
   const [isLoading,      setIsLoading]      = useState(true);
+  const [isLoadingSecondary, setIsLoadingSecondary] = useState(true);
   const [isSetup,        setIsSetup]        = useState(false);
   const [showWhoAreYou,  setShowWhoAreYou]  = useState(false);
-  const [isToolkitVisible, setIsToolkitVisible] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1320 : false);
+  const [isToolkitVisible, setIsToolkitVisible] = useState(false);
   const [clipboard,      setClipboard]      = useState<unknown>(null);
   const [taskFilterMember, setTaskFilterMember] = useState("all");
   const [snippetSearch,    setSnippetSearch]    = useState("");
@@ -224,11 +226,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           setVaultProjects(v);
           setArchivos(sf);
           setWebsites(ws);
-        }).catch(err => console.error('Error cargando datos secundarios:', err));
+        }).catch(err => console.error('Error cargando datos secundarios:', err))
+          .finally(() => setIsLoadingSecondary(false));
       } catch (err) {
         console.error('Error cargando datos:', err);
         toast.error('No se pudo conectar al servidor. ¿Está corriendo el backend?');
         router.replace('/');
+        setIsLoadingSecondary(false);
       } finally {
         setIsLoading(false);
       }
@@ -663,33 +667,42 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const handleDragImage   = (id: string, x: number, y: number, w?: number, h?: number) =>
     saveImages(boardImages.map(img => img.id === id ? { ...img, x, y, width: w||img.width, height: h||img.height } : img));
 
+  const contextValue = useMemo<DashboardContextType>(() => ({
+    members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
+    isVaultUnlocked, setIsVaultUnlocked,
+    currentUser, isLoading, isLoadingSecondary, isSetup, setIsSetup, showWhoAreYou, setShowWhoAreYou,
+    taskFilterMember, setTaskFilterMember, filteredTasks,
+    snippetSearch, setSnippetSearch, filteredSnippets,
+    isToolkitVisible, setIsToolkitVisible,
+    openTaskModal, setOpenTaskModal,
+    openSnippetModal, setOpenSnippetModal,
+    openNoteModal, setOpenNoteModal,
+    openVaultModal, setOpenVaultModal,
+    openDeleteModal, setOpenDeleteModal,
+    deleteConfig, setDeleteConfig,
+    editingTask, setEditingTask,
+    editingSnippet, setEditingSnippet,
+    editingVaultProject, setEditingVaultProject,
+    assignModal, setAssignModal,
+    pushToHistory, undo, redo, clipboard, setClipboard,
+    handleAddMember, handleDeleteMember, handleDeleteArchivo, handleChangeAvatar, selectCurrentUser, handleLogout,
+    handleSaveTask, handleChangeTaskStatus, handleStartTask, handleAssignAndStart, handleDeleteTask, handleClearCompleted,
+    handleSaveSnippet, handleDeleteSnippet, handleCopySnippet,
+    handleSaveVaultProject, handleDeleteVaultProject, saveVault,
+    handleAddNote, handleDeleteNote, handleDragNote, handleDragImage,
+    saveDrawings, saveImages, saveNotes, saveShapes, saveCustomShapes, saveArchivos,
+    handleSaveWebsite, handleDeleteWebsite,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [
+    members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
+    isVaultUnlocked, currentUser, isLoading, isLoadingSecondary, isSetup, showWhoAreYou,
+    taskFilterMember, filteredTasks, snippetSearch, filteredSnippets, isToolkitVisible,
+    openTaskModal, openSnippetModal, openNoteModal, openVaultModal, openDeleteModal,
+    deleteConfig, editingTask, editingSnippet, editingVaultProject, assignModal, clipboard,
+  ]);
+
   return (
-    <DashboardContext.Provider value={{
-      members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
-      isVaultUnlocked, setIsVaultUnlocked,
-      currentUser, isLoading, isSetup, setIsSetup, showWhoAreYou, setShowWhoAreYou,
-      taskFilterMember, setTaskFilterMember, filteredTasks,
-      snippetSearch, setSnippetSearch, filteredSnippets,
-      isToolkitVisible, setIsToolkitVisible,
-      openTaskModal, setOpenTaskModal,
-      openSnippetModal, setOpenSnippetModal,
-      openNoteModal, setOpenNoteModal,
-      openVaultModal, setOpenVaultModal,
-      openDeleteModal, setOpenDeleteModal,
-      deleteConfig, setDeleteConfig,
-      editingTask, setEditingTask,
-      editingSnippet, setEditingSnippet,
-      editingVaultProject, setEditingVaultProject,
-      assignModal, setAssignModal,
-      pushToHistory, undo, redo, clipboard, setClipboard,
-      handleAddMember, handleDeleteMember, handleDeleteArchivo, handleChangeAvatar, selectCurrentUser, handleLogout,
-      handleSaveTask, handleChangeTaskStatus, handleStartTask, handleAssignAndStart, handleDeleteTask, handleClearCompleted,
-      handleSaveSnippet, handleDeleteSnippet, handleCopySnippet,
-      handleSaveVaultProject, handleDeleteVaultProject, saveVault,
-      handleAddNote, handleDeleteNote, handleDragNote, handleDragImage,
-      saveDrawings, saveImages, saveNotes, saveShapes, saveCustomShapes, saveArchivos,
-      handleSaveWebsite, handleDeleteWebsite,
-    }}>
+    <DashboardContext.Provider value={contextValue}>
       {children}
     </DashboardContext.Provider>
   );

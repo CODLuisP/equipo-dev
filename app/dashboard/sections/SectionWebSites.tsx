@@ -11,6 +11,7 @@ import { useDashboard } from "@/app/dashboard/DashboardContext";
 import type { WebSite, WebAccount, Member } from "@/app/dashboard/types";
 import ButtonBase from "@/components/ui/ButtonBase";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
+import { CenteredLoader } from "@/components/ui/Spinner";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -523,7 +524,7 @@ function FormModal({ initial, initialKind = 'credentials', onClose, onSave }: { 
 // ─── Main section ─────────────────────────────────────────────────────────────
 
 export default function SectionWebSites() {
-  const { websites, members, handleSaveWebsite, handleDeleteWebsite } = useDashboard();
+  const { websites, members, handleSaveWebsite, handleDeleteWebsite, isLoadingSecondary } = useDashboard();
   const authorOf = (w: WebSite) => members.find(m => m.id === w.authorId);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<'credentials' | 'resource'>('credentials');
@@ -553,6 +554,8 @@ export default function SectionWebSites() {
   // Al crear, el tipo queda fijado por la pestaña activa
   const openNew = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (w: WebSite) => { setEditing(w); setFormOpen(true); setDetail(null); };
+
+  if (isLoadingSecondary) return <CenteredLoader />;
 
   return (
     <div className="h-full flex flex-col" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
