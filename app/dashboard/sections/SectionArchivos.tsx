@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, RefObject } from "react";
+import { useState, useEffect, useRef, RefObject, memo } from "react";
 import {
   FolderOpen, UploadCloud, X, LinkIcon, ExternalLink, Download,
   FileText, Image as ImageIcon, FileCode, Archive, Film, Music,
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import ButtonBase from "@/components/ui/ButtonBase";
 import ArchivosBackground from "@/app/dashboard/sections/ArchivosBackground";
 import type { Member, SharedFile } from "@/app/dashboard/types";
+import { getToken } from "@/lib/api";
 
 // ─── Floating File Card ───────────────────────────────────────────────────────
 
@@ -61,7 +62,11 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
         const resBlob = await fetch(file.dataUrl);
         const blob = await resBlob.blob();
         formData.append('file', blob, file.name);
-        const response = await fetch('/api/share', { method: 'POST', body: formData });
+        const response = await fetch('/api/share', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: formData,
+        });
         if (!response.ok) {
           const text = await response.text();
           let msg = 'Error en el servidor';
@@ -201,7 +206,7 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
 
 // ─── Sección: Archivos ────────────────────────────────────────────────────────
 
-export default function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos: SharedFile[]; members: Member[]; currentUser: Member | null; onSave: (d: SharedFile[]) => void; }) {
+function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos: SharedFile[]; members: Member[]; currentUser: Member | null; onSave: (d: SharedFile[]) => void; }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver]       = useState(false);
@@ -324,3 +329,5 @@ export default function SectionArchivos({ archivos, members, currentUser, onSave
     </div>
   );
 }
+
+export default memo(SectionArchivos);

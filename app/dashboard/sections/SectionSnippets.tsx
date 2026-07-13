@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
 import { Plus, Copy, Pencil, Trash2, Code, Check, Filter, Maximize2, X } from "lucide-react";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
@@ -466,7 +466,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
 
 // ─── Sección principal ────────────────────────────────────────────────────────
 
-export default function SectionSnippets({ snippets, search, setSearch, members, currentUser, onAddSnippet, onEditSnippet, onCopy, onDeleteSnippet }: {
+function SectionSnippets({ snippets, search, setSearch, members, currentUser, onAddSnippet, onEditSnippet, onCopy, onDeleteSnippet }: {
   snippets: Snippet[]; search: string; setSearch: (v: string) => void;
   members: Member[]; currentUser?: Member | null;
   onAddSnippet: () => void; onEditSnippet: (s: Snippet) => void;
@@ -708,3 +708,5 @@ export default function SectionSnippets({ snippets, search, setSearch, members, 
     </div>
   );
 }
+
+export default memo(SectionSnippets);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, memo } from "react";
 import {
   Globe, Plus, Search, ExternalLink, Pencil, Trash2, Copy, Check,
   Eye, EyeOff, Star, X, Image as ImageIcon, User, KeyRound, Upload, Users,
@@ -523,7 +523,7 @@ function FormModal({ initial, initialKind = 'credentials', onClose, onSave }: { 
 
 // ─── Main section ─────────────────────────────────────────────────────────────
 
-export default function SectionWebSites() {
+function SectionWebSites() {
   const { websites, members, handleSaveWebsite, handleDeleteWebsite, isLoadingSecondary } = useDashboard();
   const authorOf = (w: WebSite) => members.find(m => m.id === w.authorId);
   const [search, setSearch] = useState("");
@@ -661,3 +661,5 @@ export default function SectionWebSites() {
     </div>
   );
 }
+
+export default memo(SectionWebSites);

@@ -37,8 +37,10 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
-    if (!code) return NextResponse.json({ error: 'Falta code' }, { status: 400 });
+    const rawCode = searchParams.get('code');
+    if (!rawCode) return NextResponse.json({ error: 'Falta code' }, { status: 400 });
+    const code = rawCode.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!code) return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
 
     const filePath = join(LINKS_DIR, `${code}.json`);
     if (!existsSync(filePath)) return NextResponse.json({ error: 'No encontrado' }, { status: 404 });

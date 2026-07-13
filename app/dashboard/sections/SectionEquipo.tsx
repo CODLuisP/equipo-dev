@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
   Trash2, Pencil, Plus, Shield, Zap, Code2,
@@ -11,84 +11,6 @@ import {
 import type { Member, Task } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import EditarMiembroModal, { roleColor } from "@/app/dashboard/components/EditarMiembroModal";
-
-// ─── Three.js background component ───────────────────────────────────────────
-
-function ThreeBackground() {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const canvas = document.createElement("canvas");
-    canvas.style.position = "absolute";
-    canvas.style.inset = "0";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.pointerEvents = "none";
-    container.appendChild(canvas);
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let width = (canvas.width = container.clientWidth);
-    let height = (canvas.height = container.clientHeight);
-
-    // Ultra-soft glowing orbs (monochrome greyscale for obsidian look)
-   
-
-    let targetMouseX = width / 2;
-    let targetMouseY = height / 2;
-    let mouseX = width / 2;
-    let mouseY = height / 2;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      targetMouseX = e.clientX - rect.left;
-      targetMouseY = e.clientY - rect.top;
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-
-
-
-    let animId: number;
-    const draw = () => {
-      animId = requestAnimationFrame(draw);
-      ctx.clearRect(0, 0, width, height);
-
-      // Interpolate mouse movement with high damping for extreme calmness
-      mouseX += (targetMouseX - mouseX) * 0.015;
-      mouseY += (targetMouseY - mouseY) * 0.015;
-
-    };
-
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("mousemove", handleMouseMove);
-      if (container.contains(canvas)) {
-        container.removeChild(canvas);
-      }
-    };
-  }, []);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 1,
-        pointerEvents: "none",
-        opacity: 0.95,
-      }}
-    />
-  );
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -354,7 +276,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMember, onChangeAvatar }: {
+function SectionEquipo({ members, tasks, onAddMember, onDeleteMember, onChangeAvatar }: {
   members: Member[]; tasks: Task[];
   onAddMember: () => void;
   onDeleteMember: (m: Member) => void;
@@ -367,7 +289,6 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
       position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
       fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
-      <ThreeBackground />
       <div style={{ position: 'absolute', inset: 0, zIndex: 2, overflowY: 'auto', padding: '0 2px 24px' }} className="custom-scrollbar">
 
 
@@ -406,3 +327,5 @@ export default function SectionEquipo({ members, tasks, onAddMember, onDeleteMem
     </div>
   );
 }
+
+export default memo(SectionEquipo);

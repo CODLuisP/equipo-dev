@@ -265,11 +265,14 @@ export function VaultProjectForm({ initialData, onSave, onCancel }: VaultProject
 }
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
+function escapeHtml(text: string) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function highlightMatches(text: string, term: string) {
-  if (!term || term.length < 2) return text;
+  const escaped = escapeHtml(text);
+  if (!term || term.length < 2) return escaped;
   try {
-    const regex = new RegExp(`(${term})`, 'gi');
-    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return escaped.replace(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark style="background:rgba(var(--blue-rgb),0.45);color:inherit;border-radius:2px;">$1</mark>');
-  } catch { return text; }
+  } catch { return escaped; }
 }

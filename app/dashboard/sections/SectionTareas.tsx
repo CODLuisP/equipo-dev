@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import {
   Users, CheckSquare, Plus, Trash2, Pencil, Filter, RefreshCw,
@@ -273,7 +273,7 @@ function FilterDropdown({ value, onChange, members }: {
 
 // ─── Sección: Tareas — Centro de Comando Bento ────────────────────────────────
 
-export default function SectionTareas({ tasks, members, filterMember, setFilterMember, currentUser, onAddTask, onEditTask, onChangeStatus, onStartTask, onDeleteTask, onClearCompleted }: {
+function SectionTareas({ tasks, members, filterMember, setFilterMember, currentUser, onAddTask, onEditTask, onChangeStatus, onStartTask, onDeleteTask, onClearCompleted }: {
   tasks: Task[]; members: Member[]; filterMember: string; setFilterMember: (v: string) => void;
   currentUser: Member | null; onAddTask: () => void; onEditTask: (t: Task) => void;
   onChangeStatus: (id: string, s: Task['status']) => void; onStartTask: (id: string) => void;
@@ -289,17 +289,21 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
 
   // Estadísticas: sobre TODAS las tareas (no se alteran al buscar)
   const total   = tasks.length;
-  const doneAll = tasks.filter(t => t.status === 'completada');
+  const doneAll = useMemo(() => tasks.filter(t => t.status === 'completada'), [tasks]);
   const pct     = total > 0 ? Math.round((doneAll.length / total) * 100) : 0;
   const metaSemanal  = total > 0 ? total : 1;
   const metaProgreso = Math.min(Math.round((doneAll.length / metaSemanal) * 100), 100);
 
   // Listas visibles: filtradas por el buscador de título
   const q = search.trim().toLowerCase();
-  const matches = (t: Task) => !q || t.title.toLowerCase().includes(q);
-  const pending    = tasks.filter(t => t.status === 'pendiente'   && matches(t));
-  const inProgress = tasks.filter(t => t.status === 'en progreso' && matches(t));
-  const done       = tasks.filter(t => t.status === 'completada'  && matches(t));
+  const { pending, inProgress, done } = useMemo(() => {
+    const matches = (t: Task) => !q || t.title.toLowerCase().includes(q);
+    return {
+      pending:    tasks.filter(t => t.status === 'pendiente'   && matches(t)),
+      inProgress: tasks.filter(t => t.status === 'en progreso' && matches(t)),
+      done:       tasks.filter(t => t.status === 'completada'  && matches(t)),
+    };
+  }, [tasks, q]);
 
   const handleDropOnProgress = (e: React.DragEvent) => {
     e.preventDefault();
@@ -553,3 +557,5 @@ export default function SectionTareas({ tasks, members, filterMember, setFilterM
     </div>
   );
 }
+
+export default memo(SectionTareas);

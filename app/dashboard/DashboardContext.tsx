@@ -123,6 +123,24 @@ export function useDashboard() {
   return ctx;
 }
 
+// Envuelve un objeto de funciones "handler" (recreadas en cada render, cerrando
+// sobre el state más reciente) en wrappers de identidad ESTABLE que delegan a la
+// última versión vía ref. Así el useMemo del contextValue no depende de una lista
+// de dependencias curada a mano para cada handler — solo de los datos reales.
+function useStableHandlers<T extends Record<string, (...args: any[]) => any>>(handlers: T): T {
+  const ref = useRef(handlers);
+  ref.current = handlers;
+  const stableRef = useRef<T | null>(null);
+  if (!stableRef.current) {
+    const stable = {} as T;
+    for (const key of Object.keys(handlers) as (keyof T)[]) {
+      stable[key] = ((...args: unknown[]) => ref.current[key](...args)) as T[keyof T];
+    }
+    stableRef.current = stable;
+  }
+  return stableRef.current;
+}
+
 // ─── Provider ──────────────────────────────────────────────────────────────────
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
@@ -556,6 +574,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const handleAssignAndStart = async (memberId: string) => {
     if (!assignModal) return;
     const task = tasks.find(t => t.id === assignModal.taskId);
+    if (!task) { toast.error('Esa tarea ya no existe'); setAssignModal(null); return; }
     try {
       await api.updateTask(assignModal.taskId, { status: 'en progreso', assignedTo: memberId });
       toast.success('Tarea iniciada');
@@ -667,9 +686,24 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const handleDragImage   = (id: string, x: number, y: number, w?: number, h?: number) =>
     saveImages(boardImages.map(img => img.id === id ? { ...img, x, y, width: w||img.width, height: h||img.height } : img));
 
+  // Handlers con identidad ESTABLE (nunca cambian de referencia) pero que siempre
+  // ejecutan la versión más reciente — ver useStableHandlers arriba. Esto evita que
+  // el useMemo de abajo dependa de una lista de dependencias curada a mano por handler.
+  const handlers = useStableHandlers({
+    handleAddMember, handleDeleteMember, handleDeleteArchivo, handleChangeAvatar, selectCurrentUser, handleLogout,
+    handleSaveTask, handleChangeTaskStatus, handleStartTask, handleAssignAndStart, handleDeleteTask, handleClearCompleted,
+    handleSaveSnippet, handleDeleteSnippet, handleCopySnippet,
+    handleSaveVaultProject, handleDeleteVaultProject, saveVault,
+    handleAddNote, handleDeleteNote, handleDragNote, handleDragImage,
+    saveDrawings, saveImages, saveNotes, saveShapes, saveCustomShapes, saveArchivos,
+    handleSaveWebsite, handleDeleteWebsite,
+    pushToHistory, undo, redo,
+    setIsVaultUnlocked,
+  });
+
   const contextValue = useMemo<DashboardContextType>(() => ({
     members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
-    isVaultUnlocked, setIsVaultUnlocked,
+    isVaultUnlocked,
     currentUser, isLoading, isLoadingSecondary, isSetup, setIsSetup, showWhoAreYou, setShowWhoAreYou,
     taskFilterMember, setTaskFilterMember, filteredTasks,
     snippetSearch, setSnippetSearch, filteredSnippets,
@@ -684,21 +718,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     editingSnippet, setEditingSnippet,
     editingVaultProject, setEditingVaultProject,
     assignModal, setAssignModal,
-    pushToHistory, undo, redo, clipboard, setClipboard,
-    handleAddMember, handleDeleteMember, handleDeleteArchivo, handleChangeAvatar, selectCurrentUser, handleLogout,
-    handleSaveTask, handleChangeTaskStatus, handleStartTask, handleAssignAndStart, handleDeleteTask, handleClearCompleted,
-    handleSaveSnippet, handleDeleteSnippet, handleCopySnippet,
-    handleSaveVaultProject, handleDeleteVaultProject, saveVault,
-    handleAddNote, handleDeleteNote, handleDragNote, handleDragImage,
-    saveDrawings, saveImages, saveNotes, saveShapes, saveCustomShapes, saveArchivos,
-    handleSaveWebsite, handleDeleteWebsite,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    clipboard, setClipboard,
+    ...handlers,
   }), [
     members, tasks, snippets, notes, drawings, boardImages, boardShapes, customShapes, archivos, websites, vaultProjects,
     isVaultUnlocked, currentUser, isLoading, isLoadingSecondary, isSetup, showWhoAreYou,
     taskFilterMember, filteredTasks, snippetSearch, filteredSnippets, isToolkitVisible,
     openTaskModal, openSnippetModal, openNoteModal, openVaultModal, openDeleteModal,
     deleteConfig, editingTask, editingSnippet, editingVaultProject, assignModal, clipboard,
+    handlers,
   ]);
 
   return (

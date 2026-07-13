@@ -341,7 +341,7 @@ export default function ThreeAFKIcon({
     group.position.y = -0.2;
 
     const clock = new THREE.Clock();
-    let animationFrame: number;
+    let animationFrame: number | null = null;
 
     const animate = () => {
       animationFrame = requestAnimationFrame(animate);
@@ -349,12 +349,30 @@ export default function ThreeAFKIcon({
       animators.forEach(a => a(time));
       renderer.render(scene, camera);
     };
-    animate();
+    const startLoop = () => { if (animationFrame === null) animate(); };
+    const stopLoop = () => { if (animationFrame !== null) { cancelAnimationFrame(animationFrame); animationFrame = null; } };
+
+    // No malgastar GPU/CPU renderizando un ícono decorativo cuando no está visible
+    // (ej. el panel de DevToolkit oculto vía CSS, o la pestaña del navegador en segundo plano).
+    let isIntersecting = true;
+    const syncLoop = () => {
+      if (isIntersecting && !document.hidden) startLoop(); else stopLoop();
+    };
+    const io = new IntersectionObserver(([entry]) => {
+      isIntersecting = entry.isIntersecting;
+      syncLoop();
+    }, { threshold: 0 });
+    if (mountRef.current) io.observe(mountRef.current);
+    document.addEventListener('visibilitychange', syncLoop);
+
+    startLoop();
 
     const domElement = renderer.domElement;
 
     return () => {
-      cancelAnimationFrame(animationFrame);
+      stopLoop();
+      io.disconnect();
+      document.removeEventListener('visibilitychange', syncLoop);
       if (domElement && domElement.parentNode) {
         domElement.parentNode.removeChild(domElement);
       }
