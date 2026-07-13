@@ -388,7 +388,7 @@ function StatsSidebar({ allSnippets, members, filterLabel, setFilterLabel, filte
     .sort((a, b) => b.count - a.count);
 
   return (
-    <div style={{ width: 168, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }} className="custom-scrollbar">
+    <div style={{ flexShrink: 0, flexDirection: 'column', gap: 10, overflowY: 'auto' }} className="custom-scrollbar hidden md:flex md:w-[168px]">
 
       {/* Total */}
       <div style={{
@@ -525,20 +525,20 @@ function SectionSnippets({ snippets, search, setSearch, members, currentUser, on
   ];
 
   return (
-    <div className="h-full flex gap-3 overflow-hidden">
+    <div className="h-full flex flex-col md:flex-row gap-3 overflow-y-auto md:overflow-hidden">
 
       {/* ── Panel principal ── */}
-      <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+      <div className="flex-1 flex flex-col gap-3 min-h-0 md:overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 flex-shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Título */}
             <h2 style={{ color: 'var(--text)', fontWeight: 800, fontSize: 13, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Snippets</h2>
-            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.06)' }} className="hidden sm:block" />
 
             {/* Buscador inline */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} className="w-full sm:w-auto">
               <svg style={{ position: 'absolute', left: 9, color: '#4a5570', pointerEvents: 'none' }} width="11" height="11" viewBox="0 0 16 16" fill="none">
                 <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -547,11 +547,12 @@ function SectionSnippets({ snippets, search, setSearch, members, currentUser, on
                 placeholder="Buscar..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                className="w-full sm:w-[140px]"
                 style={{
                   padding: '5px 10px 5px 26px', borderRadius: 9, fontSize: 11,
                   background: search ? 'rgba(var(--blue-rgb),0.08)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${search ? 'rgba(var(--blue-rgb),0.3)' : 'rgba(255,255,255,0.07)'}`,
-                  color: 'var(--text)', outline: 'none', width: 140,
+                  color: 'var(--text)', outline: 'none',
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   transition: 'all 0.15s',
                 }}
@@ -615,10 +616,11 @@ function SectionSnippets({ snippets, search, setSearch, members, currentUser, on
           {/* Nuevo snippet */}
           <button
             onClick={onAddSnippet}
+            className="w-full sm:w-auto justify-center"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'var(--blue)', color: '#fff',
-              padding: '6px 12px', borderRadius: 9,
+              padding: '8px 12px', borderRadius: 9,
               fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
               border: 'none', cursor: 'pointer',
               boxShadow: '0 6px 20px rgba(var(--blue-rgb),0.3)',
@@ -632,8 +634,8 @@ function SectionSnippets({ snippets, search, setSearch, members, currentUser, on
         </div>
 
         {/* Lista de snippets */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 10 }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(380px,1fr))]" style={{ gap: 10 }}>
             {filtered.map(s => (
               <SnippetCard
                 key={s.id}

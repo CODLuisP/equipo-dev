@@ -330,24 +330,25 @@ function SectionTareas({ tasks, members, filterMember, setFilterMember, currentU
   };
 
   return (
-    <div className="flex flex-col gap-3 overflow-y-auto md:h-full md:overflow-hidden relative">
+    <div className="flex flex-col gap-3 h-full overflow-y-auto md:overflow-hidden relative">
 
       {/* Background glow */}
 
       {/* ── Top Control HUD ── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 z-10">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-white font-bold text-sm" style={{ fontFamily: "var(--font-display, 'Syne', system-ui)", letterSpacing: "-0.3px" }}>Gestión de Tareas</h2>
           <div className="h-6 w-px bg-white/5 hidden sm:block" />
           <FilterDropdown value={filterMember} onChange={setFilterMember} members={members} />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} className="flex-1 min-w-[140px] sm:flex-none">
             <Search size={11} style={{ position: 'absolute', left: 10, color: '#adb5bd', pointerEvents: 'none' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar tarea"
+              className="w-full sm:w-[150px]"
               style={{
-                height: 29, boxSizing: 'border-box', width: 150, paddingLeft: 28, paddingRight: search ? 26 : 10,
+                height: 29, boxSizing: 'border-box', paddingLeft: 28, paddingRight: search ? 26 : 10,
                 background: search ? 'rgba(var(--blue-rgb),0.10)' : '#212529',
                 border: `1px solid ${search ? 'rgba(var(--blue-rgb),0.35)' : 'rgba(255,255,255,0.07)'}`,
                 borderRadius: 10, color: 'var(--text)', fontSize: 11, fontWeight: 400, outline: 'none',
@@ -361,7 +362,7 @@ function SectionTareas({ tasks, members, filterMember, setFilterMember, currentU
             )}
           </div>
         </div>
-        <button onClick={onAddTask} className="flex items-center gap-1.5 bg-(--blue) hover:bg-[#1d4ed8] text-gray-100 px-4 py-2 rounded-lg font-semibold text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(var(--blue-rgb),0.3)]">
+        <button onClick={onAddTask} className="flex items-center justify-center gap-1.5 bg-(--blue) hover:bg-[#1d4ed8] text-gray-100 px-4 py-2.5 sm:py-2 rounded-lg font-semibold text-[11px] sm:text-[10px] uppercase tracking-wider transition-all shadow-[0_6px_20px_rgba(var(--blue-rgb),0.3)] w-full sm:w-auto">
           <Plus size={12}/> Nueva Tarea
         </button>
       </div>
@@ -451,8 +452,8 @@ function SectionTareas({ tasks, members, filterMember, setFilterMember, currentU
         {/* Panel 3: Stats + Bóveda */}
         <div className="md:col-span-2 md:row-span-6 flex flex-col gap-3">
 
-          {/* Performance + Meta: side by side on mobile, stacked on desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
+          {/* Performance + Meta: apiladas en celular, lado a lado en tablet, apiladas de nuevo en el bento de escritorio */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">
             {/* Performance Card */}
             <div className="flex flex-col gap-2 md:gap-3 bg-(--blue) rounded-[22px] p-3 md:p-4 shadow-[0_12px_32px_rgba(var(--blue-rgb),0.2)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl -translate-y-10 translate-x-10" />

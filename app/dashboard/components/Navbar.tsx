@@ -1,6 +1,7 @@
 "use client";
 
-import { Users, CheckSquare, Code, StickyNote, FolderOpen, Shield, LogOut, Sparkles, Globe } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Users, CheckSquare, Code, StickyNote, FolderOpen, Shield, LogOut, Sparkles, Globe, Menu, X } from "lucide-react";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -33,6 +34,21 @@ export default function Navbar({
   isPizarra, activeHref, currentUser, isToolkitVisible,
   onNavigate, onShowWhoAreYou, onToggleToolkit, onLogout,
 }: NavbarProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const activeNav = NAV.find(n => n.href === activeHref);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMobileMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => { setMobileMenuOpen(false); }, [activeHref]);
+
   return (
     <header
       className={isPizarra ? "shrink-0" : "mb-2 shrink-0 "}
@@ -52,12 +68,12 @@ export default function Navbar({
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto min-w-0 overflow-x-auto overflow-y-hidden pointer-events-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto min-w-0 pointer-events-auto">
 
           {currentUser && (
             <button
               onClick={onShowWhoAreYou}
-              className="flex items-center gap-2 h-9 pl-1.5 pr-3 rounded-full transition-all"
+              className="flex items-center gap-2 h-9 pl-1.5 pr-3 rounded-full transition-all shrink-0"
               style={{
                 background: "rgba(var(--blue-rgb),0.08)",
                 border: "1px solid rgba(var(--blue-rgb),0.18)",
@@ -70,28 +86,67 @@ export default function Navbar({
             </button>
           )}
 
+          {/* Navegación — pill horizontal en pantallas >= sm */}
+          <div className="hidden sm:block">
+            <Tabs value={activeHref} onValueChange={val => onNavigate(val as string)}>
+              <TabsList
+                className="h-10 gap-1 rounded-full p-1"
+                style={{ background: "#161b22", border: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                {NAV.map(({ href, icon, label }) => (
+                  <TabsTrigger
+                    key={href} value={href}
+                    className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-full transition-all [&]:text-(--text-3) [&]:bg-transparent [&]:border-transparent [&]:shadow-none [&:hover]:text-(--blue-light) data-active:text-white! data-active:shadow-none! [&_svg]:size-3!"
+                    style={activeHref === href ? {
+                      background: "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))",
+                      boxShadow: "0 4px 14px -4px rgba(var(--blue-rgb),0.55)",
+                    } : undefined}
+                  >
+                    {icon}
+                    <span className="hidden md:inline">{label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
 
-          <Tabs value={activeHref} onValueChange={val => onNavigate(val as string)}>
-            <TabsList
-              className="h-10 gap-1 rounded-full p-1"
-              style={{ background: "#161b22", border: "1px solid rgba(255,255,255,0.06)" }}
+          {/* Navegación — menú desplegable en pantallas < sm */}
+          <div ref={menuRef} className="relative sm:hidden shrink-0">
+            <button
+              onClick={() => setMobileMenuOpen(o => !o)}
+              className="h-9 gap-1.5 px-3 flex items-center rounded-full transition-all"
+              style={{
+                background: mobileMenuOpen ? "rgba(var(--blue-rgb),0.14)" : "#161b22",
+                border: `1px solid ${mobileMenuOpen ? "rgba(var(--blue-rgb),0.32)" : "rgba(255,255,255,0.06)"}`,
+                color: "var(--blue-light)",
+              }}
             >
-              {NAV.map(({ href, icon, label }) => (
-                <TabsTrigger
-                  key={href} value={href}
-                  className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-full transition-all [&]:text-(--text-3) [&]:bg-transparent [&]:border-transparent [&]:shadow-none [&:hover]:text-(--blue-light) data-active:text-white! data-active:shadow-none! [&_svg]:size-3!"
-                  style={activeHref === href ? {
-                    background: "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))",
-                    boxShadow: "0 4px 14px -4px rgba(var(--blue-rgb),0.55)",
-                  } : undefined}
-                >
-                  {icon}
-                  <span className="hidden sm:inline">{label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+              {mobileMenuOpen ? <X size={14} /> : (activeNav?.icon ?? <Menu size={14} />)}
+              <span className="text-xs font-semibold">{activeNav?.label ?? "Menú"}</span>
+            </button>
 
+            {mobileMenuOpen && (
+              <div
+                className="absolute top-full right-0 mt-2 z-[200] w-48 rounded-2xl p-1.5 flex flex-col gap-0.5"
+                style={{ background: "#161b22", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 12px 32px -8px rgba(0,0,0,0.5)" }}
+              >
+                {NAV.map(({ href, icon, label }) => (
+                  <button
+                    key={href}
+                    onClick={() => { onNavigate(href); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-2.5 h-9 px-3 rounded-xl text-xs font-semibold transition-all text-left"
+                    style={activeHref === href ? {
+                      background: "linear-gradient(135deg, rgba(var(--blue-rgb),0.9), rgba(var(--blue-rgb),0.55))",
+                      color: "#fff",
+                    } : { color: "var(--text-3)" }}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={onToggleToolkit}

@@ -295,11 +295,8 @@ function SectionEquipo({ members, tasks, onAddMember, onDeleteMember, onChangeAv
         <motion.div
           initial="hidden"
           animate="show"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
-            gap: 10,
-          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(195px,1fr))]"
+          style={{ gap: 10 }}
         >
           <AnimatePresence mode="popLayout">
             {members.map(m => (
