@@ -59,9 +59,6 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap');
-
         @keyframes spin       { to { transform: rotate(360deg); } }
         @keyframes slideUp    { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         @keyframes shake      { 0%,100% { transform:translateX(0); } 25%,75% { transform:translateX(-4px); } 50% { transform:translateX(4px); } }

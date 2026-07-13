@@ -44,8 +44,6 @@ export default function RegisterPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
         .rg-input {
           width: 100%; height: 44px; background: transparent;
           border: none; border-bottom: 1px solid rgba(255,255,255,0.18);
