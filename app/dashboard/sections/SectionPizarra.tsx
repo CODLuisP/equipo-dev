@@ -3381,6 +3381,43 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
     setIsDrawing(false);
     setIsPanning(false);
   };
+
+  // ── Soporte táctil (mobile/tablet) — traduce touch a los mismos handlers de mouse
+  // (onMD/onMM/onMU) para no duplicar la lógica de dibujo/selección/pan.
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const touchToMouseEvent = (e: React.TouchEvent, touch: React.Touch, movementX = 0, movementY = 0) =>
+    ({
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      target: touch.target,
+      currentTarget: e.currentTarget,
+      shiftKey: false,
+      movementX,
+      movementY,
+      preventDefault: () => e.preventDefault(),
+      stopPropagation: () => e.stopPropagation(),
+    }) as unknown as React.MouseEvent;
+  const onTouchStartCanvas = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    lastTouchRef.current = { x: t.clientX, y: t.clientY };
+    onMD(touchToMouseEvent(e, t));
+  };
+  const onTouchMoveCanvas = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const last = lastTouchRef.current;
+    const movementX = last ? t.clientX - last.x : 0;
+    const movementY = last ? t.clientY - last.y : 0;
+    lastTouchRef.current = { x: t.clientX, y: t.clientY };
+    onMM(touchToMouseEvent(e, t, movementX, movementY));
+  };
+  const onTouchEndCanvas = () => {
+    lastTouchRef.current = null;
+    onMU();
+  };
+
   const getCursor=()=>tool==='hand'?(isPanning?'grabbing':'grab'):tool==='pencil'?'crosshair':tool==='eraser'?'cell':tool==='text'?'text':tool==='laser'?'none':['rect','rhombus','ellipse','line','arrow'].includes(tool)?'crosshair':multiDragActive?'grabbing':(isMarqueeing?'crosshair':'default');
   const selectedImageIndex = selectedId ? images.findIndex(img => img.id === selectedId) : -1;
   const hasSelectedImage = selectedImageIndex >= 0;
@@ -3539,8 +3576,8 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       {/* Floating Toolbar (Bottom Center) */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
-        <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-16px)] px-1" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-x-auto custom-scrollbar max-w-full shrink [&>*]:shrink-0">
             <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<MousePointer2 size={18}/>} title="Seleccionar"/>
             <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Hand size={18}/>} title="Mover vista"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
@@ -3569,7 +3606,7 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
           </div>
-          <button onClick={onAddNote} className="bg-[var(--blue)] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
+          <button onClick={onAddNote} className="shrink-0 bg-[var(--blue)] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
             <Plus size={22}/>
           </button>
         </div>
@@ -3634,8 +3671,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
       )}
 
       <div ref={containerRef}
-        style={{ width: '100%', height: '100%', background:"#0A0C0F", cursor:getCursor(), position:'relative', overflow:'hidden' }}
+        style={{ width: '100%', height: '100%', background:"#0A0C0F", cursor:getCursor(), position:'relative', overflow:'hidden', touchAction: 'none' }}
         onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}
+        onTouchStart={onTouchStartCanvas} onTouchMove={onTouchMoveCanvas} onTouchEnd={onTouchEndCanvas} onTouchCancel={onTouchEndCanvas}
         onClick={(e) => { if (tool==='text') { if (editingText) { saveText(); return; } setEditingText({ x: e.clientX, y: e.clientY, content: '' }); } }}>
 
         {/* Imágenes + Formas + Notas — una sola capa ordenada por zOrder (más reciente = encima) */}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   description: "Gestión de tareas, snippets y colaboración para equipos de desarrollo",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#141417",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
@@ -17,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body style={{ background: "#05070E", minHeight: "100vh" }}>
+      <body style={{ background: "#141417", minHeight: "100vh" }}>
         {children}
       </body>
     </html>
