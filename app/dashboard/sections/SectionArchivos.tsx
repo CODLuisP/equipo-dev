@@ -14,7 +14,7 @@ import { getToken } from "@/lib/api";
 
 // ─── Floating File Card ───────────────────────────────────────────────────────
 
-function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: RefObject<HTMLDivElement | null>; }) {
+function FloatingFileCard({ file, onDelete, onDrop, containerRef, isMobile }: { file: SharedFile; onDelete: () => void; onDrop: (id: string, x: number, y: number) => void; containerRef: RefObject<HTMLDivElement | null>; isMobile?: boolean; }) {
   const [pos, setPos] = useState({ x:file.x, y:file.y });
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -129,8 +129,10 @@ function FloatingFileCard({ file, onDelete, onDrop, containerRef }: { file: Shar
   const { icon, accent, label } = getTypeInfo();
 
   return (
-    <div ref={cardRef} style={{ position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:isDragging?`2px solid ${accent}50`:`1px solid ${accent}25`, transition:isDragging?'none':'border-color 0.2s', userSelect:'none' }}
-      onMouseDown={e=>{ if ((e.target as HTMLElement).closest('button')) return; setIsDragging(true); }}>
+    <div ref={cardRef} style={isMobile
+        ? { position:'relative', width:'100%', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:`1px solid ${accent}25`, userSelect:'none' }
+        : { position:'absolute', left:pos.x, top:pos.y, width:215, zIndex:isDragging?100:10, cursor:isDragging?'grabbing':'grab', borderRadius:16, overflow:'hidden', background:'#1A1D24', border:isDragging?`2px solid ${accent}50`:`1px solid ${accent}25`, transition:isDragging?'none':'border-color 0.2s', userSelect:'none' }}
+      onMouseDown={isMobile ? undefined : e=>{ if ((e.target as HTMLElement).closest('button')) return; setIsDragging(true); }}>
       <div style={{ background:`linear-gradient(135deg,${accent}20 0%,${accent}07 100%)`, borderBottom:`1px solid ${accent}18`, padding:'14px 14px 10px' }}>
         <div className="flex items-start justify-between mb-2">
           <div style={{ color:accent, background:`${accent}18`, borderRadius:9, padding:'7px 8px', display:'flex' }}>{icon}</div>
@@ -215,6 +217,16 @@ function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos:
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const authorName = currentUser?.name || members[0]?.name || 'Equipo';
 
+  // En mobile el "espacio flotante" (drag libre) se reemplaza por una grilla simple:
+  // arrastrar con el dedo no es viable en una superficie tan chica.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const processFile = (file: File) => {
     if (file.size > 100*1024*1024) { toast.error(`"${file.name}" supera 100MB. Usa un enlace.`); return; }
     const reader = new FileReader();
@@ -235,17 +247,18 @@ function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos:
   return (
     <div className="flex flex-col gap-3 h-full relative">
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"><ArchivosBackground /></div>
-      <div className="flex items-center justify-between flex-shrink-0 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-shrink-0 relative z-10">
         <p className="text-xs text-gray-500"><span className="text-white font-semibold">{archivos.length}</span> {archivos.length===1?'archivo':'archivos'} compartidos</p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {showLink ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <input autoFocus type="url" placeholder="https://..." value={linkInput} onChange={e=>setLinkInput(e.target.value)}
                 onKeyDown={e=>{ if (e.key==='Enter') addLink(); if (e.key==='Escape') setShowLink(false); }}
-                style={{ background:"#1C1F26", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"7px 12px", fontSize:13, color:"#F4F5F7", outline:"none", width:240 }}
+                className="flex-1 sm:w-[240px] sm:flex-none"
+                style={{ background:"#1C1F26", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"7px 12px", fontSize:13, color:"#F4F5F7", outline:"none" }}
                 onFocus={e=>{e.currentTarget.style.borderColor="rgba(232,93,47,0.5)";}} onBlur={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";}}/>
-              <ButtonBase onClick={addLink} className="flex items-center gap-1.5"><LinkIcon size={13}/> Agregar</ButtonBase>
-              <button onClick={()=>setShowLink(false)} style={{ color:"#5A6270", background:"none", border:"none", cursor:"pointer", display:"flex" }}><X size={17}/></button>
+              <ButtonBase onClick={addLink} className="flex items-center gap-1.5 shrink-0"><LinkIcon size={13}/> Agregar</ButtonBase>
+              <button onClick={()=>setShowLink(false)} style={{ color:"#5A6270", background:"none", border:"none", cursor:"pointer", display:"flex", flexShrink:0 }}><X size={17}/></button>
             </div>
           ) : (
             <>
@@ -268,7 +281,7 @@ function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos:
           )}
         </div>
       </div>
-      <div ref={containerRef} style={{ flex:1, position:'relative', overflow:'hidden', borderRadius:18, background:"transparent", border:isDragOver?"2px dashed #E85D2F":"none", transition:"border-color 0.15s", zIndex:10 }}
+      <div ref={containerRef} style={{ flex:1, position:'relative', overflow: isMobile ? 'auto' : 'hidden', borderRadius:18, background:"transparent", border:isDragOver?"2px dashed #E85D2F":"none", transition:"border-color 0.15s", zIndex:10 }}
         onDragOver={e=>{e.preventDefault();setIsDragOver(true);}} onDragLeave={()=>setIsDragOver(false)}
         onDrop={e=>{e.preventDefault();setIsDragOver(false);Array.from(e.dataTransfer.files).forEach(processFile);}}>
 
@@ -280,20 +293,28 @@ function SectionArchivos({ archivos, members, currentUser, onSave }: { archivos:
           </div>
         )}
         {archivos.length===0&&!isDragOver&&(
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none opacity-15">
+          <div className={`${isMobile ? '' : 'absolute inset-0'} flex flex-col items-center justify-center gap-3 pointer-events-none opacity-15 py-16`}>
             <FolderOpen size={64}/><p className="text-xs font-bold uppercase tracking-widest">Espacio de archivos</p>
-            <p className="text-[10px] uppercase tracking-widest">Arrastra archivos o usa el botón de arriba</p>
+            <p className="text-[10px] uppercase tracking-widest text-center px-4">Arrastra archivos o usa el botón de arriba</p>
           </div>
         )}
-        {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
-        <div className="absolute bottom-4 right-4 text-[10px] text-gray-800 font-bold uppercase tracking-widest pointer-events-none flex items-center gap-1.5"><FolderOpen size={10}/> Espacio compartido</div>
+        {isMobile ? (
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 p-2">
+            {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} isMobile onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
+          </div>
+        ) : (
+          <>
+            {archivos.map(a=><FloatingFileCard key={a.id} file={a} containerRef={containerRef} onDelete={()=>onSave(archivos.filter(f=>f.id!==a.id))} onDrop={(id,x,y)=>onSave(archivos.map(f=>f.id===id?{...f,x,y}:f))}/>)}
+            <div className="absolute bottom-4 right-4 text-[10px] text-gray-800 font-bold uppercase tracking-widest pointer-events-none flex items-center gap-1.5"><FolderOpen size={10}/> Espacio compartido</div>
+          </>
+        )}
       </div>
 
       {/* Modal confirmación limpiar todo */}
       {showConfirmClear && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.65)', backdropFilter:'blur(6px)' }}
           onMouseDown={e=>{ if (e.target===e.currentTarget) setShowConfirmClear(false); }}>
-          <div style={{ background:'rgba(14,17,24,0.98)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:18, padding:'28px 32px', width:360, display:'flex', flexDirection:'column', gap:20, fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ background:'rgba(14,17,24,0.98)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:18, padding:'28px 32px', width:360, maxWidth:'calc(100vw - 32px)', margin:'0 16px', display:'flex', flexDirection:'column', gap:20, fontFamily:"'DM Sans',sans-serif" }}>
             {/* Icono */}
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ width:40, height:40, borderRadius:12, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>

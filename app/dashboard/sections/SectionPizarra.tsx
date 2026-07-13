@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import {
   MousePointer2, Hand, Pencil, Type, Eraser, Trash2,
   Plus, ZoomIn, ZoomOut, Maximize, RefreshCw, Sparkles, Upload, Image as ImageIcon,
-  Undo2, Redo2, Download, Layers, BringToFront, SendToBack, ArrowUp, ArrowDown
+  Undo2, Redo2, Download, Layers, BringToFront, SendToBack, ArrowUp, ArrowDown, MoreHorizontal
 } from "lucide-react";
 import type { Member, Note, DrawingPath, BoardImage, BoardShape, CustomShape } from "@/app/dashboard/types";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
@@ -1919,7 +1919,7 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         onClose={()=>setShowManager(false)}
       />
     )}
-    <div style={{ position:'fixed', right: 16, bottom: 16, zIndex:1000, display:'flex', flexDirection:'column', alignItems:'flex-end', gap: 8 }}>
+    <div className="fixed z-[1000] flex flex-col items-start sm:items-end gap-2 top-3 left-3 sm:top-auto sm:left-auto sm:right-4 sm:bottom-4">
       <button onClick={onToggle} title="Formas de desarrollo"
         style={{ width:42, height:42, borderRadius:13, background: isVisible ? 'var(--blue)' : 'rgba(28,31,38,0.85)', backdropFilter:'blur(20px)', border:`1px solid ${isVisible?'var(--blue)':'rgba(255,255,255,0.12)'}`, color: isVisible?'#fff':'#8A9099', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}
         onMouseEnter={e=>{ if (!isVisible) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(var(--blue-rgb),0.5)'; } }}
@@ -1929,7 +1929,7 @@ function ShapesPanel({ isVisible, onToggle, onAddShape, onDragStart, defaultColo
         </svg>
       </button>
       {isVisible && (
-        <div style={{ position:'fixed', top:'50%', right:16, transform:'translateY(-50%)', background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, width:226, maxHeight:'80vh', overflowY:'auto', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:12 }}>
+        <div className="fixed z-[1000] top-16 left-3 sm:top-1/2 sm:left-auto sm:right-4 sm:-translate-y-1/2 w-[226px] max-w-[calc(100vw-24px)]" style={{ background:'rgba(20,23,30,0.95)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:18, padding:14, maxHeight:'80vh', overflowY:'auto', boxShadow:'0 24px 60px rgba(0,0,0,0.6)', display:'flex', flexDirection:'column', gap:12 }}>
 
           {/* Acciones */}
           <div style={{ display:'flex', gap:6 }}>
@@ -2087,6 +2087,22 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
   onClearAll: () => void; pushToHistory: () => void; undo: () => void; redo: () => void; clipboard: any; setClipboard: (v: any) => void;
 }) {
   const [tool, setTool]         = useState<'select'|'pencil'|'eraser'|'hand'|'text'|'rect'|'rhombus'|'ellipse'|'line'|'arrow'|'laser'>('select');
+  // Menús desplegables compactos de la barra de herramientas en móvil (agrupan formas/zoom/más)
+  const [mobileShapesOpen, setMobileShapesOpen] = useState(false);
+  const [mobileZoomOpen,   setMobileZoomOpen]   = useState(false);
+  const [mobileMoreOpen,   setMobileMoreOpen]   = useState(false);
+  const mobileToolbarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mobileShapesOpen && !mobileZoomOpen && !mobileMoreOpen) return;
+    const h = (e: Event) => {
+      if (!mobileToolbarRef.current?.contains(e.target as Node)) {
+        setMobileShapesOpen(false); setMobileZoomOpen(false); setMobileMoreOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', h);
+    document.addEventListener('touchstart', h);
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h); };
+  }, [mobileShapesOpen, mobileZoomOpen, mobileMoreOpen]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapeStart, setShapeStart]     = useState<{x:number;y:number}|null>(null);
   const [shapeCurrent, setShapeCurrent] = useState<{x:number;y:number}|null>(null);
@@ -3575,9 +3591,9 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
         </div>
       )}
 
-      {/* Floating Toolbar (Bottom Center) */}
-      <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-16px)] px-1" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
-        <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-x-auto custom-scrollbar max-w-full shrink [&>*]:shrink-0">
+      {/* Floating Toolbar (Bottom Center) — versión escritorio, sin cambios */}
+      <div className="hidden sm:flex absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] items-center gap-3 max-w-[calc(100vw-16px)] px-1" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 bg-[#1C1F26]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<MousePointer2 size={18}/>} title="Seleccionar"/>
             <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Hand size={18}/>} title="Mover vista"/>
             <div className="w-px h-6 bg-white/10 mx-1"/>
@@ -3606,9 +3622,70 @@ export default function SectionPizarra({ notes, drawings, images, shapes, custom
             <div className="w-px h-6 bg-white/10 mx-1"/>
             <button onClick={onClearAll} className="p-2 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all" title="Limpiar todo"><Trash2 size={17}/></button>
           </div>
-          <button onClick={onAddNote} className="shrink-0 bg-[var(--blue)] hover:bg-[#1d4ed8] text-white p-3 rounded-2xl shadow-lg transition-all transform hover:scale-105">
-            <Plus size={22}/>
-          </button>
+        </div>
+
+      {/* Floating Toolbar (Bottom Center) — versión móvil compacta, sin scroll horizontal */}
+      <div ref={mobileToolbarRef} className="flex sm:hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-[100] items-center" onMouseDown={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5 bg-[#1C1F26]/90 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <ToolBtn active={tool==='select'} onClick={()=>setTool('select')} icon={<MousePointer2 size={15}/>} title="Seleccionar"/>
+            <ToolBtn active={tool==='hand'}   onClick={()=>setTool('hand')}   icon={<Hand size={15}/>} title="Mover vista"/>
+            <div className="w-px h-5 bg-white/10 mx-0.5"/>
+            <ToolBtn active={false} onClick={undo} icon={<Undo2 size={15}/>} title="Deshacer"/>
+            <ToolBtn active={false} onClick={redo} icon={<Redo2 size={15}/>} title="Rehacer"/>
+            <div className="w-px h-5 bg-white/10 mx-0.5"/>
+            <ToolBtn active={tool==='pencil'} onClick={()=>setTool('pencil')} icon={<div className="relative"><Pencil size={15}/><div className="absolute -bottom-1 -right-1 w-1.5 h-1.5 rounded-full border border-white" style={{ background: currentColor }}/></div>} title="Lápiz"/>
+            <ToolBtn active={tool==='text'}   onClick={()=>setTool('text')}   icon={<Type size={15}/>} title="Texto"/>
+            <div className="w-px h-5 bg-white/10 mx-0.5"/>
+
+            {/* Formas agrupadas: línea, flecha, rectángulo, rombo, elipse */}
+            <div className="relative">
+              <ToolBtn
+                active={['line','arrow','rect','rhombus','ellipse'].includes(tool)}
+                onClick={() => { setMobileShapesOpen(o => !o); setMobileZoomOpen(false); setMobileMoreOpen(false); }}
+                title="Formas"
+                icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2.5" y="4" width="9" height="9" rx="1.5"/></svg>}
+              />
+              {mobileShapesOpen && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[#1C1F26]/95 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
+                  <ToolBtn active={tool==='line'}    onClick={()=>{setTool('line'); setMobileShapesOpen(false);}}    title="Línea" icon={<svg viewBox="0 0 18 18" width={15} height={15} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="15" x2="15" y2="3"/></svg>}/>
+                  <ToolBtn active={tool==='arrow'}   onClick={()=>{setTool('arrow'); setMobileShapesOpen(false);}}   title="Flecha" icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="15" x2="14" y2="4"/><polyline points="8,4 14,4 14,10"/></svg>}/>
+                  <ToolBtn active={tool==='rect'}    onClick={()=>{setTool('rect'); setMobileShapesOpen(false);}}    title="Rectángulo" icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>}/>
+                  <ToolBtn active={tool==='rhombus'} onClick={()=>{setTool('rhombus'); setMobileShapesOpen(false);}} title="Rombo" icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="9,2 16,9 9,16 2,9"/></svg>}/>
+                  <ToolBtn active={tool==='ellipse'} onClick={()=>{setTool('ellipse'); setMobileShapesOpen(false);}} title="Círculo / Elipse" icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="9" cy="9" rx="6.5" ry="5"/></svg>}/>
+                </div>
+              )}
+            </div>
+
+            <div className="w-px h-5 bg-white/10 mx-0.5"/>
+            <ToolBtn active={tool==='laser'}  onClick={()=>setTool('laser')}  title="Puntero láser" icon={<svg viewBox="0 0 18 18" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="9" cy="9" r="2.5" fill="currentColor" opacity="0.9"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="9" y1="14" x2="9" y2="17"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="14" y1="9" x2="17" y2="9"/></svg>}/>
+            <ToolBtn active={tool==='eraser'} onClick={()=>setTool('eraser')} icon={<Eraser size={15}/>} title="Borrador"/>
+            <div className="w-px h-5 bg-white/10 mx-0.5"/>
+
+            {/* Zoom agrupado */}
+            <div className="relative">
+              <ToolBtn active={mobileZoomOpen} onClick={() => { setMobileZoomOpen(o => !o); setMobileShapesOpen(false); setMobileMoreOpen(false); }} title="Zoom" icon={<ZoomIn size={15}/>}/>
+              {mobileZoomOpen && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[#1C1F26]/95 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
+                  <ToolBtn active={false} onClick={zoomOut}   icon={<ZoomOut size={15}/>} title="Zoom -"/>
+                  <span className="text-[10px] text-gray-400 font-bold px-1.5 min-w-[36px] text-center">{Math.round(zoom*100)}%</span>
+                  <ToolBtn active={false} onClick={zoomIn}    icon={<ZoomIn size={15}/>}  title="Zoom +"/>
+                  <ToolBtn active={false} onClick={resetZoom} icon={<Maximize size={15}/>} title="Restablecer vista"/>
+                </div>
+              )}
+            </div>
+
+            {/* Más: importar, exportar, limpiar todo */}
+            <div className="relative">
+              <ToolBtn active={mobileMoreOpen} onClick={() => { setMobileMoreOpen(o => !o); setMobileShapesOpen(false); setMobileZoomOpen(false); }} title="Más" icon={<MoreHorizontal size={15}/>}/>
+              {mobileMoreOpen && (
+                <div className="absolute bottom-full mb-2 right-0 flex items-center gap-0.5 bg-[#1C1F26]/95 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
+                  <ToolBtn active={false} onClick={() => { imageInputRef.current?.click(); setMobileMoreOpen(false); }} icon={<Upload size={15}/>} title="Importar imagen"/>
+                  <ToolBtn active={false} onClick={() => { exportBoardPng(); setMobileMoreOpen(false); }} icon={<Download size={15}/>} title="Exportar PNG"/>
+                  <button onClick={() => { onClearAll(); setMobileMoreOpen(false); }} className="p-1.5 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all" title="Limpiar todo"><Trash2 size={15}/></button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
       {/* Menú contextual (clic derecho sobre imagen o forma) */}

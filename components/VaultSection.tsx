@@ -57,7 +57,7 @@ export function SectionBoveda({
     return (
       <div className="h-full flex items-center justify-center relative overflow-hidden rounded-2xl">
         <BovedaBackground />
-        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-(--blue)/15 rounded-3xl p-10 text-center backdrop-blur-sm">
+        <div className="relative z-10 max-w-md w-full bg-[#0d1117]/80 border border-(--blue)/15 rounded-3xl p-6 sm:p-10 text-center backdrop-blur-sm mx-4">
           <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-(--blue) to-transparent opacity-60" />
           <div className="w-20 h-20 bg-(--blue)/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-(--blue)/25">
             <Shield size={40} className="text-(--blue)" />
@@ -80,15 +80,15 @@ export function SectionBoveda({
   return (
     <div className="flex flex-col h-full gap-6 relative">
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"><BovedaBackground /></div>
-      <div className="flex items-center justify-between relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative z-10">
         <div className="flex flex-col">
            <h2 className="text-white font-bold text-sm tracking-tight">Gestor de <span className="text-gray-500">Credenciales</span></h2>
         </div>
         <div className="flex items-center gap-3">
-           <button onClick={() => onUnlock(false)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-xl transition-all border border-white/5 flex items-center" title="Bloquear">
+           <button onClick={() => onUnlock(false)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-xl transition-all border border-white/5 flex items-center shrink-0" title="Bloquear">
              <Lock size={14} />
            </button>
-           <ButtonBase onClick={onAddProject} className="flex items-center gap-2"><Plus size={16}/> Nuevo Proyecto</ButtonBase>
+           <ButtonBase onClick={onAddProject} className="flex items-center justify-center gap-2 flex-1 sm:flex-none"><Plus size={16}/> Nuevo Proyecto</ButtonBase>
         </div>
       </div>
 
@@ -105,27 +105,28 @@ export function SectionBoveda({
       </div>
 
       {fullViewProject && (
-        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8">
+        <div className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-8">
           <div style={{ background:'#0C0E13', border:'1px solid rgba(255,255,255,0.08)' }} className="max-w-5xl w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
             {/* Header compacto — una sola barra */}
-            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex flex-col px-4 py-2 shrink-0 gap-1">
+            <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }} className="flex flex-col px-3 sm:px-4 py-2 shrink-0 gap-2">
               {/* Fila título + acciones */}
-              <div className="flex items-center gap-3">
-                <span className="text-white font-semibold text-sm shrink-0">{fullViewProject.name}</span>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <span className="text-white font-semibold text-sm shrink-0 truncate max-w-[45%] sm:max-w-none">{fullViewProject.name}</span>
                 {/* Buscador inline */}
-                <div className="relative ml-auto shrink-0">
+                <div className="relative order-3 sm:order-none w-full sm:w-auto sm:ml-auto shrink-0">
                   <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600"/>
                   <input
                     type="text"
                     placeholder="Buscar..."
                     value={vaultSearchTerm}
                     onChange={e => setVaultSearchTerm(e.target.value)}
-                    style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:7, padding:'4px 10px 4px 26px', fontSize:12, color:'#d1d5db', outline:'none', width:160 }}
+                    className="w-full sm:w-[160px]"
+                    style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:7, padding:'4px 10px 4px 26px', fontSize:12, color:'#d1d5db', outline:'none' }}
                   />
                 </div>
                 <button onClick={() => { navigator.clipboard.writeText(fullViewProject.content); toast.success("Copiado"); }}
-                  className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors shrink-0"
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors shrink-0 ml-auto sm:ml-0"
                   style={{ fontSize:11, padding:'4px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:7 }}>
                   <Copy size={11}/> Copiar
                 </button>
