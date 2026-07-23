@@ -95,14 +95,11 @@ export const api = {
   updateVaultProject:(id: string, patch: Record<string, unknown>) => req('PATCH',  `/vault/${id}`, patch),
   deleteVaultProject:(id: string)                 => req('DELETE', `/vault/${id}`),
 
-  // ── Pizarra personal ─────────────────────────────────────────────────────────
-  getPizarra:  (memberId: string)          => req('GET', `/pizarra/${memberId}`),
-  savePizarra: (memberId: string, data: unknown) => req('PUT', `/pizarra/${memberId}`, data),
-
-  // ── Custom shapes (compartidas) ──────────────────────────────────────────────
-  getCustomShapes:   ()                    => req('GET',    '/pizarra/shapes/all'),
-  addCustomShape:    (data: Record<string, unknown>)       => req('POST',   '/pizarra/shapes', data),
-  deleteCustomShape: (id: string)          => req('DELETE', `/pizarra/shapes/${id}`),
+  // ── Archivos compartidos ──────────────────────────────────────────────────────
+  getSharedFiles:    ()                                    => req('GET',    '/pizarra/files/all'),
+  addSharedFile:     (data: Record<string, unknown>)       => req('POST',   '/pizarra/files', data),
+  updateSharedFile:  (id: string, patch: Record<string, unknown>) => req('PATCH', `/pizarra/files/${id}`, patch),
+  deleteSharedFile:  (id: string)                          => req('DELETE', `/pizarra/files/${id}`),
 
   // ── Links de Entornos ────────────────────────────────────────────────────────
   getLinks:    ()                                          => req('GET',    '/links'),
@@ -115,9 +112,4 @@ export const api = {
   updateWebsite:  (id: string, patch: Record<string, unknown>) => req('PATCH', `/websites/${id}`, patch),
   deleteWebsite:  (id: string)                              => req('DELETE', `/websites/${id}`),
 
-  // ── Archivos compartidos ──────────────────────────────────────────────────────
-  getSharedFiles:    ()                                    => req('GET',    '/pizarra/files/all'),
-  addSharedFile:     (data: Record<string, unknown>)       => req('POST',   '/pizarra/files', data),
-  updateSharedFile:  (id: string, patch: Record<string, unknown>) => req('PATCH', `/pizarra/files/${id}`, patch),
-  deleteSharedFile:  (id: string)                          => req('DELETE', `/pizarra/files/${id}`),
 };

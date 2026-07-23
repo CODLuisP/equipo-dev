@@ -12,19 +12,15 @@ import { VaultProjectForm } from "@/components/VaultSection";
 import MemberPicker from "@/app/dashboard/forms/MemberPicker";
 import TaskForm from "@/app/dashboard/forms/TaskForm";
 import SnippetForm from "@/app/dashboard/forms/SnippetForm";
-
 import ButtonBase from "@/components/ui/ButtonBase";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SetupScreen from "@/app/dashboard/screens/SetupScreen";
 import WhoAreYouScreen from "@/app/dashboard/screens/WhoAreYouScreen";
 import Spinner from "@/components/ui/Spinner";
 
-// ─── Inner layout ─────────────────────────────────────────────────────────────
-
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
-  const isPizarra = pathname === "/dashboard/pizarra";
   const [isWide, setIsWide] = useState(false);
   const [hasSavedMember, setHasSavedMember] = useState(false);
 
@@ -36,15 +32,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     setShowWhoAreYou, handleAddMember, selectCurrentUser, handleLogout,
     openTaskModal, setOpenTaskModal, editingTask, setEditingTask,
     openSnippetModal, setOpenSnippetModal, editingSnippet, setEditingSnippet,
-    openNoteModal, setOpenNoteModal,
     openVaultModal, setOpenVaultModal, editingVaultProject, setEditingVaultProject,
     openDeleteModal, setOpenDeleteModal, deleteConfig, setDeleteConfig,
     assignModal, setAssignModal,
     handleSaveTask, handleAssignAndStart,
-    handleSaveSnippet, handleAddNote,
+    handleSaveSnippet,
     handleSaveVaultProject,
     handleDeleteMember, handleDeleteTask, handleDeleteSnippet,
-    handleDeleteNote, handleDeleteVaultProject, handleDeleteArchivo,
+    handleDeleteVaultProject,
     saveVault, vaultProjects,
     isVaultUnlocked, setIsVaultUnlocked,
   } = useDashboard();
@@ -79,21 +74,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     </>
   );
 
-  // Si no hay un miembro guardado, lo más probable es que vayamos a mostrar
-  // WhoAreYouScreen apenas termine de cargar: evitamos el flash del dashboard
-  // completo mostrando un loader neutro mientras tanto.
   if (isLoading && !hasSavedMember) return (
     <div className="h-screen w-full bg-(--bg-base)" />
   );
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden bg-(--bg-base) relative ${isPizarra ? '' : 'p-3 sm:p-4 lg:px-5.5 lg:py-2'}`}
+    <div className="flex flex-col h-screen overflow-hidden bg-(--bg-base) relative p-3 sm:p-4 lg:px-5.5 lg:py-2"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <AppToaster />
 
       <Navbar
-        isPizarra={isPizarra}
+        isPizarra={false}
         activeHref={activeHref}
         currentUser={currentUser}
         isToolkitVisible={isToolkitVisible}
@@ -103,9 +95,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         onLogout={handleLogout}
       />
 
-      {/* ── Content + Toolkit ── */}
-      <div className={`flex-1 min-h-0 overflow-hidden relative ${isPizarra ? "" : "flex flex-col wide:flex-row gap-3 wide:gap-5"}`}>
-        <div className={`min-w-0 overflow-hidden ${isPizarra ? 'h-full' : 'flex-1 min-h-0'}`}>
+      <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col wide:flex-row gap-3 wide:gap-5">
+        <div className="min-w-0 overflow-hidden flex-1 min-h-0">
           {isLoading ? (
             <div className="h-full w-full flex items-center justify-center">
               <Spinner size={28} />
@@ -113,31 +104,27 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           ) : children}
         </div>
 
-        {!isPizarra && (
-          <>
-            {/* Overlay backdrop — solo en < 1320px */}
-            {isToolkitVisible && (
-              <div
-                className="wide:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-                onClick={() => setIsToolkitVisible(false)}
+        <>
+          {isToolkitVisible && (
+            <div
+              className="wide:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+              onClick={() => setIsToolkitVisible(false)}
+            />
+          )}
+          <div className={`
+            ${isToolkitVisible ? '' : 'hidden'}
+            ${isWide ? 'relative block w-80 h-full shrink-0' : 'fixed top-0 right-0 h-full w-80 max-w-[90vw] z-50'}
+            ${isWide ? '' : 'animate-in slide-in-from-right duration-300'}
+          `}>
+            <div className="h-full">
+              <DevToolkit
+                members={members}
+                currentUser={currentUser}
+                borderRadius={isWide ? 24 : '24px 0 0 24px'}
               />
-            )}
-            {/* Sidebar — siempre montado (no pierde estado interno); se muestra u oculta con CSS */}
-            <div className={`
-              ${isToolkitVisible ? '' : 'hidden'}
-              ${isWide ? 'relative block w-80 h-full shrink-0' : 'fixed top-0 right-0 h-full w-80 max-w-[90vw] z-50'}
-              ${isWide ? '' : 'animate-in slide-in-from-right duration-300'}
-            `}>
-              <div className="h-full">
-                <DevToolkit
-                  members={members}
-                  currentUser={currentUser}
-                  borderRadius={isWide ? 24 : '24px 0 0 24px'}
-                />
-              </div>
             </div>
-          </>
-        )}
+          </div>
+        </>
       </div>
 
       {/* ── Global Modals ── */}
@@ -154,9 +141,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <ModalBase open={openSnippetModal} title={editingSnippet ? "Editar Snippet" : "Nuevo Snippet"} onClose={() => { setOpenSnippetModal(false); setEditingSnippet(null); }}>
         <SnippetForm members={members} initialData={editingSnippet || undefined} onSave={handleSaveSnippet} onCancel={() => setOpenSnippetModal(false)} />
       </ModalBase>
-      <ModalBase open={openNoteModal} title="Nueva Nota" onClose={() => setOpenNoteModal(false)}>
-        <NoteForm members={members} onSave={handleAddNote} onCancel={() => setOpenNoteModal(false)} />
-      </ModalBase>
       <ModalBase open={openVaultModal} title={editingVaultProject ? "Editar Proyecto" : "Nuevo Proyecto en Bóveda"} onClose={() => { setOpenVaultModal(false); setEditingVaultProject(null); }} closeOnOverlayClick={false}>
         <VaultProjectForm initialData={editingVaultProject || undefined} onSave={handleSaveVaultProject} onCancel={() => setOpenVaultModal(false)} />
       </ModalBase>
@@ -170,12 +154,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           if (type === "member")  handleDeleteMember(id);
           if (type === "task")    handleDeleteTask(id);
           if (type === "snippet") handleDeleteSnippet(id);
-          if (type === "note")    handleDeleteNote(id);
-          if (type === "archivo") handleDeleteArchivo(id);
           if (type === "vault")   handleDeleteVaultProject(id);
           setOpenDeleteModal(false);
         }}
-        title={`Eliminar ${deleteConfig?.type === "member" ? "Miembro" : deleteConfig?.type === "task" ? "Tarea" : deleteConfig?.type === "snippet" ? "Snippet" : deleteConfig?.type === "archivo" ? "Archivo" : deleteConfig?.type === "vault" ? "Proyecto de Bóveda" : "Nota"}`}
+        title={`Eliminar ${deleteConfig?.type === "member" ? "Miembro" : deleteConfig?.type === "task" ? "Tarea" : deleteConfig?.type === "snippet" ? "Snippet" : "Proyecto de Bóveda"}`}
         message={`¿Estás seguro de que deseas eliminar "${deleteConfig?.name}"? Esta acción no se puede deshacer.`}
       />
     </div>
