@@ -12,7 +12,7 @@ import { VaultProjectForm } from "@/components/VaultSection";
 import MemberPicker from "@/app/dashboard/forms/MemberPicker";
 import TaskForm from "@/app/dashboard/forms/TaskForm";
 import SnippetForm from "@/app/dashboard/forms/SnippetForm";
-import NoteForm from "@/app/dashboard/forms/NoteForm";
+
 import ButtonBase from "@/components/ui/ButtonBase";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SetupScreen from "@/app/dashboard/screens/SetupScreen";

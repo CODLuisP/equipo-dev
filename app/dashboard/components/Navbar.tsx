@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Users, CheckSquare, Code, StickyNote, FolderOpen, Shield, LogOut, Sparkles, Globe, Menu, X } from "lucide-react";
+import { Users, CheckSquare, Code, Shield, LogOut, Sparkles, Globe, Menu, X } from "lucide-react";
 import AvatarImg from "@/app/dashboard/components/AvatarImg";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -10,13 +10,11 @@ import type { Member } from "@/app/dashboard/types";
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 export const NAV = [
-  { href: "/dashboard/equipo",   icon: <Users size={12}/>,       label: "Equipo"   },
-  { href: "/dashboard/tareas",   icon: <CheckSquare size={12}/>, label: "Tareas"   },
-  { href: "/dashboard/snippets", icon: <Code size={12}/>,        label: "Snippets" },
-  { href: "/dashboard/pizarra",  icon: <StickyNote size={12}/>,  label: "Pizarra"  },
-  { href: "/dashboard/archivos", icon: <FolderOpen size={12}/>,  label: "Archivos" },
-  { href: "/dashboard/web-sites", icon: <Globe size={12}/>,      label: "Web Sites" },
-  { href: "/dashboard/boveda",   icon: <Shield size={12}/>,      label: "Bóveda"   },
+  { href: "/dashboard/equipo",    icon: <Users size={12}/>,       label: "Equipo"    },
+  { href: "/dashboard/tareas",    icon: <CheckSquare size={12}/>, label: "Tareas"    },
+  { href: "/dashboard/snippets",  icon: <Code size={12}/>,        label: "Snippets"  },
+  { href: "/dashboard/web-sites", icon: <Globe size={12}/>,       label: "Web Sites" },
+  { href: "/dashboard/boveda",    icon: <Shield size={12}/>,      label: "Bóveda"    },
 ];
 
 interface NavbarProps {
